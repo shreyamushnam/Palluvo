@@ -1,215 +1,196 @@
 "use client";
 
-import React from "react";
+import React, { useState } from "react";
 import Link from "next/link";
-import { Globe, ArrowUp } from "lucide-react";
-import { InstagramIcon, YoutubeIcon, TwitterIcon } from "@/components/icons/BrandIcons";
-import { useStore, Currency } from "@/context/StoreContext";
+import { Check, ArrowRight } from "lucide-react";
+import { InstagramIcon } from "@/components/icons/BrandIcons";
 
 export const Footer: React.FC = () => {
-  const { currency, setCurrency } = useStore();
+  const [email, setEmail] = useState("");
+  const [subscribed, setSubscribed] = useState(false);
 
-  const scrollToTop = () => {
-    window.scrollTo({ top: 0, behavior: "smooth" });
+  const handleSubscribe = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!email) return;
+    setSubscribed(true);
+    setEmail("");
   };
 
   return (
-    <footer className="bg-[#1C1A18] text-[#FAF7F2] pt-20 pb-12 border-t border-[#3B0E14]/40">
-      <div className="max-w-7xl mx-auto px-6 md:px-10">
+    <footer className="bg-[#1C1A18] text-[#FAF7F2] pt-16 pb-20 lg:pb-12 border-t border-[#3B0E14]/30">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-10">
         
         {/* Main 4-Column Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-12 gap-12 lg:gap-8 pb-16 border-b border-[#FAF7F2]/10">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-10 pb-12 border-b border-[#FAF7F2]/10">
           
-          {/* Brand Column (5 cols) */}
-          <div className="lg:col-span-4 flex flex-col justify-between">
-            <div>
-              <Link href="/" className="inline-block focus:outline-none">
-                <span className="font-serif-display text-3xl tracking-[0.24em] font-medium uppercase text-[#FAF7F2]">
-                  PALLUVO
-                </span>
-                <p className="font-serif-display text-sm italic text-[#C5A575] mt-1">
-                  “Every drape, a little magic”
-                </p>
-              </Link>
-
-              <p className="text-xs text-[#FAF7F2]/60 mt-6 max-w-sm font-light leading-relaxed">
-                An Indian luxury saree and drape house dedicated to fluid contemporary silhouettes, unstitched geometry, and generational handloom artistry.
-              </p>
-            </div>
-
-            {/* Currency Selector */}
-            <div className="mt-8 pt-6 border-t border-[#FAF7F2]/10 flex items-center gap-3">
-              <Globe size={14} className="text-[#C5A575]" />
-              <span className="text-[11px] uppercase tracking-wider text-[#FAF7F2]/60">
-                Region / Currency:
+          {/* Brand Col */}
+          <div className="lg:col-span-2">
+            <Link href="/" className="inline-block">
+              <span className="font-serif-display text-3xl tracking-[0.2em] font-medium uppercase text-[#FAF7F2]">
+                PALLUVO
               </span>
-              <div className="flex gap-2 text-xs font-medium">
-                {(["INR", "USD", "EUR", "GBP"] as Currency[]).map((cur) => (
+              <p className="font-serif-display text-xs italic text-[#C5A575] mt-1">
+                Every drape, a little magic.
+              </p>
+            </Link>
+            <p className="text-xs text-[#FAF7F2]/65 mt-4 max-w-sm leading-relaxed font-light">
+              PALLUVO is a modern Indian ethnic fashion house bringing artisanal pure silk, organza, tussar, and handloom sarees directly to your doorstep.
+            </p>
+
+            {/* Newsletter Box */}
+            <div className="mt-6">
+              <p className="text-xs uppercase tracking-wider text-[#C5A575] font-semibold mb-2">
+                Get the latest from PALLUVO
+              </p>
+              {subscribed ? (
+                <div className="flex items-center gap-2 text-xs text-[#A8D5BA]">
+                  <Check size={16} /> Thank you for subscribing! Check your inbox for 10% off.
+                </div>
+              ) : (
+                <form onSubmit={handleSubscribe} className="flex max-w-sm gap-2">
+                  <input
+                    type="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    placeholder="Enter your email address"
+                    required
+                    className="flex-1 px-3.5 py-2.5 bg-[#FAF7F2]/10 border border-[#FAF7F2]/20 text-xs text-[#FAF7F2] placeholder:text-[#FAF7F2]/40 focus:outline-none focus:border-[#C5A575]"
+                  />
                   <button
-                    key={cur}
-                    onClick={() => setCurrency(cur)}
-                    className={`px-2 py-0.5 transition-colors ${
-                      currency === cur
-                        ? "bg-[#C5A575] text-[#1C1A18] font-bold"
-                        : "text-[#FAF7F2]/60 hover:text-[#FAF7F2]"
-                    }`}
+                    type="submit"
+                    className="px-4 py-2.5 bg-[#541920] hover:bg-[#7B1113] text-[#FAF7F2] text-xs uppercase tracking-wider font-medium transition-colors shrink-0"
                   >
-                    {cur}
+                    Subscribe
                   </button>
-                ))}
-              </div>
+                </form>
+              )}
             </div>
           </div>
 
-          {/* SHOP Column (2 cols) */}
-          <div className="lg:col-span-2 lg:pl-4">
-            <p className="text-xs uppercase tracking-[0.25em] text-[#C5A575] font-semibold mb-6">
+          {/* SHOP */}
+          <div>
+            <p className="text-xs uppercase tracking-[0.2em] text-[#C5A575] font-semibold mb-4">
               Shop
             </p>
-            <ul className="space-y-3.5 text-xs text-[#FAF7F2]/75 font-light">
+            <ul className="space-y-2.5 text-xs text-[#FAF7F2]/75 font-light">
               <li>
-                <a href="#shop-section" className="hover:text-[#C5A575] transition-colors">
+                <Link href="/shop?category=New+Arrivals" className="hover:text-[#C5A575] transition-colors">
                   New Arrivals
-                </a>
+                </Link>
               </li>
               <li>
-                <a href="#shop-section" className="hover:text-[#C5A575] transition-colors">
+                <Link href="/shop" className="hover:text-[#C5A575] transition-colors">
                   Sarees
-                </a>
+                </Link>
               </li>
               <li>
-                <a href="#collections-section" className="hover:text-[#C5A575] transition-colors">
-                  Collections
-                </a>
+                <Link href="/shop?category=Silk" className="hover:text-[#C5A575] transition-colors">
+                  Silk Sarees
+                </Link>
               </li>
               <li>
-                <a href="#shop-section" className="hover:text-[#C5A575] transition-colors">
-                  Limited Editions
-                </a>
+                <Link href="/shop?category=Handloom" className="hover:text-[#C5A575] transition-colors">
+                  Handloom
+                </Link>
               </li>
               <li>
-                <a href="#shop-section" className="hover:text-[#C5A575] transition-colors">
-                  Bridal Trousseau
-                </a>
-              </li>
-            </ul>
-          </div>
-
-          {/* DISCOVER Column (3 cols) */}
-          <div className="lg:col-span-3">
-            <p className="text-xs uppercase tracking-[0.25em] text-[#C5A575] font-semibold mb-6">
-              Discover
-            </p>
-            <ul className="space-y-3.5 text-xs text-[#FAF7F2]/75 font-light">
-              <li>
-                <a href="#mood-section" className="hover:text-[#C5A575] transition-colors">
-                  About PALLUVO
-                </a>
+                <Link href="/shop?category=Festive" className="hover:text-[#C5A575] transition-colors">
+                  Festive Edits
+                </Link>
               </li>
               <li>
-                <a href="#drape-stories-section" className="hover:text-[#C5A575] transition-colors">
-                  Drape Stories
-                </a>
-              </li>
-              <li>
-                <a href="#fabric-closeup-section" className="hover:text-[#C5A575] transition-colors">
-                  Fabric Architecture
-                </a>
-              </li>
-              <li>
-                <a href="#journal-section" className="hover:text-[#C5A575] transition-colors">
-                  The PALLUVO Journal
-                </a>
-              </li>
-              <li>
-                <a href="https://instagram.com" target="_blank" rel="noreferrer" className="hover:text-[#C5A575] transition-colors">
-                  Instagram (@palluvo)
-                </a>
+                <Link href="/shop?category=Bridal" className="hover:text-[#C5A575] transition-colors">
+                  Bridal Sarees
+                </Link>
               </li>
             </ul>
           </div>
 
-          {/* HELP Column (3 cols) */}
-          <div className="lg:col-span-3">
-            <p className="text-xs uppercase tracking-[0.25em] text-[#C5A575] font-semibold mb-6">
-              Help & Concierge
+          {/* HELP */}
+          <div>
+            <p className="text-xs uppercase tracking-[0.2em] text-[#C5A575] font-semibold mb-4">
+              Help
             </p>
-            <ul className="space-y-3.5 text-xs text-[#FAF7F2]/75 font-light">
+            <ul className="space-y-2.5 text-xs text-[#FAF7F2]/75 font-light">
               <li>
-                <a href="#newsletter" onClick={(e) => { e.preventDefault(); alert("PALLUVO Concierge Desk: concierge@palluvo.com | +91 98200 44021"); }} className="hover:text-[#C5A575] transition-colors">
-                  Bespoke Consultation
+                <Link href="/account" className="hover:text-[#C5A575] transition-colors">
+                  Track Order
+                </Link>
+              </li>
+              <li>
+                <a href="#contact" onClick={(e) => { e.preventDefault(); alert("PALLUVO Customer Care: care@palluvo.com | WhatsApp: +91 98200 44021"); }} className="hover:text-[#C5A575] transition-colors">
+                  Contact Us
                 </a>
               </li>
               <li>
-                <span className="cursor-pointer hover:text-[#C5A575] transition-colors" onClick={() => alert("Complimentary worldwide express shipping via DHL Express on all saree orders.")}>
-                  Shipping & Customs
+                <span className="cursor-pointer hover:text-[#C5A575] transition-colors" onClick={() => alert("Free shipping across India on orders above ₹1,999. Standard delivery time is 3-4 working days.")}>
+                  Shipping Policy
                 </span>
               </li>
               <li>
-                <span className="cursor-pointer hover:text-[#C5A575] transition-colors" onClick={() => alert("14-day white-glove return window for unstitched sarees in original heirloom packaging.")}>
+                <span className="cursor-pointer hover:text-[#C5A575] transition-colors" onClick={() => alert("Hassle-free 7-day return and exchange policy on all unstitched sarees.")}>
                   Returns & Exchanges
                 </span>
               </li>
               <li>
-                <span className="cursor-pointer hover:text-[#C5A575] transition-colors" onClick={() => alert("Silk Care: Dry clean only with petroleum-based solvents. Store wrapped in pure unbleached muslin.")}>
-                  Silk Care & Preservation
-                </span>
-              </li>
-              <li>
-                <span className="cursor-pointer hover:text-[#C5A575] transition-colors" onClick={() => alert("PALLUVO FAQs: Saree lengths are 5.5 meters with an unstitched 0.8 meter blouse piece included.")}>
-                  Frequently Asked Questions
+                <span className="cursor-pointer hover:text-[#C5A575] transition-colors" onClick={() => alert("FAQs: All sarees come with 0.8m blouse piece. Silk Mark certified genuine pure silks.")}>
+                  FAQs
                 </span>
               </li>
             </ul>
           </div>
 
-        </div>
+          {/* ABOUT & FOLLOW US */}
+          <div>
+            <p className="text-xs uppercase tracking-[0.2em] text-[#C5A575] font-semibold mb-4">
+              About
+            </p>
+            <ul className="space-y-2.5 text-xs text-[#FAF7F2]/75 font-light mb-6">
+              <li>
+                <span className="cursor-pointer hover:text-[#C5A575] transition-colors" onClick={() => alert("PALLUVO celebrates the timeless beauty of Indian drape through modern silhouettes.")}>
+                  Our Story
+                </span>
+              </li>
+              <li>
+                <span className="cursor-pointer hover:text-[#C5A575] transition-colors" onClick={() => alert("Woven directly with master artisan weaver clusters in Varanasi, Kanchipuram, Chanderi, and Bengal.")}>
+                  Craftsmanship
+                </span>
+              </li>
+              <li>
+                <Link href="/shop" className="hover:text-[#C5A575] transition-colors">
+                  Journal & Drapes
+                </Link>
+              </li>
+            </ul>
 
-        {/* Bottom Bar: Copyright, Socials, Back to Top */}
-        <div className="pt-8 flex flex-col sm:flex-row items-center justify-between gap-6 text-xs text-[#FAF7F2]/50">
-          
-          <div className="flex items-center gap-6">
-            <a
-              href="https://instagram.com"
-              target="_blank"
-              rel="noreferrer"
-              className="text-[#FAF7F2]/70 hover:text-[#C5A575] transition-colors"
-              aria-label="Instagram"
-            >
-              <InstagramIcon size={17} />
-            </a>
-            <a
-              href="https://youtube.com"
-              target="_blank"
-              rel="noreferrer"
-              className="text-[#FAF7F2]/70 hover:text-[#C5A575] transition-colors"
-              aria-label="YouTube"
-            >
-              <YoutubeIcon size={18} />
-            </a>
-            <a
-              href="https://twitter.com"
-              target="_blank"
-              rel="noreferrer"
-              className="text-[#FAF7F2]/70 hover:text-[#C5A575] transition-colors"
-              aria-label="Twitter / X"
-            >
-              <TwitterIcon size={17} />
-            </a>
+            <p className="text-xs uppercase tracking-[0.2em] text-[#C5A575] font-semibold mb-3">
+              Follow Us
+            </p>
+            <div className="flex items-center gap-4 text-[#FAF7F2]/80">
+              <a href="https://instagram.com" target="_blank" rel="noreferrer" className="hover:text-[#C5A575]" aria-label="Instagram">
+                <InstagramIcon size={18} />
+              </a>
+              <a href="https://facebook.com" target="_blank" rel="noreferrer" className="hover:text-[#C5A575] text-xs font-semibold" aria-label="Facebook">
+                FB
+              </a>
+              <a href="https://pinterest.com" target="_blank" rel="noreferrer" className="hover:text-[#C5A575] text-xs font-semibold" aria-label="Pinterest">
+                PIN
+              </a>
+            </div>
           </div>
 
-          <p className="text-center text-[11px] tracking-wider">
-            © {new Date().getFullYear()} PALLUVO Luxury Fashion Pvt Ltd. All rights reserved. Crafted with timeless Indian artistry.
-          </p>
+        </div>
 
-          <button
-            onClick={scrollToTop}
-            className="flex items-center gap-1.5 text-[11px] uppercase tracking-widest text-[#FAF7F2]/70 hover:text-[#C5A575] transition-colors"
-          >
-            <span>Back to Top</span>
-            <ArrowUp size={13} />
-          </button>
-
+        {/* Bottom copyright */}
+        <div className="pt-6 flex flex-col sm:flex-row items-center justify-between text-xs text-[#FAF7F2]/50 gap-3">
+          <p>© {new Date().getFullYear()} PALLUVO Retail Pvt Ltd. All rights reserved.</p>
+          <div className="flex gap-4">
+            <span>100% Genuine Sarees</span>
+            <span>•</span>
+            <span>Silk Mark Certified</span>
+            <span>•</span>
+            <span>Secure 256-Bit SSL Checkout</span>
+          </div>
         </div>
 
       </div>
