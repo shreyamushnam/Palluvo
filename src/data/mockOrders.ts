@@ -81,8 +81,8 @@ export const MOCK_ADDRESSES: SavedAddress[] = [
   {
     id: "addr-1",
     type: "Home",
-    name: "Shreya Mushnam",
-    phone: "+91 98450 12345",
+    name: "Radhika Sharma",
+    phone: "+91 98765 43210",
     addressLine: "Flat 402, Lotus Towers, 12th Main Road, Indiranagar",
     city: "Bangalore",
     state: "Karnataka",
@@ -92,8 +92,8 @@ export const MOCK_ADDRESSES: SavedAddress[] = [
   {
     id: "addr-2",
     type: "Office",
-    name: "Shreya Mushnam",
-    phone: "+91 98450 12345",
+    name: "Radhika Sharma",
+    phone: "+91 98765 43210",
     addressLine: "Level 4, Prestige Tech Park, Marathahalli-Sarjapur Ring Road",
     city: "Bangalore",
     state: "Karnataka",

@@ -356,9 +356,14 @@ export default function AccountPage() {
                           )}
                         </div>
 
-                        <h4 className="font-serif text-sm font-semibold text-neutral-900">
-                          {addr.name}
-                        </h4>
+                        <div>
+                          <span className="text-[10px] uppercase font-semibold text-neutral-400 tracking-wider block">
+                            Recipient
+                          </span>
+                          <h4 className="font-serif text-sm font-semibold text-neutral-900">
+                            {addr.name}
+                          </h4>
+                        </div>
                         <p className="text-xs text-neutral-600 font-sans leading-relaxed">
                           {addr.addressLine} <br />
                           {addr.city}, {addr.state} - {addr.pincode}
@@ -371,7 +376,7 @@ export default function AccountPage() {
                             type="button"
                             onClick={() => handleOpenEditAddress(addr)}
                             className="text-[#541920] hover:underline flex items-center gap-1 cursor-pointer"
-                            aria-label={`Edit address for ${addr.name}`}
+                            aria-label={`Edit recipient address for ${addr.name}`}
                           >
                             <Edit2 className="w-3 h-3" />
                             <span>Edit</span>
@@ -381,7 +386,7 @@ export default function AccountPage() {
                             type="button"
                             onClick={() => handleDeleteAddress(addr.id, addr.name)}
                             className="text-neutral-500 hover:text-red-600 flex items-center gap-1 cursor-pointer"
-                            aria-label={`Delete address for ${addr.name}`}
+                            aria-label={`Delete recipient address for ${addr.name}`}
                           >
                             <Trash2 className="w-3 h-3" />
                             <span>Delete</span>
@@ -402,7 +407,7 @@ export default function AccountPage() {
                     Profile & Settings
                   </h2>
                   <p className="text-xs text-neutral-500">
-                    Update your personal information and drapping preferences.
+                    Update your personal information and draping preferences.
                   </p>
                 </div>
 
@@ -525,7 +530,7 @@ export default function AccountPage() {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label htmlFor="addr-name" className="block text-neutral-700 font-medium mb-1">
-                    Full Name *
+                    Recipient Full Name *
                   </label>
                   <input
                     id="addr-name"
@@ -539,7 +544,7 @@ export default function AccountPage() {
                 </div>
                 <div>
                   <label htmlFor="addr-phone" className="block text-neutral-700 font-medium mb-1">
-                    Phone Number *
+                    Recipient Phone Number *
                   </label>
                   <input
                     id="addr-phone"
