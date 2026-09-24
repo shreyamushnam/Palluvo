@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useMemo, Suspense } from "react";
+import React, { useState, useEffect, useMemo, Suspense } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { Filter, X, ChevronDown, SlidersHorizontal, Check } from "lucide-react";
@@ -46,13 +46,66 @@ function ShopContent() {
   const [sortBy, setSortBy] = useState<string>("featured");
   const [isMobileFilterOpen, setIsMobileFilterOpen] = useState(false);
 
+  // Keep state synchronized whenever searchParams change (e.g. clicking category in navbar or breadcrumb)
+  useEffect(() => {
+    const cat = searchParams.get("category");
+    if (cat !== null) {
+      setSelectedCategory(cat);
+    }
+    const sort = searchParams.get("sort");
+    if (sort) {
+      setSortBy(sort);
+    }
+  }, [searchParams]);
+
   // Filter and sort products
   const filteredProducts = useMemo(() => {
     return PRODUCTS.filter((product) => {
-      // Category filter
-      if (selectedCategory && product.category.toLowerCase() !== selectedCategory.toLowerCase()) {
-        return false;
+      // Category filter with intelligent matching
+      if (selectedCategory) {
+        const norm = selectedCategory.toLowerCase().trim();
+        if (norm.includes("new arrival")) {
+          if (!product.isNewArrival) return false;
+        } else if (norm.includes("silk") && !norm.includes("cotton")) {
+          if (product.category.toLowerCase() !== "silk" && !product.fabric.toLowerCase().includes("silk")) {
+            return false;
+          }
+        } else if (norm.includes("handloom")) {
+          if (product.category.toLowerCase() !== "handloom" && !product.fabric.toLowerCase().includes("handloom")) {
+            return false;
+          }
+        } else if (norm.includes("cotton")) {
+          if (product.category.toLowerCase() !== "cotton" && !product.fabric.toLowerCase().includes("cotton")) {
+            return false;
+          }
+        } else if (norm.includes("festive")) {
+          if (product.category.toLowerCase() !== "festive" && product.occasion.toLowerCase() !== "festive") {
+            return false;
+          }
+        } else if (norm.includes("bridal") || norm.includes("wedding")) {
+          if (product.category.toLowerCase() !== "bridal" && product.occasion.toLowerCase() !== "wedding") {
+            return false;
+          }
+        } else if (norm.includes("party")) {
+          if (product.category.toLowerCase() !== "party wear" && product.occasion.toLowerCase() !== "party") {
+            return false;
+          }
+        } else if (norm.includes("printed")) {
+          if (product.category.toLowerCase() !== "printed") {
+            return false;
+          }
+        } else {
+          const root = norm.replace(/sarees?/g, "").trim();
+          if (
+            !product.category.toLowerCase().includes(root) &&
+            !product.fabric.toLowerCase().includes(root) &&
+            !product.occasion.toLowerCase().includes(root)
+          ) {
+            return false;
+          }
+        }
       }
+
       // Fabric filter
       if (selectedFabric && !product.fabric.toLowerCase().includes(selectedFabric.toLowerCase())) {
         return false;

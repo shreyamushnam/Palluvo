@@ -2,6 +2,7 @@
 
 import React, { useState } from "react";
 import Image from "next/image";
+import Link from "next/link";
 import { ShoppingBag, Check } from "lucide-react";
 import { useStore } from "@/context/StoreContext";
 import { PRODUCTS, SHOP_THE_LOOK_ITEMS } from "@/data/products";
@@ -38,15 +39,23 @@ export const ShopTheLook: React.FC = () => {
           
           {/* Left: Styled Photo */}
           <div className="lg:col-span-6 relative">
-            <div className="relative aspect-[3/4] rounded-sm overflow-hidden bg-neutral-100 shadow-sm border border-[#E8E2D9]">
+            <Link
+              href="/product/pal-001"
+              className="group relative block aspect-[3/4] rounded-sm overflow-hidden bg-neutral-100 shadow-sm border border-[#E8E2D9]"
+            >
               <Image
                 src="/images/products/wine-tissue-silk.jpg"
                 alt="Shop the look model in Wine Tissue Silk Saree"
                 fill
                 sizes="(max-width: 1024px) 100vw, 550px"
-                className="object-cover object-top"
+                className="object-cover object-top group-hover:scale-105 transition-transform duration-500"
               />
-            </div>
+              <div className="absolute inset-0 bg-black/25 opacity-0 group-hover:opacity-100 transition-opacity flex items-end p-4">
+                <span className="px-4 py-2 bg-white/95 text-neutral-900 text-xs uppercase tracking-wider font-semibold rounded-xs shadow-md">
+                  View Featured Saree →
+                </span>
+              </div>
+            </Link>
           </div>
 
           {/* Right: Complete the Look Items */}
@@ -64,7 +73,10 @@ export const ShopTheLook: React.FC = () => {
                     className="flex items-center justify-between gap-4 p-3.5 rounded-sm border border-[#E8E2D9] bg-[#FAF7F2] hover:bg-[#F4EFE6] transition-colors"
                   >
                     <div className="flex items-center gap-3 min-w-0">
-                      <div className="relative w-14 h-18 shrink-0 rounded-xs overflow-hidden bg-neutral-200 border border-[#DCD5C9]">
+                      <Link
+                        href={item.productId ? `/product/${item.productId}` : "/product/pal-001"}
+                        className="relative w-14 h-18 shrink-0 rounded-xs overflow-hidden bg-neutral-200 border border-[#DCD5C9] hover:opacity-85"
+                      >
                         <Image
                           src={item.image}
                           alt={item.title || item.name}
@@ -72,14 +84,17 @@ export const ShopTheLook: React.FC = () => {
                           sizes="60px"
                           className="object-cover object-top"
                         />
-                      </div>
+                      </Link>
                       <div className="min-w-0">
                         <span className="text-[10px] uppercase font-bold text-[#541920] tracking-wider">
                           {item.role || item.type}
                         </span>
-                        <h4 className="text-xs sm:text-sm font-serif font-medium text-neutral-900 truncate">
+                        <Link
+                          href={item.productId ? `/product/${item.productId}` : "/product/pal-001"}
+                          className="block text-xs sm:text-sm font-serif font-medium text-neutral-900 truncate hover:text-[#541920]"
+                        >
                           {item.title || item.name}
-                        </h4>
+                        </Link>
                         <p className="text-xs font-bold text-neutral-900 mt-0.5">
                           {formatPrice(item.price)}
                         </p>
