@@ -2,9 +2,107 @@
 
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
 import { Search, User, Heart, ShoppingBag, Menu, X } from "lucide-react";
 import { useStore } from "@/context/StoreContext";
+
+interface NavLinkItem {
+  label: string;
+  href: string;
+  category?: string;
+}
+
+const NAV_LINKS: NavLinkItem[] = [
+  { label: "New Arrivals", href: "/shop?category=New+Arrivals", category: "new arrival" },
+  { label: "Sarees", href: "/shop" },
+  { label: "Collections", href: "/collections" },
+  { label: "Silk", href: "/shop?category=Silk", category: "silk" },
+  { label: "Handloom", href: "/shop?category=Handloom", category: "handloom" },
+  { label: "Festive", href: "/shop?category=Festive", category: "festive" },
+  { label: "Bridal", href: "/shop?category=Bridal", category: "bridal" },
+];
+
+function isNavLinkActive(link: NavLinkItem, pathname: string, currentCategory: string): boolean {
+  if (link.label === "Collections") {
+    return pathname === "/collections";
+  }
+
+  if (pathname !== "/shop") {
+    return false;
+  }
+
+  // On /shop
+  if (link.category) {
+    if (link.category === "new arrival") {
+      return currentCategory.includes("new arrival") || currentCategory === "new+arrivals";
+    }
+    if (link.category === "silk") {
+      return currentCategory.includes("silk") && !currentCategory.includes("cotton");
+    }
+    if (link.category === "bridal") {
+      return currentCategory.includes("bridal") || currentCategory.includes("wedding");
+    }
+    return currentCategory.includes(link.category);
+  }
+
+  // "Sarees" (/shop) is active ONLY when on /shop and NO specific category is selected
+  return !currentCategory;
+}
+
+function NavLinksList({ onLinkClick }: { onLinkClick?: () => void }) {
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const currentCategory = (searchParams.get("category") || "").toLowerCase().trim();
+
+  return (
+    <>
+      {NAV_LINKS.map((link) => {
+        const isActive = isNavLinkActive(link, pathname, currentCategory);
+        return (
+          <Link
+            key={link.label}
+            href={link.href}
+            onClick={onLinkClick}
+            className={`relative py-1 hover:text-[#541920] transition-colors ${
+              isActive ? "text-[#541920] font-bold" : "text-[#1C1A18]"
+            }`}
+          >
+            <span>{link.label}</span>
+            {isActive && (
+              <span className="absolute bottom-0 left-0 w-full h-[2px] bg-[#541920] transition-all" />
+            )}
+          </Link>
+        );
+      })}
+    </>
+  );
+}
+
+function MobileNavLinksList({ onLinkClick }: { onLinkClick?: () => void }) {
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const currentCategory = (searchParams.get("category") || "").toLowerCase().trim();
+
+  return (
+    <>
+      {NAV_LINKS.map((link) => {
+        const isActive = isNavLinkActive(link, pathname, currentCategory);
+        return (
+          <Link
+            key={link.label}
+            href={link.href}
+            onClick={onLinkClick}
+            className={`font-serif-display text-2xl py-1 border-b border-[#1C1A18]/5 transition-colors ${
+              isActive ? "text-[#541920] font-bold" : "text-[#1C1A18] hover:text-[#541920]"
+            }`}
+          >
+            {link.label}
+          </Link>
+        );
+      })}
+    </>
+  );
+}
 
 export const Navbar: React.FC = () => {
   const pathname = usePathname();
@@ -19,16 +117,6 @@ export const Navbar: React.FC = () => {
     window.addEventListener("scroll", handleScroll, { passive: true });
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
-
-  const navLinks = [
-    { label: "New Arrivals", href: "/shop?category=New+Arrivals" },
-    { label: "Sarees", href: "/shop" },
-    { label: "Collections", href: "/shop" },
-    { label: "Silk", href: "/shop?category=Silk" },
-    { label: "Handloom", href: "/shop?category=Handloom" },
-    { label: "Festive", href: "/shop?category=Festive" },
-    { label: "Bridal", href: "/shop?category=Bridal" },
-  ];
 
   return (
     <>
@@ -63,22 +151,10 @@ export const Navbar: React.FC = () => {
           </div>
 
           {/* Center: E-Commerce Category Links */}
-          <nav className="hidden lg:flex items-center space-x-7 xl:space-x-8 text-[12px] uppercase tracking-[0.16em] font-medium text-[#1C1A18]">
-            {navLinks.map((link) => {
-              const isActive = pathname === link.href;
-              return (
-                <Link
-                  key={link.label}
-                  href={link.href}
-                  className={`relative py-1 hover:text-[#541920] transition-colors ${
-                    isActive ? "text-[#541920] font-semibold" : ""
-                  }`}
-                >
-                  <span>{link.label}</span>
-                  <span className="absolute bottom-0 left-0 w-0 h-[1.5px] bg-[#541920] transition-all duration-300 group-hover:w-full" />
-                </Link>
-              );
-            })}
+          <nav className="hidden lg:flex items-center space-x-7 xl:space-x-8 text-[12px] uppercase tracking-[0.16em] font-medium">
+            <React.Suspense fallback={<div className="h-4 w-48" />}>
+              <NavLinksList />
+            </React.Suspense>
           </nav>
 
           {/* Right: E-Commerce Utilities */}
@@ -163,16 +239,9 @@ export const Navbar: React.FC = () => {
               <span className="text-[10px] uppercase tracking-[0.25em] text-[#8A857E] font-semibold mb-2">
                 Saree Categories
               </span>
-              {navLinks.map((link) => (
-                <Link
-                  key={link.label}
-                  href={link.href}
-                  onClick={() => setMobileMenuOpen(false)}
-                  className="font-serif-display text-2xl py-1 text-[#1C1A18] hover:text-[#541920] border-b border-[#1C1A18]/5 transition-colors"
-                >
-                  {link.label}
-                </Link>
-              ))}
+              <React.Suspense fallback={<div className="h-20" />}>
+                <MobileNavLinksList onLinkClick={() => setMobileMenuOpen(false)} />
+              </React.Suspense>
             </div>
 
             <div className="pt-8 border-t border-[#1C1A18]/10 space-y-3">

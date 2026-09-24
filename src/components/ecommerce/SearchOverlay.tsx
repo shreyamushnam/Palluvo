@@ -24,16 +24,25 @@ export const SearchOverlay: React.FC = () => {
   const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        setIsSearchOpen(false);
+      }
+    };
+
     if (isSearchOpen) {
       setTimeout(() => inputRef.current?.focus(), 100);
       document.body.style.overflow = "hidden";
+      window.addEventListener("keydown", handleKeyDown);
     } else {
       document.body.style.overflow = "unset";
     }
+
     return () => {
       document.body.style.overflow = "unset";
+      window.removeEventListener("keydown", handleKeyDown);
     };
-  }, [isSearchOpen]);
+  }, [isSearchOpen, setIsSearchOpen]);
 
   if (!isSearchOpen) return null;
 
@@ -70,6 +79,12 @@ export const SearchOverlay: React.FC = () => {
               type="text"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Escape") {
+                  e.preventDefault();
+                  setIsSearchOpen(false);
+                }
+              }}
               placeholder="Search sarees by fabric, weave, color, or occasion..."
               className="flex-1 text-base sm:text-lg bg-transparent border-none outline-none text-[#1C1A18] placeholder-neutral-400 font-sans"
             />
@@ -81,13 +96,18 @@ export const SearchOverlay: React.FC = () => {
                 Clear
               </button>
             )}
-            <button
-              onClick={() => setIsSearchOpen(false)}
-              className="p-1.5 text-neutral-500 hover:text-black hover:bg-neutral-100 rounded-full transition-colors shrink-0"
-              aria-label="Close search"
-            >
-              <X className="w-5 h-5" />
-            </button>
+            <div className="flex items-center gap-2">
+              <span className="hidden sm:inline-block text-[10px] uppercase tracking-wider text-neutral-400 bg-neutral-100 px-2 py-1 rounded-xs border border-neutral-200 font-mono">
+                Press ESC to close
+              </span>
+              <button
+                onClick={() => setIsSearchOpen(false)}
+                className="p-1.5 text-neutral-500 hover:text-black hover:bg-neutral-100 rounded-full transition-colors shrink-0"
+                aria-label="Close search"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
           </div>
 
           {/* Body Content */}

@@ -1,8 +1,8 @@
 "use client";
 
-import React, { useState, useEffect, useMemo, Suspense } from "react";
+import React, { useState, useMemo, Suspense } from "react";
 import Link from "next/link";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Filter, X, ChevronDown, SlidersHorizontal, Check } from "lucide-react";
 import { PRODUCTS, Product } from "@/data/products";
 import { CATEGORIES } from "@/data/categories";
@@ -35,28 +35,35 @@ const PRICE_RANGES = [
 ];
 
 function ShopContent() {
+  const router = useRouter();
   const searchParams = useSearchParams();
-  const initialCategory = searchParams.get("category") || "";
+  const selectedCategory = searchParams.get("category") || "";
   const initialQuery = searchParams.get("q") || "";
 
-  const [selectedCategory, setSelectedCategory] = useState<string>(initialCategory);
   const [selectedFabric, setSelectedFabric] = useState<string>("");
   const [selectedOccasion, setSelectedOccasion] = useState<string>("");
   const [selectedPriceRange, setSelectedPriceRange] = useState<number | null>(null);
-  const [sortBy, setSortBy] = useState<string>("featured");
+  const [sortBy, setSortBy] = useState<string>(searchParams.get("sort") || "featured");
   const [isMobileFilterOpen, setIsMobileFilterOpen] = useState(false);
 
-  // Keep state synchronized whenever searchParams change (e.g. clicking category in navbar or breadcrumb)
-  useEffect(() => {
-    const cat = searchParams.get("category");
-    if (cat !== null) {
-      setSelectedCategory(cat);
+  const handleCategoryToggle = (catName: string) => {
+    const params = new URLSearchParams(searchParams.toString());
+    const isCurrent =
+      selectedCategory.toLowerCase() === catName.toLowerCase() ||
+      (catName.toLowerCase().includes("silk") && selectedCategory.toLowerCase() === "silk") ||
+      (catName.toLowerCase().includes("handloom") && selectedCategory.toLowerCase() === "handloom") ||
+      (catName.toLowerCase().includes("festive") && selectedCategory.toLowerCase() === "festive") ||
+      (catName.toLowerCase().includes("bridal") && selectedCategory.toLowerCase() === "bridal") ||
+      (catName.toLowerCase().includes("new") && selectedCategory.toLowerCase().includes("new"));
+
+    if (isCurrent) {
+      params.delete("category");
+    } else {
+      params.set("category", catName);
     }
-    const sort = searchParams.get("sort");
-    if (sort) {
-      setSortBy(sort);
-    }
-  }, [searchParams]);
+    const newQuery = params.toString();
+    router.push(newQuery ? `/shop?${newQuery}` : "/shop", { scroll: false });
+  };
 
   // Filter and sort products
   const filteredProducts = useMemo(() => {
@@ -147,7 +154,11 @@ function ShopContent() {
     (selectedPriceRange !== null ? 1 : 0);
 
   const clearAllFilters = () => {
-    setSelectedCategory("");
+    const params = new URLSearchParams(searchParams.toString());
+    params.delete("category");
+    params.delete("q");
+    const qStr = params.toString();
+    router.push(qStr ? `/shop?${qStr}` : "/shop", { scroll: false });
     setSelectedFabric("");
     setSelectedOccasion("");
     setSelectedPriceRange(null);
@@ -205,7 +216,13 @@ function ShopContent() {
             <select
               id="sort"
               value={sortBy}
-              onChange={(e) => setSortBy(e.target.value)}
+              onChange={(e) => {
+                const newSort = e.target.value;
+                setSortBy(newSort);
+                const params = new URLSearchParams(searchParams.toString());
+                params.set("sort", newSort);
+                router.push(`/shop?${params.toString()}`, { scroll: false });
+              }}
               className="bg-white border border-[#DCD5C9] text-neutral-800 text-xs rounded-xs px-3 py-2 focus:outline-none focus:border-[#541920]"
             >
               <option value="featured">Featured Weaves</option>
@@ -224,7 +241,15 @@ function ShopContent() {
             {selectedCategory && (
               <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-white border border-[#DCD5C9] rounded-full text-xs text-neutral-800">
                 Category: {selectedCategory}
-                <button onClick={() => setSelectedCategory("")} className="hover:text-red-600">
+                <button
+                  onClick={() => {
+                    const params = new URLSearchParams(searchParams.toString());
+                    params.delete("category");
+                    const qStr = params.toString();
+                    router.push(qStr ? `/shop?${qStr}` : "/shop", { scroll: false });
+                  }}
+                  className="hover:text-red-600 cursor-pointer"
+                >
                   <X className="w-3 h-3" />
                 </button>
               </span>
@@ -232,7 +257,7 @@ function ShopContent() {
             {selectedFabric && (
               <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-white border border-[#DCD5C9] rounded-full text-xs text-neutral-800">
                 Fabric: {selectedFabric}
-                <button onClick={() => setSelectedFabric("")} className="hover:text-red-600">
+                <button onClick={() => setSelectedFabric("")} className="hover:text-red-600 cursor-pointer">
                   <X className="w-3 h-3" />
                 </button>
               </span>
@@ -240,7 +265,7 @@ function ShopContent() {
             {selectedOccasion && (
               <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-white border border-[#DCD5C9] rounded-full text-xs text-neutral-800">
                 Occasion: {selectedOccasion}
-                <button onClick={() => setSelectedOccasion("")} className="hover:text-red-600">
+                <button onClick={() => setSelectedOccasion("")} className="hover:text-red-600 cursor-pointer">
                   <X className="w-3 h-3" />
                 </button>
               </span>
@@ -248,14 +273,14 @@ function ShopContent() {
             {selectedPriceRange !== null && (
               <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-white border border-[#DCD5C9] rounded-full text-xs text-neutral-800">
                 Price: {PRICE_RANGES[selectedPriceRange].label}
-                <button onClick={() => setSelectedPriceRange(null)} className="hover:text-red-600">
+                <button onClick={() => setSelectedPriceRange(null)} className="hover:text-red-600 cursor-pointer">
                   <X className="w-3 h-3" />
                 </button>
               </span>
             )}
             <button
               onClick={clearAllFilters}
-              className="text-xs text-[#541920] font-semibold hover:underline ml-2"
+              className="text-xs text-[#541920] font-semibold hover:underline ml-2 cursor-pointer"
             >
               Clear All
             </button>
@@ -278,7 +303,7 @@ function ShopContent() {
                 {activeFiltersCount > 0 && (
                   <button
                     onClick={clearAllFilters}
-                    className="text-xs text-[#541920] hover:underline font-medium"
+                    className="text-xs text-[#541920] hover:underline font-medium cursor-pointer"
                   >
                     Reset
                   </button>
@@ -291,20 +316,30 @@ function ShopContent() {
                   Category
                 </h4>
                 <div className="space-y-1.5">
-                  {CATEGORIES.map((cat) => (
-                    <button
-                      key={cat.id}
-                      onClick={() => setSelectedCategory(selectedCategory === cat.name ? "" : cat.name)}
-                      className={`w-full flex items-center justify-between py-1 text-xs text-left transition-colors ${
-                        selectedCategory === cat.name
-                          ? "text-[#541920] font-bold"
-                          : "text-neutral-600 hover:text-black"
-                      }`}
-                    >
-                      <span>{cat.name}</span>
-                      <span className="text-[11px] text-neutral-400">({cat.itemCount})</span>
-                    </button>
-                  ))}
+                  {CATEGORIES.map((cat) => {
+                    const isSelected =
+                      selectedCategory.toLowerCase() === cat.name.toLowerCase() ||
+                      (cat.name.toLowerCase().includes("silk") && selectedCategory.toLowerCase() === "silk") ||
+                      (cat.name.toLowerCase().includes("handloom") && selectedCategory.toLowerCase() === "handloom") ||
+                      (cat.name.toLowerCase().includes("festive") && selectedCategory.toLowerCase() === "festive") ||
+                      (cat.name.toLowerCase().includes("bridal") && selectedCategory.toLowerCase() === "bridal") ||
+                      (cat.name.toLowerCase().includes("new") && selectedCategory.toLowerCase().includes("new"));
+
+                    return (
+                      <button
+                        key={cat.id}
+                        onClick={() => handleCategoryToggle(cat.name)}
+                        className={`w-full flex items-center justify-between py-1 text-xs text-left transition-colors cursor-pointer ${
+                          isSelected
+                            ? "text-[#541920] font-bold"
+                            : "text-neutral-600 hover:text-black"
+                        }`}
+                      >
+                        <span>{cat.name}</span>
+                        <span className="text-[11px] text-neutral-400">({cat.itemCount})</span>
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
 
@@ -435,18 +470,28 @@ function ShopContent() {
                     Category
                   </h4>
                   <div className="space-y-1">
-                    {CATEGORIES.map((cat) => (
-                      <button
-                        key={cat.id}
-                        onClick={() => setSelectedCategory(selectedCategory === cat.name ? "" : cat.name)}
-                        className={`w-full flex items-center justify-between py-1.5 text-xs text-left ${
-                          selectedCategory === cat.name ? "text-[#541920] font-bold" : "text-neutral-600"
-                        }`}
-                      >
-                        <span>{cat.name}</span>
-                        {selectedCategory === cat.name && <Check className="w-3.5 h-3.5 text-[#541920]" />}
-                      </button>
-                    ))}
+                    {CATEGORIES.map((cat) => {
+                      const isSelected =
+                        selectedCategory.toLowerCase() === cat.name.toLowerCase() ||
+                        (cat.name.toLowerCase().includes("silk") && selectedCategory.toLowerCase() === "silk") ||
+                        (cat.name.toLowerCase().includes("handloom") && selectedCategory.toLowerCase() === "handloom") ||
+                        (cat.name.toLowerCase().includes("festive") && selectedCategory.toLowerCase() === "festive") ||
+                        (cat.name.toLowerCase().includes("bridal") && selectedCategory.toLowerCase() === "bridal") ||
+                        (cat.name.toLowerCase().includes("new") && selectedCategory.toLowerCase().includes("new"));
+
+                      return (
+                        <button
+                          key={cat.id}
+                          onClick={() => handleCategoryToggle(cat.name)}
+                          className={`w-full flex items-center justify-between py-1.5 text-xs text-left cursor-pointer ${
+                            isSelected ? "text-[#541920] font-bold" : "text-neutral-600"
+                          }`}
+                        >
+                          <span>{cat.name}</span>
+                          {isSelected && <Check className="w-3.5 h-3.5 text-[#541920]" />}
+                        </button>
+                      );
+                    })}
                   </div>
                 </div>
 
