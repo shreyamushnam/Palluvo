@@ -180,13 +180,15 @@ export default function CartPage() {
                           <button
                             onClick={() => updateQuantity(item.product.id, item.quantity - 1, item.selectedColor)}
                             className="px-2.5 py-1 text-neutral-600 hover:bg-neutral-100"
+                            aria-label="Decrease quantity"
                           >
                             <Minus className="w-3 h-3" />
                           </button>
-                          <span className="px-3 text-xs font-semibold">{item.quantity}</span>
+                          <span className="px-3 text-xs font-semibold" aria-label={`Quantity: ${item.quantity}`}>{item.quantity}</span>
                           <button
                             onClick={() => updateQuantity(item.product.id, item.quantity + 1, item.selectedColor)}
                             className="px-2.5 py-1 text-neutral-600 hover:bg-neutral-100"
+                            aria-label="Increase quantity"
                           >
                             <Plus className="w-3 h-3" />
                           </button>
@@ -197,6 +199,7 @@ export default function CartPage() {
                           <button
                             onClick={() => handleMoveToWishlist(item.product.id, item.selectedColor)}
                             className="text-neutral-500 hover:text-[#541920] flex items-center gap-1"
+                            aria-label={`Save ${item.product.name} to Wishlist`}
                           >
                             <Heart className="w-3.5 h-3.5" />
                             <span>Save to Wishlist</span>
@@ -204,6 +207,7 @@ export default function CartPage() {
                           <button
                             onClick={() => removeFromCart(item.product.id, item.selectedColor)}
                             className="text-neutral-400 hover:text-red-600 flex items-center gap-1"
+                            aria-label={`Remove ${item.product.name} from cart`}
                           >
                             <Trash2 className="w-3.5 h-3.5" />
                             <span>Remove</span>

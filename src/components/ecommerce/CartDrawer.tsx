@@ -149,6 +149,7 @@ export const CartDrawer: React.FC = () => {
                           onClick={() => removeFromCart(item.product.id, item.selectedColor)}
                           className="text-neutral-400 hover:text-red-600 transition-colors p-0.5"
                           title="Remove item"
+                          aria-label={`Remove ${item.product.name} from cart`}
                         >
                           <Trash2 className="w-3.5 h-3.5" />
                         </button>
@@ -181,15 +182,17 @@ export const CartDrawer: React.FC = () => {
                         <button
                           onClick={() => updateQuantity(item.product.id, item.quantity - 1, item.selectedColor)}
                           className="p-1 px-2 text-neutral-600 hover:text-black hover:bg-neutral-100"
+                          aria-label="Decrease quantity"
                         >
                           <Minus className="w-3 h-3" />
                         </button>
-                        <span className="px-2 text-xs font-medium min-w-[20px] text-center">
+                        <span className="px-2 text-xs font-medium min-w-[20px] text-center" aria-label={`Quantity: ${item.quantity}`}>
                           {item.quantity}
                         </span>
                         <button
                           onClick={() => updateQuantity(item.product.id, item.quantity + 1, item.selectedColor)}
                           className="p-1 px-2 text-neutral-600 hover:text-black hover:bg-neutral-100"
+                          aria-label="Increase quantity"
                         >
                           <Plus className="w-3 h-3" />
                         </button>
