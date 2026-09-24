@@ -9,39 +9,45 @@ import { ShoppingBag } from "lucide-react";
 const COMMUNITY_POSTS = [
   {
     id: 1,
-    image: "/images/community/styled_1.jpg",
+    image: "/images/community/customer_1.jpg",
     handle: "@ananya_drapes",
     saree: "Wine Tissue Silk",
+    productId: "pal-001",
   },
   {
     id: 2,
-    image: "/images/community/styled_2.jpg",
+    image: "/images/community/customer_2.jpg",
     handle: "@priya_elegance",
     saree: "Mustard Cotton Silk",
+    productId: "pal-004",
   },
   {
     id: 3,
-    image: "/images/community/styled_3.jpg",
+    image: "/images/community/customer_3.jpg",
     handle: "@tanya.ethnic",
     saree: "Red Banarasi Brocade",
+    productId: "pal-005",
   },
   {
     id: 4,
-    image: "/images/community/styled_4.jpg",
+    image: "/images/community/customer_4.jpg",
     handle: "@meera.weaves",
     saree: "Royal Blue Kanjeevaram",
+    productId: "pal-002",
   },
   {
     id: 5,
-    image: "/images/community/styled_5.jpg",
+    image: "/images/community/customer_5.jpg",
     handle: "@radhika_celebrates",
     saree: "Lavender Organza",
+    productId: "pal-007",
   },
   {
     id: 6,
-    image: "/images/community/styled_6.jpg",
+    image: "/images/community/customer_6.jpg",
     handle: "@sneha_saree_diaries",
     saree: "Emerald Green Silk",
+    productId: "pal-009",
   },
 ];
 
@@ -69,21 +75,21 @@ export const InstagramGrid: React.FC = () => {
           {COMMUNITY_POSTS.map((post) => (
             <Link
               key={post.id}
-              href="/shop"
-              className="group relative aspect-[3/4] rounded-sm overflow-hidden bg-neutral-200 block shadow-xs hover:shadow-md transition-shadow border border-[#E8E2D9]"
+              href={`/product/${post.productId}`}
+              className="group relative aspect-square sm:aspect-[4/5] rounded-sm overflow-hidden bg-neutral-100 block shadow-xs hover:shadow-lg transition-all duration-300 border border-[#E8E2D9]"
             >
               <Image
                 src={post.image}
                 alt={post.saree}
                 fill
                 sizes="(max-width: 640px) 50vw, (max-width: 768px) 33vw, 16vw"
-                className="object-cover object-top group-hover:scale-105 transition-transform duration-500"
+                className="object-cover object-center group-hover:scale-105 transition-transform duration-500"
               />
-              <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center p-2 text-white text-center">
+              <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-end p-3 text-white text-center">
                 <ShoppingBag className="w-4 h-4 mb-1 text-[#C5A575]" />
-                <span className="text-[10px] font-sans font-medium">{post.handle}</span>
+                <span className="text-[10px] font-sans font-medium text-neutral-200">{post.handle}</span>
                 <span className="text-[11px] font-serif font-semibold mt-0.5 line-clamp-1">{post.saree}</span>
-                <span className="text-[9px] uppercase tracking-wider text-neutral-300 mt-1">Shop Drape →</span>
+                <span className="text-[9px] uppercase tracking-wider text-[#C5A575] font-semibold mt-1">Shop Saree →</span>
               </div>
             </Link>
           ))}
