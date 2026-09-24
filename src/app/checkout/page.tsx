@@ -113,6 +113,15 @@ export default function CheckoutPage() {
                 <span>Total Amount Paid:</span>
                 <strong className="text-[#541920]">{formatPrice(completedOrder.totalAmount)}</strong>
               </div>
+              <div className="pt-2 border-t border-[#E8E2D9] text-neutral-600">
+                <p className="font-semibold text-neutral-800 mb-0.5">Need help with your order?</p>
+                <p>
+                  Email: <a href="mailto:contact@palluvo.com" className="text-[#541920] font-medium hover:underline">contact@palluvo.com</a>
+                </p>
+                <p>
+                  Call / WhatsApp: <a href="tel:+918498854323" className="text-[#541920] font-medium hover:underline">+91 84988 54323</a> / <a href="tel:+918106789789" className="text-[#541920] font-medium hover:underline">+91 81067 89789</a>
+                </p>
+              </div>
             </div>
 
             <div className="flex flex-col sm:flex-row gap-3 pt-2">
@@ -218,9 +227,14 @@ export default function CheckoutPage() {
                 <form onSubmit={handleAddressSubmit} className="p-6 space-y-4 text-xs">
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
-                      <label className="block text-neutral-700 font-medium mb-1">Full Name *</label>
+                      <label htmlFor="fullName" className="block text-neutral-700 font-medium mb-1">
+                        Full Name *
+                      </label>
                       <input
+                        id="fullName"
+                        name="fullName"
                         type="text"
+                        autoComplete="name"
                         required
                         value={shippingAddress.fullName}
                         onChange={(e) => setShippingAddress({ ...shippingAddress, fullName: e.target.value })}
@@ -228,9 +242,14 @@ export default function CheckoutPage() {
                       />
                     </div>
                     <div>
-                      <label className="block text-neutral-700 font-medium mb-1">Phone Number (+91) *</label>
+                      <label htmlFor="phone" className="block text-neutral-700 font-medium mb-1">
+                        Phone Number (+91) *
+                      </label>
                       <input
+                        id="phone"
+                        name="phone"
                         type="tel"
+                        autoComplete="tel"
                         required
                         value={shippingAddress.phone}
                         onChange={(e) => setShippingAddress({ ...shippingAddress, phone: e.target.value })}
@@ -240,9 +259,14 @@ export default function CheckoutPage() {
                   </div>
 
                   <div>
-                    <label className="block text-neutral-700 font-medium mb-1">Email Address *</label>
+                    <label htmlFor="email" className="block text-neutral-700 font-medium mb-1">
+                      Email Address *
+                    </label>
                     <input
+                      id="email"
+                      name="email"
                       type="email"
+                      autoComplete="email"
                       required
                       value={shippingAddress.email}
                       onChange={(e) => setShippingAddress({ ...shippingAddress, email: e.target.value })}
@@ -251,9 +275,14 @@ export default function CheckoutPage() {
                   </div>
 
                   <div>
-                    <label className="block text-neutral-700 font-medium mb-1">Flat / House / Street Address *</label>
+                    <label htmlFor="addressLine1" className="block text-neutral-700 font-medium mb-1">
+                      Flat / House / Street Address *
+                    </label>
                     <input
+                      id="addressLine1"
+                      name="addressLine1"
                       type="text"
+                      autoComplete="street-address"
                       required
                       value={shippingAddress.addressLine1}
                       onChange={(e) => setShippingAddress({ ...shippingAddress, addressLine1: e.target.value })}
@@ -263,9 +292,14 @@ export default function CheckoutPage() {
 
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                     <div>
-                      <label className="block text-neutral-700 font-medium mb-1">City *</label>
+                      <label htmlFor="city" className="block text-neutral-700 font-medium mb-1">
+                        City *
+                      </label>
                       <input
+                        id="city"
+                        name="city"
                         type="text"
+                        autoComplete="address-level2"
                         required
                         value={shippingAddress.city}
                         onChange={(e) => setShippingAddress({ ...shippingAddress, city: e.target.value })}
@@ -273,9 +307,14 @@ export default function CheckoutPage() {
                       />
                     </div>
                     <div>
-                      <label className="block text-neutral-700 font-medium mb-1">State *</label>
+                      <label htmlFor="state" className="block text-neutral-700 font-medium mb-1">
+                        State *
+                      </label>
                       <input
+                        id="state"
+                        name="state"
                         type="text"
+                        autoComplete="address-level1"
                         required
                         value={shippingAddress.state}
                         onChange={(e) => setShippingAddress({ ...shippingAddress, state: e.target.value })}
@@ -283,9 +322,14 @@ export default function CheckoutPage() {
                       />
                     </div>
                     <div>
-                      <label className="block text-neutral-700 font-medium mb-1">PIN Code *</label>
+                      <label htmlFor="pincode" className="block text-neutral-700 font-medium mb-1">
+                        PIN Code *
+                      </label>
                       <input
+                        id="pincode"
+                        name="pincode"
                         type="text"
+                        autoComplete="postal-code"
                         required
                         maxLength={6}
                         value={shippingAddress.pincode}
@@ -338,7 +382,7 @@ export default function CheckoutPage() {
               {step === 2 && (
                 <form onSubmit={handleDeliverySubmit} className="p-6 space-y-3 text-xs">
                   <label
-                    onClick={() => setDeliveryMethod("standard")}
+                    htmlFor="delivery-standard"
                     className={`flex items-center justify-between p-3.5 border rounded-xs cursor-pointer ${
                       deliveryMethod === "standard"
                         ? "border-[#541920] bg-[#FAF7F2] ring-1 ring-[#541920]"
@@ -347,7 +391,10 @@ export default function CheckoutPage() {
                   >
                     <div className="flex items-center gap-3">
                       <input
+                        id="delivery-standard"
+                        name="deliveryMethod"
                         type="radio"
+                        value="standard"
                         checked={deliveryMethod === "standard"}
                         onChange={() => setDeliveryMethod("standard")}
                         className="text-[#541920]"
@@ -361,7 +408,7 @@ export default function CheckoutPage() {
                   </label>
 
                   <label
-                    onClick={() => setDeliveryMethod("express")}
+                    htmlFor="delivery-express"
                     className={`flex items-center justify-between p-3.5 border rounded-xs cursor-pointer ${
                       deliveryMethod === "express"
                         ? "border-[#541920] bg-[#FAF7F2] ring-1 ring-[#541920]"
@@ -370,7 +417,10 @@ export default function CheckoutPage() {
                   >
                     <div className="flex items-center gap-3">
                       <input
+                        id="delivery-express"
+                        name="deliveryMethod"
                         type="radio"
+                        value="express"
                         checked={deliveryMethod === "express"}
                         onChange={() => setDeliveryMethod("express")}
                         className="text-[#541920]"
@@ -415,7 +465,7 @@ export default function CheckoutPage() {
                   <div className="space-y-2.5">
                     {/* UPI */}
                     <label
-                      onClick={() => setPaymentMethod("upi")}
+                      htmlFor="payment-upi"
                       className={`flex flex-col p-3.5 border rounded-xs cursor-pointer ${
                         paymentMethod === "upi" ? "border-[#541920] bg-[#FAF7F2] ring-1 ring-[#541920]" : "border-[#E8E2D9]"
                       }`}
@@ -423,6 +473,9 @@ export default function CheckoutPage() {
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-2">
                           <input
+                            id="payment-upi"
+                            name="paymentMethod"
+                            value="upi"
                             type="radio"
                             checked={paymentMethod === "upi"}
                             onChange={() => setPaymentMethod("upi")}
@@ -434,7 +487,12 @@ export default function CheckoutPage() {
                       </div>
                       {paymentMethod === "upi" && (
                         <div className="mt-3 pt-3 border-t border-[#E8E2D9] space-y-2">
+                          <label htmlFor="upiId" className="block text-neutral-700 font-medium mb-1">
+                            UPI ID *
+                          </label>
                           <input
+                            id="upiId"
+                            name="upiId"
                             type="text"
                             placeholder="Enter UPI ID (e.g. mobile@upi)"
                             value={upiId}
@@ -447,13 +505,16 @@ export default function CheckoutPage() {
 
                     {/* Card */}
                     <label
-                      onClick={() => setPaymentMethod("card")}
+                      htmlFor="payment-card"
                       className={`flex flex-col p-3.5 border rounded-xs cursor-pointer ${
                         paymentMethod === "card" ? "border-[#541920] bg-[#FAF7F2] ring-1 ring-[#541920]" : "border-[#E8E2D9]"
                       }`}
                     >
                       <div className="flex items-center gap-2">
                         <input
+                          id="payment-card"
+                          name="paymentMethod"
+                          value="card"
                           type="radio"
                           checked={paymentMethod === "card"}
                           onChange={() => setPaymentMethod("card")}
@@ -465,13 +526,16 @@ export default function CheckoutPage() {
 
                     {/* Netbanking */}
                     <label
-                      onClick={() => setPaymentMethod("netbanking")}
+                      htmlFor="payment-netbanking"
                       className={`flex flex-col p-3.5 border rounded-xs cursor-pointer ${
                         paymentMethod === "netbanking" ? "border-[#541920] bg-[#FAF7F2] ring-1 ring-[#541920]" : "border-[#E8E2D9]"
                       }`}
                     >
                       <div className="flex items-center gap-2">
                         <input
+                          id="payment-netbanking"
+                          name="paymentMethod"
+                          value="netbanking"
                           type="radio"
                           checked={paymentMethod === "netbanking"}
                           onChange={() => setPaymentMethod("netbanking")}
@@ -483,7 +547,7 @@ export default function CheckoutPage() {
 
                     {/* Cash on Delivery */}
                     <label
-                      onClick={() => setPaymentMethod("cod")}
+                      htmlFor="payment-cod"
                       className={`flex flex-col p-3.5 border rounded-xs cursor-pointer ${
                         paymentMethod === "cod" ? "border-[#541920] bg-[#FAF7F2] ring-1 ring-[#541920]" : "border-[#E8E2D9]"
                       }`}
@@ -491,6 +555,9 @@ export default function CheckoutPage() {
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-2">
                           <input
+                            id="payment-cod"
+                            name="paymentMethod"
+                            value="cod"
                             type="radio"
                             checked={paymentMethod === "cod"}
                             onChange={() => setPaymentMethod("cod")}
@@ -579,6 +646,15 @@ export default function CheckoutPage() {
               <div className="text-[11px] text-neutral-500 pt-2 border-t border-[#E8E2D9] space-y-1">
                 <p>• 7-Day Hassle-Free Returns Guaranteed</p>
                 <p>• 100% Pure Silk Mark Verified</p>
+                <div className="pt-2 border-t border-[#E8E2D9] text-neutral-600">
+                  <p className="font-semibold text-neutral-800 mb-0.5">Need Help with Checkout?</p>
+                  <p>
+                    Email: <a href="mailto:contact@palluvo.com" className="text-[#541920] hover:underline font-medium">contact@palluvo.com</a>
+                  </p>
+                  <p>
+                    Call / WhatsApp: <a href="tel:+918498854323" className="text-[#541920] hover:underline font-medium">+91 84988 54323</a> / <a href="tel:+918106789789" className="text-[#541920] hover:underline font-medium">+91 81067 89789</a>
+                  </p>
+                </div>
               </div>
             </div>
           </div>

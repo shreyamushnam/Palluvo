@@ -118,7 +118,7 @@ export const Footer: React.FC = () => {
             {/* HELP */}
             <div>
               <p className="text-xs uppercase tracking-[0.2em] text-[#C5A575] font-semibold mb-4">
-                Help
+                Help & Contact
               </p>
               <ul className="space-y-2.5 text-xs text-[#FAF7F2]/75 font-light">
                 <li>
@@ -131,8 +131,23 @@ export const Footer: React.FC = () => {
                     onClick={() => openInfo("contact")}
                     className="hover:text-[#C5A575] transition-colors text-left"
                   >
-                    Contact Us
+                    Concierge & Help Desk
                   </button>
+                </li>
+                <li>
+                  <a href="mailto:contact@palluvo.com" className="hover:text-[#C5A575] transition-colors block">
+                    contact@palluvo.com
+                  </a>
+                </li>
+                <li>
+                  <a href="tel:+918498854323" className="hover:text-[#C5A575] transition-colors block">
+                    +91 84988 54323
+                  </a>
+                </li>
+                <li>
+                  <a href="tel:+918106789789" className="hover:text-[#C5A575] transition-colors block">
+                    +91 81067 89789
+                  </a>
                 </li>
                 <li>
                   <button

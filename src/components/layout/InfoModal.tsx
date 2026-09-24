@@ -153,8 +153,8 @@ export const InfoModal: React.FC<InfoModalProps> = ({
                       <Mail className="w-4 h-4 text-[#541920] shrink-0 mt-0.5" />
                       <div>
                         <strong className="block text-neutral-900">Email Concierge</strong>
-                        <a href="mailto:care@palluvo.com" className="text-[#541920] hover:underline">
-                          care@palluvo.com
+                        <a href="mailto:contact@palluvo.com" className="text-[#541920] hover:underline font-medium">
+                          contact@palluvo.com
                         </a>
                         <p className="text-[11px] text-neutral-400 mt-0.5">Response within 4 hours</p>
                       </div>
@@ -164,9 +164,14 @@ export const InfoModal: React.FC<InfoModalProps> = ({
                       <Phone className="w-4 h-4 text-[#541920] shrink-0 mt-0.5" />
                       <div>
                         <strong className="block text-neutral-900">WhatsApp & Phone</strong>
-                        <a href="tel:+919820044021" className="text-[#541920] hover:underline">
-                          +91 98200 44021
-                        </a>
+                        <div className="space-y-0.5">
+                          <a href="tel:+918498854323" className="text-[#541920] hover:underline block font-medium">
+                            +91 84988 54323
+                          </a>
+                          <a href="tel:+918106789789" className="text-[#541920] hover:underline block font-medium">
+                            +91 81067 89789
+                          </a>
+                        </div>
                         <p className="text-[11px] text-neutral-400 mt-0.5">Mon–Sat, 10 AM – 7 PM IST</p>
                       </div>
                     </div>
@@ -296,7 +301,7 @@ export const InfoModal: React.FC<InfoModalProps> = ({
                         ✨ Easy Return Window
                       </strong>
                       <p>
-                        You can initiate a return or exchange within <strong>7 days of delivery</strong> directly from your account or by emailing us at <strong>care@palluvo.com</strong>.
+                        You can initiate a return or exchange within <strong>7 days of delivery</strong> directly from your account or by emailing us at <strong>contact@palluvo.com</strong>.
                       </p>
                     </div>
 
