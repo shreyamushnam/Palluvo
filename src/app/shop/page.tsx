@@ -249,6 +249,7 @@ function ShopContent() {
                     router.push(qStr ? `/shop?${qStr}` : "/shop", { scroll: false });
                   }}
                   className="hover:text-red-600 cursor-pointer"
+                  aria-label={`Remove category filter: ${selectedCategory}`}
                 >
                   <X className="w-3 h-3" />
                 </button>
@@ -257,7 +258,11 @@ function ShopContent() {
             {selectedFabric && (
               <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-white border border-[#DCD5C9] rounded-full text-xs text-neutral-800">
                 Fabric: {selectedFabric}
-                <button onClick={() => setSelectedFabric("")} className="hover:text-red-600 cursor-pointer">
+                <button
+                  onClick={() => setSelectedFabric("")}
+                  className="hover:text-red-600 cursor-pointer"
+                  aria-label={`Remove fabric filter: ${selectedFabric}`}
+                >
                   <X className="w-3 h-3" />
                 </button>
               </span>
@@ -265,7 +270,11 @@ function ShopContent() {
             {selectedOccasion && (
               <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-white border border-[#DCD5C9] rounded-full text-xs text-neutral-800">
                 Occasion: {selectedOccasion}
-                <button onClick={() => setSelectedOccasion("")} className="hover:text-red-600 cursor-pointer">
+                <button
+                  onClick={() => setSelectedOccasion("")}
+                  className="hover:text-red-600 cursor-pointer"
+                  aria-label={`Remove occasion filter: ${selectedOccasion}`}
+                >
                   <X className="w-3 h-3" />
                 </button>
               </span>
@@ -273,7 +282,11 @@ function ShopContent() {
             {selectedPriceRange !== null && (
               <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-white border border-[#DCD5C9] rounded-full text-xs text-neutral-800">
                 Price: {PRICE_RANGES[selectedPriceRange].label}
-                <button onClick={() => setSelectedPriceRange(null)} className="hover:text-red-600 cursor-pointer">
+                <button
+                  onClick={() => setSelectedPriceRange(null)}
+                  className="hover:text-red-600 cursor-pointer"
+                  aria-label={`Remove price filter: ${PRICE_RANGES[selectedPriceRange].label}`}
+                >
                   <X className="w-3 h-3" />
                 </button>
               </span>
@@ -457,7 +470,8 @@ function ShopContent() {
                 <h3 className="font-serif text-base font-semibold">Filter Sarees</h3>
                 <button
                   onClick={() => setIsMobileFilterOpen(false)}
-                  className="p-1 text-neutral-500 hover:text-black"
+                  className="p-1 text-neutral-500 hover:text-black rounded-full"
+                  aria-label="Close filters"
                 >
                   <X className="w-5 h-5" />
                 </button>
