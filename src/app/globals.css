@@ -1,0 +1,140 @@
+@import "tailwindcss";
+
+@layer base {
+  :root {
+    --bg-ivory: #FAF7F2;
+    --bg-cream: #F5EFEB;
+    --bg-warm-white: #FFFFFF;
+    --text-charcoal: #1C1A18;
+    --text-muted: #5E5A54;
+    --text-subtle: #8A857E;
+    --accent-wine: #541920;
+    --accent-wine-dark: #3B0E14;
+    --accent-terracotta: #BF6A54;
+    --accent-gold: #C5A575;
+    --accent-gold-light: #E2D1B8;
+    --border-light: rgba(28, 26, 24, 0.08);
+    --border-gold: rgba(197, 165, 117, 0.35);
+  }
+
+  html {
+    scroll-behavior: smooth;
+    background-color: var(--bg-ivory);
+    color: var(--text-charcoal);
+    font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+  }
+
+  body {
+    background-color: var(--bg-ivory);
+    color: var(--text-charcoal);
+    overflow-x: hidden;
+    selection-background-color: #541920;
+    selection-color: #FAF7F2;
+  }
+
+  ::selection {
+    background: #541920;
+    color: #FAF7F2;
+  }
+}
+
+/* Custom Editorial Typography & Utilities */
+.font-serif-display {
+  font-family: var(--font-cormorant), Georgia, serif;
+}
+
+.font-sans-body {
+  font-family: var(--font-montserrat), -apple-system, BlinkMacSystemFont, sans-serif;
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 5px;
+  height: 5px;
+}
+
+::-webkit-scrollbar-track {
+  background: #FAF7F2;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #C5A575;
+  border-radius: 9999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #541920;
+}
+
+/* Micro-animations */
+@keyframes fadeInScale {
+  from {
+    opacity: 0;
+    transform: scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes slowPan {
+  0% {
+    transform: scale(1.04) translateY(0);
+  }
+  50% {
+    transform: scale(1.07) translateY(-8px);
+  }
+  100% {
+    transform: scale(1.04) translateY(0);
+  }
+}
+
+@keyframes pulseSubtle {
+  0%, 100% {
+    opacity: 0.3;
+    transform: translateY(0);
+  }
+  50% {
+    opacity: 0.85;
+    transform: translateY(6px);
+  }
+}
+
+.animate-slow-pan {
+  animation: slowPan 24s ease-in-out infinite alternate;
+}
+
+.animate-scroll-indicator {
+  animation: pulseSubtle 2.5s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+/* Glassmorphism for sticky nav & modals */
+.glass-nav {
+  background: rgba(250, 247, 242, 0.88);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border-bottom: 1px solid rgba(28, 26, 24, 0.06);
+}
+
+.glass-card {
+  background: rgba(255, 255, 255, 0.75);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(197, 165, 117, 0.2);
+}
+
+/* Editorial line decorations */
+.gold-divider {
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(197, 165, 117, 0.5), transparent);
+}
+
+/* Hide scrollbar for clean horizontal galleries */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
