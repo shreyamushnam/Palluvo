@@ -1,59 +1,54 @@
 "use client";
 
 import React from "react";
-import { Award, Users, ShieldCheck, Truck } from "lucide-react";
+import { Sparkles, CheckCircle2, ShieldCheck, RotateCcw } from "lucide-react";
 
 const TRUST_PILLARS = [
   {
-    icon: Award,
-    title: "Silk Mark Certified",
-    description: "Every silk saree bears government-authorized Silk Mark certification guaranteeing 100% pure silk warp and weft.",
+    icon: Sparkles,
+    title: "Premium Fabrics",
+    description: "Thoughtfully selected textiles",
   },
   {
-    icon: Users,
-    title: "Direct From Weavers",
-    description: "Ethically sourced directly from 350+ master weaver families across Varanasi, Kanchipuram, and Bengal.",
-  },
-  {
-    icon: Truck,
-    title: "Free Express Shipping",
-    description: "Complimentary insured delivery across all Indian pin codes for orders over ₹1,999 with tamper-proof packaging.",
+    icon: CheckCircle2,
+    title: "Quality Checked",
+    description: "Every piece inspected before dispatch",
   },
   {
     icon: ShieldCheck,
-    title: "7-Day Easy Returns",
-    description: "Complete peace of mind with doorstep reverse pickup, full refunds, and real-time order tracking.",
+    title: "Secure Payments",
+    description: "Safe and secure checkout",
+  },
+  {
+    icon: RotateCcw,
+    title: "Easy Returns",
+    description: "Simple return experience",
   },
 ];
 
 export const TrustSection: React.FC = () => {
   return (
-    <section className="py-12 sm:py-16 bg-[#F4EFE6] border-t border-[#E8E2D9]">
+    <section className="py-10 sm:py-12 bg-[#FAF7F2] border-t border-[#E8E2D9]">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="text-center max-w-xl mx-auto mb-10">
-          <span className="text-xs uppercase tracking-widest text-[#541920] font-semibold">
-            The PALLUVO Promise
-          </span>
-          <h2 className="text-2xl sm:text-3xl lg:text-4xl font-serif font-normal text-neutral-900 mt-1">
-            Why Discerning Drape Lovers Choose Us
-          </h2>
-        </div>
+        <h2 className="text-xl sm:text-2xl font-serif font-normal text-neutral-900 mb-8 text-center sm:text-left">
+          Why PALLUVO
+        </h2>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
           {TRUST_PILLARS.map((pillar, idx) => {
             const Icon = pillar.icon;
             return (
               <div
                 key={idx}
-                className="bg-[#FAF7F2] p-6 rounded-sm border border-[#E8E2D9] text-center space-y-3 hover:border-[#541920] transition-colors"
+                className="bg-white p-5 rounded-sm border border-[#E8E2D9] text-left space-y-2 hover:border-[#541920] transition-colors"
               >
-                <div className="w-12 h-12 mx-auto rounded-full bg-[#541920]/10 flex items-center justify-center text-[#541920]">
-                  <Icon className="w-6 h-6" />
+                <div className="w-10 h-10 rounded-full bg-[#FAF7F2] flex items-center justify-center text-[#541920] border border-[#E8E2D9]">
+                  <Icon className="w-5 h-5" />
                 </div>
-                <h3 className="font-serif text-base font-medium text-neutral-900">
+                <h3 className="font-serif text-sm font-semibold text-neutral-900">
                   {pillar.title}
                 </h3>
-                <p className="text-xs text-neutral-600 leading-relaxed font-sans">
+                <p className="text-xs text-neutral-500 font-sans">
                   {pillar.description}
                 </p>
               </div>

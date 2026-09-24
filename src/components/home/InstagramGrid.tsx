@@ -9,39 +9,39 @@ import { ShoppingBag } from "lucide-react";
 const COMMUNITY_POSTS = [
   {
     id: 1,
-    image: "https://images.unsplash.com/photo-1617627143750-d86bc21e42bb?auto=format&fit=crop&w=700&q=80",
+    image: "/images/community/styled_1.jpg",
     handle: "@ananya_drapes",
-    saree: "Rani Crimson Silk",
+    saree: "Wine Tissue Silk",
   },
   {
     id: 2,
-    image: "https://images.unsplash.com/photo-1583391733956-3750e0ff4e8b?auto=format&fit=crop&w=700&q=80",
+    image: "/images/community/styled_2.jpg",
     handle: "@priya_elegance",
-    saree: "Emerald Kanjeevaram",
+    saree: "Mustard Cotton Silk",
   },
   {
     id: 3,
-    image: "https://images.unsplash.com/photo-1609357605129-26f69add5d6e?auto=format&fit=crop&w=700&q=80",
+    image: "/images/community/styled_3.jpg",
     handle: "@tanya.ethnic",
-    saree: "Peacock Blue Paithani",
+    saree: "Red Banarasi Brocade",
   },
   {
     id: 4,
-    image: "https://images.unsplash.com/photo-1610030469983-98e550d6193c?auto=format&fit=crop&w=700&q=80",
+    image: "/images/community/styled_4.jpg",
     handle: "@meera.weaves",
-    saree: "Banarasi Golden Brocade",
+    saree: "Royal Blue Kanjeevaram",
   },
   {
     id: 5,
-    image: "https://images.unsplash.com/photo-1617627143750-d86bc21e42bb?auto=format&fit=crop&w=700&q=80",
+    image: "/images/community/styled_5.jpg",
     handle: "@radhika_celebrates",
-    saree: "Lotus Organza Tissue",
+    saree: "Lavender Organza",
   },
   {
     id: 6,
-    image: "https://images.unsplash.com/photo-1583391733956-3750e0ff4e8b?auto=format&fit=crop&w=700&q=80",
+    image: "/images/community/styled_6.jpg",
     handle: "@sneha_saree_diaries",
-    saree: "Sunlit Mustard Tussar",
+    saree: "Emerald Green Silk",
   },
 ];
 
@@ -57,20 +57,20 @@ export const InstagramGrid: React.FC = () => {
             <span>#PalluvoDrapes</span>
           </div>
           <h2 className="text-2xl sm:text-3xl font-serif font-normal text-neutral-900">
-            Styled by You Across India
+            Styled by PALLUVO
           </h2>
           <p className="text-xs text-neutral-600 font-sans">
-            Tag @palluvo_official in your festive and wedding moments to be featured.
+            Real customers celebrating in handcrafted PALLUVO weaves across India.
           </p>
         </div>
 
         {/* 6-Image Grid */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-3">
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-3.5">
           {COMMUNITY_POSTS.map((post) => (
             <Link
               key={post.id}
               href="/shop"
-              className="group relative aspect-[3/4] rounded-sm overflow-hidden bg-neutral-200 block shadow-2xs hover:shadow-md transition-shadow"
+              className="group relative aspect-[3/4] rounded-sm overflow-hidden bg-neutral-200 block shadow-xs hover:shadow-md transition-shadow border border-[#E8E2D9]"
             >
               <Image
                 src={post.image}
@@ -79,11 +79,11 @@ export const InstagramGrid: React.FC = () => {
                 sizes="(max-width: 640px) 50vw, (max-width: 768px) 33vw, 16vw"
                 className="object-cover object-top group-hover:scale-105 transition-transform duration-500"
               />
-              <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center p-2 text-white text-center">
+              <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center p-2 text-white text-center">
                 <ShoppingBag className="w-4 h-4 mb-1 text-[#C5A575]" />
                 <span className="text-[10px] font-sans font-medium">{post.handle}</span>
                 <span className="text-[11px] font-serif font-semibold mt-0.5 line-clamp-1">{post.saree}</span>
-                <span className="text-[9px] uppercase tracking-wider text-neutral-300 mt-1">Shop Look →</span>
+                <span className="text-[9px] uppercase tracking-wider text-neutral-300 mt-1">Shop Drape →</span>
               </div>
             </Link>
           ))}
