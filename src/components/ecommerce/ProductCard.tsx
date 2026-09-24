@@ -45,31 +45,37 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
       onMouseLeave={() => setIsHovered(false)}
     >
       {/* Product Image Area */}
-      <Link href={`/product/${product.id}`} className="relative block aspect-[3/4] w-full overflow-hidden bg-[#F5EFEB]">
-        {/* Primary Image */}
-        <Image
-          src={product.primaryImage}
-          alt={product.name}
-          fill
-          sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
-          className={`object-cover object-top transition-all duration-500 ease-out ${
-            isHovered ? "scale-105 opacity-0" : "scale-100 opacity-100"
-          }`}
-        />
+      <div className="relative aspect-[3/4] w-full overflow-hidden bg-[#F5EFEB]">
+        <Link
+          href={`/product/${product.id}`}
+          className="relative block w-full h-full"
+          aria-label={`View ${product.name}`}
+        >
+          {/* Primary Image */}
+          <Image
+            src={product.primaryImage}
+            alt={product.name}
+            fill
+            sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
+            className={`object-cover object-top transition-all duration-500 ease-out ${
+              isHovered ? "scale-105 opacity-0" : "scale-100 opacity-100"
+            }`}
+          />
 
-        {/* Hover / Secondary Image */}
-        <Image
-          src={product.hoverImage}
-          alt={`${product.name} alternate view`}
-          fill
-          sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
-          className={`object-cover object-top transition-all duration-500 ease-out ${
-            isHovered ? "scale-105 opacity-100" : "scale-100 opacity-0"
-          }`}
-        />
+          {/* Hover / Secondary Image */}
+          <Image
+            src={product.hoverImage}
+            alt={`${product.name} alternate view`}
+            fill
+            sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
+            className={`object-cover object-top transition-all duration-500 ease-out ${
+              isHovered ? "scale-105 opacity-100" : "scale-100 opacity-0"
+            }`}
+          />
+        </Link>
 
         {/* Badges */}
-        <div className="absolute top-2.5 left-2.5 flex flex-col gap-1 z-10">
+        <div className="absolute top-2.5 left-2.5 flex flex-col gap-1 z-10 pointer-events-none">
           {product.isBestseller && (
             <span className="px-2 py-0.5 bg-[#541920] text-[#FAF7F2] text-[9px] uppercase tracking-wider font-semibold">
               Bestseller
@@ -84,13 +90,14 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
 
         {/* Wishlist Button */}
         <button
+          type="button"
           onClick={handleWishlist}
-          className={`absolute top-2.5 right-2.5 z-10 p-2 rounded-full backdrop-blur-md transition-all duration-200 ${
+          className={`absolute top-2.5 right-2.5 z-10 p-2 rounded-full backdrop-blur-md transition-all duration-200 cursor-pointer ${
             isSaved
               ? "bg-[#541920] text-[#FAF7F2]"
               : "bg-[#FAF7F2]/80 text-[#1C1A18] hover:text-[#541920] hover:bg-white"
           }`}
-          aria-label={isSaved ? "Remove from wishlist" : "Add to wishlist"}
+          aria-label={isSaved ? `Remove ${product.name} from wishlist` : `Add ${product.name} to wishlist`}
         >
           <Heart size={15} className={isSaved ? "fill-current" : ""} />
         </button>
@@ -98,13 +105,15 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
         {/* Quick View Button (Desktop Hover) */}
         <div className="absolute inset-x-2 bottom-2 z-10 hidden sm:flex items-center gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
           <button
+            type="button"
             onClick={handleQuickView}
-            className="flex-1 py-2.5 bg-[#FAF7F2]/95 hover:bg-white text-[#1C1A18] text-[11px] uppercase tracking-wider font-semibold shadow-sm flex items-center justify-center gap-1.5 transition-colors"
+            className="flex-1 py-2.5 bg-[#FAF7F2]/95 hover:bg-white text-[#1C1A18] text-[11px] uppercase tracking-wider font-semibold shadow-sm flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
+            aria-label={`Quick view ${product.name}`}
           >
             <Eye size={13} /> Quick View
           </button>
         </div>
-      </Link>
+      </div>
 
       {/* Product Details Section */}
       <div className="pt-3.5 pb-2 flex flex-col flex-1 justify-between">
