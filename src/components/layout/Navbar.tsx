@@ -127,21 +127,21 @@ export const Navbar: React.FC = () => {
             : "bg-[#FAF7F2] border-b border-[#1C1A18]/6 py-4 sm:py-5"
         }`}
       >
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 xl:px-8 2xl:px-10 flex items-center justify-between">
+        <div className="max-w-7xl mx-auto px-3 sm:px-6 xl:px-8 2xl:px-10 flex items-center justify-between w-full min-w-0">
           
           {/* Mobile Menu Trigger & Logo Group */}
-          <div className="flex items-center gap-3 xl:gap-0">
+          <div className="flex items-center gap-1.5 sm:gap-3 xl:gap-0 min-w-0 shrink">
             <button
               onClick={() => setMobileMenuOpen(true)}
-              className="xl:hidden min-h-[44px] min-w-[44px] p-2 text-[#1C1A18] hover:text-[#541920] transition-colors flex items-center justify-center focus-visible:ring-2 focus-visible:ring-[#541920] focus-visible:outline-none cursor-pointer"
+              className="xl:hidden min-h-[44px] min-w-[44px] p-2 text-[#1C1A18] hover:text-[#541920] transition-colors flex items-center justify-center focus-visible:ring-2 focus-visible:ring-[#541920] focus-visible:outline-none cursor-pointer shrink-0"
               aria-label="Open mobile category menu"
             >
               <Menu size={22} />
             </button>
 
             {/* Brand Logo */}
-            <Link href="/" className="flex flex-col items-start group">
-              <span className="font-serif-display text-2xl sm:text-3xl font-medium tracking-[0.2em] text-[#1C1A18] uppercase group-hover:text-[#541920] transition-colors">
+            <Link href="/" className="flex flex-col items-start group min-w-0">
+              <span className="font-serif-display text-xl sm:text-2xl lg:text-3xl font-medium tracking-[0.16em] sm:tracking-[0.2em] text-[#1C1A18] uppercase group-hover:text-[#541920] transition-colors truncate">
                 PALLUVO
               </span>
               <span className="text-[8px] sm:text-[9px] tracking-[0.28em] text-[#8A857E] uppercase font-light -mt-1 hidden sm:block">
@@ -158,7 +158,7 @@ export const Navbar: React.FC = () => {
           </nav>
 
           {/* Right: E-Commerce Utilities */}
-          <div className="flex items-center space-x-2 sm:space-x-4 shrink-0">
+          <div className="flex items-center gap-0.5 sm:gap-1.5 xl:gap-3 shrink-0">
             {/* Search */}
             <button
               onClick={() => setIsSearchOpen(true)}
@@ -172,10 +172,10 @@ export const Navbar: React.FC = () => {
               </span>
             </button>
 
-            {/* Account */}
+            {/* Account - on mobile <sm, Account is accessed via the mobile drawer or bottom nav */}
             <Link
               href="/account"
-              className="min-h-[44px] min-w-[44px] p-2 text-[#1C1A18] hover:text-[#541920] transition-colors flex items-center justify-center focus-visible:ring-2 focus-visible:ring-[#541920] focus-visible:outline-none"
+              className="hidden sm:flex min-h-[44px] min-w-[44px] p-2 text-[#1C1A18] hover:text-[#541920] transition-colors items-center justify-center focus-visible:ring-2 focus-visible:ring-[#541920] focus-visible:outline-none"
               aria-label="My Account"
               title="Account"
             >

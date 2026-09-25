@@ -71,7 +71,7 @@ export const FeaturedCollectionSection: React.FC = () => {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         
         {/* Header with Title and Unified Controls */}
-        <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-8">
+        <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-8 w-full max-w-full min-w-0">
           <div>
             <span className="text-xs uppercase tracking-widest text-[#541920] font-semibold block mb-1">
               Curated Drapes
@@ -82,33 +82,35 @@ export const FeaturedCollectionSection: React.FC = () => {
           </div>
 
           {/* Tab Controls (New Arrivals, Popular, Bestsellers) */}
-          <div
-            role="tablist"
-            aria-label="Product Collections"
-            className="flex items-center gap-1.5 p-1 bg-[#F4EFE6] border border-[#DCD5C9] rounded-sm self-start sm:self-auto overflow-x-auto max-w-full"
-          >
-            {TABS.map((tab, idx) => {
-              const isActive = activeTabId === tab.id;
-              return (
-                <button
-                  key={tab.id}
-                  id={`tab-${tab.id}`}
-                  role="tab"
-                  aria-selected={isActive}
-                  aria-controls="featured-product-grid"
-                  tabIndex={isActive ? 0 : -1}
-                  onClick={() => setActiveTabId(tab.id)}
-                  onKeyDown={(e) => handleKeyDown(e, idx)}
-                  className={`min-h-[44px] px-4 py-2 text-xs uppercase tracking-wider font-semibold rounded-xs transition-all whitespace-nowrap cursor-pointer flex items-center justify-center focus-visible:ring-2 focus-visible:ring-[#541920] focus-visible:outline-none ${
-                    isActive
-                      ? "bg-[#541920] text-white shadow-xs"
-                      : "text-neutral-700 hover:text-neutral-900 hover:bg-white/60"
-                  }`}
-                >
-                  {tab.label}
-                </button>
-              );
-            })}
+          <div className="w-full sm:w-auto max-w-full min-w-0 overflow-hidden">
+            <div
+              role="tablist"
+              aria-label="Product Collections"
+              className="flex items-center gap-1 sm:gap-1.5 p-1 bg-[#F4EFE6] border border-[#DCD5C9] rounded-sm overflow-x-auto max-w-full w-full sm:w-auto scrollbar-none"
+            >
+              {TABS.map((tab, idx) => {
+                const isActive = activeTabId === tab.id;
+                return (
+                  <button
+                    key={tab.id}
+                    id={`tab-${tab.id}`}
+                    role="tab"
+                    aria-selected={isActive}
+                    aria-controls="featured-product-grid"
+                    tabIndex={isActive ? 0 : -1}
+                    onClick={() => setActiveTabId(tab.id)}
+                    onKeyDown={(e) => handleKeyDown(e, idx)}
+                    className={`min-h-[44px] flex-1 sm:flex-initial px-2.5 sm:px-4 py-2 text-[11px] sm:text-xs uppercase tracking-wider font-semibold rounded-xs transition-all whitespace-nowrap cursor-pointer flex items-center justify-center shrink-0 focus-visible:ring-2 focus-visible:ring-[#541920] focus-visible:outline-none ${
+                      isActive
+                        ? "bg-[#541920] text-white shadow-xs"
+                        : "text-neutral-700 hover:text-neutral-900 hover:bg-white/60"
+                    }`}
+                  >
+                    {tab.label}
+                  </button>
+                );
+              })}
+            </div>
           </div>
         </div>
 

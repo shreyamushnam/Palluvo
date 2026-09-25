@@ -81,7 +81,7 @@ export const HeroBanner: React.FC = () => {
             </p>
 
             {/* Main Action Buttons */}
-            <div className="flex flex-row items-center justify-center lg:justify-start gap-2.5 sm:gap-3.5 pt-1 sm:pt-2">
+            <div className="flex flex-row flex-wrap sm:flex-nowrap items-center justify-center lg:justify-start gap-2 sm:gap-3.5 pt-1 sm:pt-2">
               <Link
                 href={slide.primaryCta.href}
                 className="min-h-[44px] px-6 sm:px-8 py-2.5 sm:py-3.5 bg-[#541920] hover:bg-[#3D1217] text-white text-xs uppercase tracking-widest font-semibold rounded-xs shadow-md transition-all flex items-center justify-center gap-2 group focus-visible:ring-2 focus-visible:ring-[#541920] focus-visible:outline-none shrink-0"
@@ -125,7 +125,7 @@ export const HeroBanner: React.FC = () => {
 
           {/* Right Column: High Quality Saree Hero Image Showcase */}
           <div className="lg:col-span-6 relative mt-2 lg:mt-0">
-            <div className="relative mx-auto max-w-[280px] sm:max-w-md lg:max-w-none">
+            <div className="relative mx-auto max-w-[320px] sm:max-w-md lg:max-w-none">
               <div className="relative aspect-[4/5] sm:aspect-[3/4] rounded-sm overflow-hidden shadow-2xl bg-neutral-100 border-2 sm:border-4 border-white">
                 <Image
                   key={slide.image}
@@ -139,24 +139,30 @@ export const HeroBanner: React.FC = () => {
                 />
 
                 {/* Floating Product Highlight Card */}
-                <div className="absolute bottom-3 left-3 right-3 sm:bottom-4 sm:left-4 sm:right-4 bg-white/95 backdrop-blur-md p-2.5 sm:p-3.5 rounded-xs shadow-lg border border-[#E8E2D9] flex items-center justify-between gap-2">
-                  <div className="min-w-0">
-                    <span className="text-[10px] font-bold uppercase tracking-widest text-[#541920] block truncate">
-                      {slide.product.badge}
-                    </span>
-                    <h3 className="text-xs sm:text-sm font-serif font-medium text-neutral-900 truncate">
+                <div className="absolute bottom-2.5 left-2.5 right-2.5 sm:bottom-4 sm:left-4 sm:right-4 bg-white/95 backdrop-blur-md p-2.5 sm:p-3.5 rounded-xs shadow-lg border border-[#E8E2D9] flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 sm:gap-3">
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center justify-between gap-2 mb-0.5">
+                      <span className="text-[10px] font-bold uppercase tracking-widest text-[#541920] block">
+                        {slide.product.badge}
+                      </span>
+                      <span className="text-[10px] text-[#15803D] font-bold bg-[#15803D]/10 px-1.5 py-0.5 rounded-2xs shrink-0 whitespace-nowrap">
+                        {slide.product.discount}
+                      </span>
+                    </div>
+
+                    <h3 className="text-xs sm:text-sm font-serif font-medium text-neutral-900 leading-snug">
                       {slide.product.name}
                     </h3>
+
                     <div className="flex items-baseline gap-1.5 sm:gap-2 mt-0.5">
-                      <span className="text-xs font-bold text-[#541920]">{slide.product.price}</span>
+                      <span className="text-xs sm:text-sm font-bold text-[#541920]">{slide.product.price}</span>
                       <span className="text-[11px] text-neutral-400 line-through">{slide.product.originalPrice}</span>
-                      <span className="text-[10px] text-[#15803D] font-bold">{slide.product.discount}</span>
                     </div>
                   </div>
 
                   <Link
                     href={slide.product.href}
-                    className="min-h-[44px] px-3.5 py-2 bg-[#541920] hover:bg-[#3D1217] text-white text-[11px] uppercase tracking-wider font-semibold rounded-xs shadow-xs transition-colors shrink-0 flex items-center justify-center focus-visible:ring-2 focus-visible:ring-[#541920] focus-visible:outline-none"
+                    className="w-full sm:w-auto min-h-[44px] px-3.5 py-2 bg-[#541920] hover:bg-[#3D1217] text-white text-[11px] uppercase tracking-wider font-semibold rounded-xs shadow-xs transition-colors shrink-0 flex items-center justify-center focus-visible:ring-2 focus-visible:ring-[#541920] focus-visible:outline-none"
                   >
                     View Saree
                   </Link>
