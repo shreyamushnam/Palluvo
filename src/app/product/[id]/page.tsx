@@ -144,12 +144,13 @@ export default function ProductDetailPage({
             <div>
               <div className="flex items-center justify-between">
                 <span className="text-xs uppercase tracking-widest text-[#541920] font-semibold">
-                  {product.category} Sarees
+                  {product.category} {product.hasBlousePiece ? "Sarees" : "Collection"}
                 </span>
                 <button
                   onClick={handleShare}
-                  className="text-neutral-400 hover:text-black p-1 transition-colors"
+                  className="text-neutral-400 hover:text-black p-1 transition-colors min-h-[44px] min-w-[44px] flex items-center justify-center focus-visible:ring-2 focus-visible:ring-[#541920] focus-visible:outline-none"
                   title="Share product link"
+                  aria-label="Share product link"
                 >
                   <Share2 className="w-4 h-4" />
                 </button>
@@ -201,13 +202,14 @@ export default function ProductDetailPage({
                     <button
                       key={c.name}
                       onClick={() => setSelectedColor(c.name)}
-                      className={`w-7 h-7 rounded-full transition-all border-2 ${
+                      className={`w-7 h-7 rounded-full transition-all border-2 min-h-[32px] min-w-[32px] focus-visible:ring-2 focus-visible:ring-[#541920] focus-visible:outline-none ${
                         selectedColor === c.name
                           ? "border-[#541920] ring-2 ring-[#541920]/30 scale-110"
                           : "border-transparent opacity-80 hover:opacity-100"
                       }`}
                       style={{ backgroundColor: c.hex }}
                       title={c.name}
+                      aria-label={`Select color ${c.name}`}
                     />
                   ))}
                 </div>
@@ -215,26 +217,28 @@ export default function ProductDetailPage({
             )}
 
             {/* Blouse Option */}
-            <div>
-              <label className="block text-xs font-semibold text-neutral-800 mb-2">
-                Select Blouse Option:
-              </label>
-              <div className="flex gap-3">
-                {["With Blouse", "Without Blouse"].map((opt) => (
-                  <button
-                    key={opt}
-                    onClick={() => setBlouseOption(opt)}
-                    className={`px-4 py-2 text-xs rounded-xs border transition-all font-medium ${
-                      blouseOption === opt
-                        ? "border-[#541920] bg-[#FAF7F2] text-[#541920] ring-1 ring-[#541920]"
-                        : "border-[#DCD5C9] bg-white text-neutral-700 hover:border-neutral-400"
-                    }`}
-                  >
-                    {opt}
-                  </button>
-                ))}
+            {product.hasBlousePiece && (
+              <div>
+                <label className="block text-xs font-semibold text-neutral-800 mb-2">
+                  Select Blouse Option:
+                </label>
+                <div className="flex gap-3">
+                  {["With Blouse", "Without Blouse"].map((opt) => (
+                    <button
+                      key={opt}
+                      onClick={() => setBlouseOption(opt)}
+                      className={`min-h-[44px] px-4 py-2 text-xs rounded-xs border transition-all font-medium focus-visible:ring-2 focus-visible:ring-[#541920] focus-visible:outline-none cursor-pointer ${
+                        blouseOption === opt
+                          ? "border-[#541920] bg-[#FAF7F2] text-[#541920] ring-1 ring-[#541920]"
+                          : "border-[#DCD5C9] bg-white text-neutral-700 hover:border-neutral-400"
+                      }`}
+                    >
+                      {opt}
+                    </button>
+                  ))}
+                </div>
               </div>
-            </div>
+            )}
 
             {/* Quantity Stepper & Heart */}
             <div className="flex items-center gap-3">

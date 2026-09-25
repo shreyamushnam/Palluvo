@@ -14,7 +14,7 @@ export const ShopTheLook: React.FC = () => {
   const handleAddSingleItem = (item: typeof SHOP_THE_LOOK_ITEMS[0]) => {
     if (item.productId) {
       const prod = PRODUCTS.find((p) => p.id === item.productId) || PRODUCTS[0];
-      addToCart(prod, 1, "Wine", "With Blouse");
+      addToCart(prod, 1, prod.colors?.[0]?.name || "Default", prod.hasBlousePiece ? "With Blouse" : "Standard");
     } else {
       showToast(`Added ${item.title || item.name} to bag!`);
     }
@@ -41,7 +41,8 @@ export const ShopTheLook: React.FC = () => {
           <div className="lg:col-span-6 relative">
             <Link
               href="/product/pal-001"
-              className="group relative block aspect-[3/4] rounded-sm overflow-hidden bg-neutral-100 shadow-sm border border-[#E8E2D9]"
+              className="group relative block aspect-[3/4] rounded-sm overflow-hidden bg-neutral-100 shadow-sm border border-[#E8E2D9] focus-visible:ring-2 focus-visible:ring-[#541920] focus-visible:outline-none"
+              aria-label="View featured Wine Tissue Silk Saree"
             >
               <Image
                 src="/images/products/wine-tissue-silk.jpg"
@@ -51,7 +52,7 @@ export const ShopTheLook: React.FC = () => {
                 className="object-cover object-top group-hover:scale-105 transition-transform duration-500"
               />
               <div className="absolute inset-0 bg-black/25 opacity-0 group-hover:opacity-100 transition-opacity flex items-end p-4">
-                <span className="px-4 py-2 bg-white/95 text-neutral-900 text-xs uppercase tracking-wider font-semibold rounded-xs shadow-md">
+                <span className="min-h-[44px] px-4 py-2 bg-white/95 text-neutral-900 text-xs uppercase tracking-wider font-semibold rounded-xs shadow-md flex items-center justify-center">
                   View Featured Saree →
                 </span>
               </div>
@@ -67,6 +68,7 @@ export const ShopTheLook: React.FC = () => {
             <div className="space-y-4">
               {SHOP_THE_LOOK_ITEMS.map((item) => {
                 const isAdded = addedItems[item.id];
+                const itemHref = item.productId ? `/product/${item.productId}` : "/product/pal-001";
                 return (
                   <div
                     key={item.id}
@@ -74,8 +76,9 @@ export const ShopTheLook: React.FC = () => {
                   >
                     <div className="flex items-center gap-3 min-w-0">
                       <Link
-                        href={item.productId ? `/product/${item.productId}` : "/product/pal-001"}
-                        className="relative w-14 h-18 shrink-0 rounded-xs overflow-hidden bg-neutral-200 border border-[#DCD5C9] hover:opacity-85"
+                        href={itemHref}
+                        className="relative w-14 h-18 shrink-0 rounded-xs overflow-hidden bg-neutral-200 border border-[#DCD5C9] hover:opacity-85 focus-visible:ring-2 focus-visible:ring-[#541920] focus-visible:outline-none"
+                        aria-label={`View ${item.title || item.name}`}
                       >
                         <Image
                           src={item.image}
@@ -90,8 +93,8 @@ export const ShopTheLook: React.FC = () => {
                           {item.role || item.type}
                         </span>
                         <Link
-                          href={item.productId ? `/product/${item.productId}` : "/product/pal-001"}
-                          className="block text-xs sm:text-sm font-serif font-medium text-neutral-900 truncate hover:text-[#541920]"
+                          href={itemHref}
+                          className="block text-xs sm:text-sm font-serif font-medium text-neutral-900 truncate hover:text-[#541920] focus-visible:ring-2 focus-visible:ring-[#541920] focus-visible:outline-none"
                         >
                           {item.title || item.name}
                         </Link>
@@ -103,11 +106,12 @@ export const ShopTheLook: React.FC = () => {
 
                     <button
                       onClick={() => handleAddSingleItem(item)}
-                      className={`px-3.5 py-2 text-[10px] uppercase tracking-wider font-semibold rounded-xs shadow-2xs transition-colors shrink-0 flex items-center gap-1.5 ${
+                      className={`min-h-[44px] px-3.5 py-2 text-[10px] uppercase tracking-wider font-semibold rounded-xs shadow-2xs transition-colors shrink-0 flex items-center justify-center gap-1.5 focus-visible:ring-2 focus-visible:ring-[#541920] focus-visible:outline-none cursor-pointer ${
                         isAdded
                           ? "bg-[#15803D] text-white"
                           : "bg-[#541920] hover:bg-[#3D1217] text-white"
                       }`}
+                      aria-label={isAdded ? `Added ${item.title || item.name} to bag` : `Add ${item.title || item.name} to bag`}
                     >
                       {isAdded ? (
                         <>

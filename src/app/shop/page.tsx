@@ -142,6 +142,8 @@ function ShopContent() {
       if (sortBy === "price-low") return a.price - b.price;
       if (sortBy === "price-high") return b.price - a.price;
       if (sortBy === "rating") return b.rating - a.rating;
+      if (sortBy === "popular") return (b.isTrending ? 2 : 0) + b.rating - ((a.isTrending ? 2 : 0) + a.rating);
+      if (sortBy === "bestselling") return (b.isBestseller ? 1 : 0) - (a.isBestseller ? 1 : 0);
       if (sortBy === "newest") return (b.isNewArrival ? 1 : 0) - (a.isNewArrival ? 1 : 0);
       return 0; // default featured
     });
@@ -223,13 +225,16 @@ function ShopContent() {
                 params.set("sort", newSort);
                 router.push(`/shop?${params.toString()}`, { scroll: false });
               }}
-              className="bg-white border border-[#DCD5C9] text-neutral-800 text-xs rounded-xs px-3 py-2 focus:outline-none focus:border-[#541920]"
+              className="bg-white border border-[#DCD5C9] text-neutral-800 text-xs rounded-xs px-3 py-2 min-h-[44px] focus:outline-none focus:border-[#541920] focus-visible:ring-2 focus-visible:ring-[#541920]"
+              aria-label="Sort products by"
             >
               <option value="featured">Featured Weaves</option>
+              <option value="newest">Newest Arrivals</option>
+              <option value="popular">Popular & Trending</option>
+              <option value="bestselling">Bestsellers</option>
               <option value="price-low">Price: Low to High</option>
               <option value="price-high">Price: High to Low</option>
               <option value="rating">Highest Rated</option>
-              <option value="newest">Newest Arrivals</option>
             </select>
           </div>
         </div>
