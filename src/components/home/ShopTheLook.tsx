@@ -7,6 +7,25 @@ import { ShoppingBag, Check } from "lucide-react";
 import { useStore } from "@/context/StoreContext";
 import { PRODUCTS, SHOP_THE_LOOK_ITEMS } from "@/data/products";
 
+const LookItemThumbnail: React.FC<{ src: string; alt: string }> = ({ src, alt }) => {
+  const [imgSrc, setImgSrc] = useState(src);
+  const [hasError, setHasError] = useState(false);
+
+  return (
+    <Image
+      src={hasError ? "/images/products/gold-jhumkas.jpg" : imgSrc}
+      alt={alt}
+      fill
+      sizes="60px"
+      className="object-cover object-top"
+      onError={() => {
+        setHasError(true);
+        setImgSrc("/images/products/gold-jhumkas.jpg");
+      }}
+    />
+  );
+};
+
 export const ShopTheLook: React.FC = () => {
   const { addToCart, setIsCartOpen, formatPrice, showToast } = useStore();
   const [addedItems, setAddedItems] = useState<{ [key: string]: boolean }>({});
@@ -80,12 +99,9 @@ export const ShopTheLook: React.FC = () => {
                         className="relative w-14 h-18 shrink-0 rounded-xs overflow-hidden bg-neutral-200 border border-[#DCD5C9] hover:opacity-85 focus-visible:ring-2 focus-visible:ring-[#541920] focus-visible:outline-none"
                         aria-label={`View ${item.title || item.name}`}
                       >
-                        <Image
+                        <LookItemThumbnail
                           src={item.image}
                           alt={item.title || item.name}
-                          fill
-                          sizes="60px"
-                          className="object-cover object-top"
                         />
                       </Link>
                       <div className="min-w-0">
