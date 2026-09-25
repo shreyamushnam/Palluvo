@@ -91,12 +91,12 @@ export const ShopTheLook: React.FC = () => {
                 return (
                   <div
                     key={item.id}
-                    className="flex items-center justify-between gap-4 p-3.5 rounded-sm border border-[#E8E2D9] bg-[#FAF7F2] hover:bg-[#F4EFE6] transition-colors"
+                    className="flex items-center justify-between gap-3 sm:gap-4 p-3 sm:p-3.5 rounded-sm border border-[#E8E2D9] bg-[#FAF7F2] hover:bg-[#F4EFE6] transition-colors"
                   >
-                    <div className="flex items-center gap-3 min-w-0">
+                    <div className="flex items-center gap-2.5 sm:gap-3 flex-1 min-w-0">
                       <Link
                         href={itemHref}
-                        className="relative w-14 h-18 shrink-0 rounded-xs overflow-hidden bg-neutral-200 border border-[#DCD5C9] hover:opacity-85 focus-visible:ring-2 focus-visible:ring-[#541920] focus-visible:outline-none"
+                        className="relative w-12 h-16 sm:w-14 sm:h-18 shrink-0 rounded-xs overflow-hidden bg-neutral-200 border border-[#DCD5C9] hover:opacity-85 focus-visible:ring-2 focus-visible:ring-[#541920] focus-visible:outline-none"
                         aria-label={`View ${item.title || item.name}`}
                       >
                         <LookItemThumbnail
@@ -104,13 +104,13 @@ export const ShopTheLook: React.FC = () => {
                           alt={item.title || item.name}
                         />
                       </Link>
-                      <div className="min-w-0">
-                        <span className="text-[10px] uppercase font-bold text-[#541920] tracking-wider">
+                      <div className="flex-1 min-w-0 pr-1">
+                        <span className="text-[10px] uppercase font-bold text-[#541920] tracking-wider block">
                           {item.role || item.type}
                         </span>
                         <Link
                           href={itemHref}
-                          className="block text-xs sm:text-sm font-serif font-medium text-neutral-900 truncate hover:text-[#541920] focus-visible:ring-2 focus-visible:ring-[#541920] focus-visible:outline-none"
+                          className="block text-xs sm:text-sm font-serif font-medium text-neutral-900 leading-snug line-clamp-2 hover:text-[#541920] focus-visible:ring-2 focus-visible:ring-[#541920] focus-visible:outline-none"
                         >
                           {item.title || item.name}
                         </Link>
@@ -122,7 +122,7 @@ export const ShopTheLook: React.FC = () => {
 
                     <button
                       onClick={() => handleAddSingleItem(item)}
-                      className={`min-h-[44px] px-3.5 py-2 text-[10px] uppercase tracking-wider font-semibold rounded-xs shadow-2xs transition-colors shrink-0 flex items-center justify-center gap-1.5 focus-visible:ring-2 focus-visible:ring-[#541920] focus-visible:outline-none cursor-pointer ${
+                      className={`min-h-[44px] min-w-[44px] px-2.5 sm:px-3.5 py-2 text-[10px] uppercase tracking-wider font-semibold rounded-xs shadow-2xs transition-colors shrink-0 flex items-center justify-center gap-1 sm:gap-1.5 focus-visible:ring-2 focus-visible:ring-[#541920] focus-visible:outline-none cursor-pointer ${
                         isAdded
                           ? "bg-[#15803D] text-white"
                           : "bg-[#541920] hover:bg-[#3D1217] text-white"
@@ -131,13 +131,14 @@ export const ShopTheLook: React.FC = () => {
                     >
                       {isAdded ? (
                         <>
-                          <Check className="w-3 h-3" />
+                          <Check className="w-3.5 h-3.5 shrink-0" />
                           <span>Added</span>
                         </>
                       ) : (
                         <>
-                          <ShoppingBag className="w-3 h-3" />
-                          <span>Add to Bag</span>
+                          <ShoppingBag className="w-3.5 h-3.5 shrink-0" />
+                          <span className="hidden sm:inline">Add to Bag</span>
+                          <span className="sm:hidden">Add</span>
                         </>
                       )}
                     </button>

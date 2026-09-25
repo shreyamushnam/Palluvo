@@ -66,25 +66,25 @@ export const HeroBanner: React.FC = () => {
 
   return (
     <section className="relative bg-[#FAF7F2] overflow-hidden border-b border-[#E8E2D9]">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-10 lg:py-16">
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 sm:gap-8 lg:gap-12 items-center">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-2 pb-4 sm:py-10 lg:py-16">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-2 sm:gap-8 lg:gap-12 items-center">
           
           {/* Left Column: Brand Copy & Direct CTAs */}
-          <div className="lg:col-span-6 space-y-4 sm:space-y-6 text-center lg:text-left">
-            <h1 className="text-3xl sm:text-5xl lg:text-6xl font-serif font-normal text-[#1C1A18] tracking-tight leading-[1.14]">
+          <div className="lg:col-span-6 space-y-2 sm:space-y-6 text-center lg:text-left">
+            <h1 className="text-2xl sm:text-5xl lg:text-6xl font-serif font-normal text-[#1C1A18] tracking-tight leading-[1.12]">
               {slide.titleLine1} <br />
               <span className="italic font-serif text-[#541920]">{slide.titleLine2}</span>
             </h1>
 
-            <p className="text-xs sm:text-base text-neutral-600 max-w-lg mx-auto lg:mx-0 leading-relaxed font-sans line-clamp-2 sm:line-clamp-none">
+            <p className="text-xs sm:text-base text-neutral-600 max-w-lg mx-auto lg:mx-0 leading-relaxed font-sans line-clamp-1 sm:line-clamp-none">
               {slide.description}
             </p>
 
             {/* Main Action Buttons */}
-            <div className="flex flex-row flex-wrap sm:flex-nowrap items-center justify-center lg:justify-start gap-2 sm:gap-3.5 pt-1 sm:pt-2">
+            <div className="flex flex-row flex-wrap sm:flex-nowrap items-center justify-center lg:justify-start gap-2 sm:gap-3.5 pt-0.5 sm:pt-2">
               <Link
                 href={slide.primaryCta.href}
-                className="min-h-[44px] px-6 sm:px-8 py-2.5 sm:py-3.5 bg-[#541920] hover:bg-[#3D1217] text-white text-xs uppercase tracking-widest font-semibold rounded-xs shadow-md transition-all flex items-center justify-center gap-2 group focus-visible:ring-2 focus-visible:ring-[#541920] focus-visible:outline-none shrink-0"
+                className="min-h-[44px] px-5 sm:px-8 py-2.5 sm:py-3.5 bg-[#541920] hover:bg-[#3D1217] text-white text-xs uppercase tracking-widest font-semibold rounded-xs shadow-md transition-all flex items-center justify-center gap-2 group focus-visible:ring-2 focus-visible:ring-[#541920] focus-visible:outline-none shrink-0"
               >
                 <span>{slide.primaryCta.label}</span>
                 <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
@@ -98,7 +98,7 @@ export const HeroBanner: React.FC = () => {
             </div>
 
             {/* Slider navigation indicator */}
-            <div className="pt-2 sm:pt-4 flex items-center justify-center lg:justify-start gap-3 sm:gap-4 text-xs font-mono text-neutral-600">
+            <div className="pt-0.5 sm:pt-4 flex items-center justify-center lg:justify-start gap-2.5 sm:gap-4 text-xs font-mono text-neutral-600">
               <div className="flex items-center gap-1 font-semibold text-neutral-900">
                 <span>0{currentSlideIdx + 1}</span>
                 <span className="text-neutral-400">/</span>
@@ -107,14 +107,14 @@ export const HeroBanner: React.FC = () => {
               <div className="flex items-center gap-1.5">
                 <button
                   onClick={() => setCurrentSlideIdx((idx) => (idx === 0 ? totalSlides - 1 : idx - 1))}
-                  className="min-w-[44px] min-h-[44px] rounded-full border border-[#DCD5C9] bg-white hover:bg-neutral-100 text-neutral-700 transition-colors cursor-pointer flex items-center justify-center focus-visible:ring-2 focus-visible:ring-[#541920] focus-visible:outline-none"
+                  className="min-w-[40px] min-h-[40px] sm:min-w-[44px] sm:min-h-[44px] rounded-full border border-[#DCD5C9] bg-white hover:bg-neutral-100 text-neutral-700 transition-colors cursor-pointer flex items-center justify-center focus-visible:ring-2 focus-visible:ring-[#541920] focus-visible:outline-none"
                   aria-label="Previous slide"
                 >
                   <ChevronLeft className="w-4 h-4" />
                 </button>
                 <button
                   onClick={() => setCurrentSlideIdx((idx) => (idx === totalSlides - 1 ? 0 : idx + 1))}
-                  className="min-w-[44px] min-h-[44px] rounded-full border border-[#DCD5C9] bg-white hover:bg-neutral-100 text-neutral-700 transition-colors cursor-pointer flex items-center justify-center focus-visible:ring-2 focus-visible:ring-[#541920] focus-visible:outline-none"
+                  className="min-w-[40px] min-h-[40px] sm:min-w-[44px] sm:min-h-[44px] rounded-full border border-[#DCD5C9] bg-white hover:bg-neutral-100 text-neutral-700 transition-colors cursor-pointer flex items-center justify-center focus-visible:ring-2 focus-visible:ring-[#541920] focus-visible:outline-none"
                   aria-label="Next slide"
                 >
                   <ChevronRight className="w-4 h-4" />
@@ -124,8 +124,8 @@ export const HeroBanner: React.FC = () => {
           </div>
 
           {/* Right Column: High Quality Saree Hero Image Showcase */}
-          <div className="lg:col-span-6 relative mt-2 lg:mt-0">
-            <div className="relative mx-auto max-w-[320px] sm:max-w-md lg:max-w-none">
+          <div className="lg:col-span-6 relative mt-1 lg:mt-0">
+            <div className="relative mx-auto max-w-[270px] sm:max-w-md lg:max-w-none">
               <div className="relative aspect-[4/5] sm:aspect-[3/4] rounded-sm overflow-hidden shadow-2xl bg-neutral-100 border-2 sm:border-4 border-white">
                 <Image
                   key={slide.image}
@@ -139,7 +139,7 @@ export const HeroBanner: React.FC = () => {
                 />
 
                 {/* Floating Product Highlight Card */}
-                <div className="absolute bottom-2.5 left-2.5 right-2.5 sm:bottom-4 sm:left-4 sm:right-4 bg-white/95 backdrop-blur-md p-2.5 sm:p-3.5 rounded-xs shadow-lg border border-[#E8E2D9] flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 sm:gap-3">
+                <div className="absolute bottom-2 left-2 right-2 sm:bottom-4 sm:left-4 sm:right-4 bg-white/95 backdrop-blur-md p-2.5 sm:p-3.5 rounded-xs shadow-lg border border-[#E8E2D9] flex flex-col sm:flex-row sm:items-center justify-between gap-2 sm:gap-3">
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center justify-between gap-2 mb-0.5">
                       <span className="text-[10px] font-bold uppercase tracking-widest text-[#541920] block">
