@@ -70,7 +70,7 @@ export const ShopTheLook: React.FC = () => {
                 sizes="(max-width: 1024px) 100vw, 550px"
                 className="object-cover object-top group-hover:scale-105 transition-transform duration-500"
               />
-              <div className="absolute inset-0 bg-black/25 opacity-0 group-hover:opacity-100 transition-opacity flex items-end p-4">
+              <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent lg:bg-black/25 opacity-100 lg:opacity-0 lg:group-hover:opacity-100 group-focus-visible:opacity-100 transition-opacity flex items-end p-4">
                 <span className="min-h-[44px] px-4 py-2 bg-white/95 text-neutral-900 text-xs uppercase tracking-wider font-semibold rounded-xs shadow-md flex items-center justify-center">
                   View Featured Saree →
                 </span>

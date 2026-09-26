@@ -85,8 +85,8 @@ export const InstagramGrid: React.FC = () => {
                 sizes="(max-width: 640px) 50vw, (max-width: 768px) 33vw, 16vw"
                 className="object-cover object-center group-hover:scale-105 transition-transform duration-500"
               />
-              <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-end p-3 text-white text-center">
-                <ShoppingBag className="w-4 h-4 mb-1 text-[#C5A575]" />
+              <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/35 to-transparent opacity-100 md:opacity-0 md:group-hover:opacity-100 group-focus-visible:opacity-100 transition-opacity flex flex-col items-center justify-end p-2.5 sm:p-3 text-white text-center">
+                <ShoppingBag className="w-4 h-4 mb-0.5 sm:mb-1 text-[#C5A575]" />
                 <span className="text-[10px] font-sans font-medium text-neutral-200">{post.handle}</span>
                 <span className="text-[11px] font-serif font-semibold mt-0.5 line-clamp-1">{post.saree}</span>
                 <span className="text-[9px] uppercase tracking-wider text-[#C5A575] font-semibold mt-1">Shop Saree →</span>
