@@ -76,7 +76,7 @@ export const HeroBanner: React.FC = () => {
               <span className="italic font-serif text-[#541920]">{slide.titleLine2}</span>
             </h1>
 
-            <p className="text-xs sm:text-sm md:text-base text-neutral-600 max-w-lg mx-auto lg:mx-0 leading-relaxed font-sans line-clamp-1 sm:line-clamp-none">
+            <p className="text-xs sm:text-sm md:text-base text-neutral-600 max-w-lg mx-auto lg:mx-0 leading-relaxed font-sans line-clamp-2 sm:line-clamp-none">
               {slide.description}
             </p>
 
