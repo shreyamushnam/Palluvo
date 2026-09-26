@@ -81,17 +81,17 @@ export const HeroBanner: React.FC = () => {
             </p>
 
             {/* Main Action Buttons */}
-            <div className="flex flex-row flex-nowrap items-center justify-center lg:justify-start gap-1.5 sm:gap-3.5 pt-0.5 sm:pt-1.5 md:pt-2">
+            <div className="flex flex-row flex-wrap sm:flex-nowrap items-center justify-center lg:justify-start gap-1.5 sm:gap-3.5 pt-0.5 sm:pt-1.5 md:pt-2">
               <Link
                 href={slide.primaryCta.href}
-                className="min-h-[44px] px-3.5 sm:px-6 md:px-8 py-2 sm:py-2.5 md:py-3.5 bg-[#541920] hover:bg-[#3D1217] text-white text-[11px] sm:text-xs uppercase tracking-wider sm:tracking-widest font-semibold rounded-xs shadow-md transition-all flex items-center justify-center gap-1.5 sm:gap-2 group focus-visible:ring-2 focus-visible:ring-[#541920] focus-visible:outline-none shrink-0"
+                className="min-h-[44px] px-2.5 sm:px-6 md:px-8 py-2 sm:py-2.5 md:py-3.5 bg-[#541920] hover:bg-[#3D1217] text-white text-[10px] sm:text-xs uppercase tracking-normal sm:tracking-widest font-semibold rounded-xs shadow-md transition-all flex items-center justify-center gap-1 sm:gap-2 group focus-visible:ring-2 focus-visible:ring-[#541920] focus-visible:outline-none shrink-0"
               >
                 <span>{slide.primaryCta.label}</span>
-                <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform" />
+                <ArrowRight className="w-3 h-3 sm:w-3.5 sm:h-3.5 group-hover:translate-x-1 transition-transform" />
               </Link>
               <Link
                 href={slide.secondaryCta.href}
-                className="min-h-[44px] px-3 sm:px-5 md:px-7 py-2 sm:py-2.5 md:py-3.5 bg-white hover:bg-[#F4EFE6] text-neutral-900 border border-[#DCD5C9] text-[11px] sm:text-xs uppercase tracking-wider sm:tracking-widest font-semibold rounded-xs transition-colors flex items-center justify-center text-center focus-visible:ring-2 focus-visible:ring-[#541920] focus-visible:outline-none shrink-0"
+                className="min-h-[44px] px-2.5 sm:px-5 md:px-7 py-2 sm:py-2.5 md:py-3.5 bg-white hover:bg-[#F4EFE6] text-neutral-900 border border-[#DCD5C9] text-[10px] sm:text-xs uppercase tracking-normal sm:tracking-widest font-semibold rounded-xs transition-colors flex items-center justify-center text-center focus-visible:ring-2 focus-visible:ring-[#541920] focus-visible:outline-none shrink-0"
               >
                 {slide.secondaryCta.label}
               </Link>

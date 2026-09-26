@@ -142,7 +142,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
 
         {/* Pricing Block */}
         <div className="mt-2.5 pt-2 border-t border-[#1C1A18]/6 flex flex-col">
-          <div className="flex items-baseline gap-2">
+          <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
             <span className="font-serif-display text-lg font-semibold text-[#1C1A18]">
               {formatPrice(product.price)}
             </span>
@@ -152,7 +152,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
               </span>
             )}
             {product.discountPercent > 0 && (
-              <span className="text-[11px] text-[#15803D] font-semibold">
+              <span className="text-[11px] text-[#15803D] font-semibold whitespace-nowrap">
                 {product.discountPercent}% OFF
               </span>
             )}
