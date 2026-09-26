@@ -3,7 +3,7 @@
 import React, { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { ShoppingBag, Check } from "lucide-react";
+import { ShoppingBag, Check, ArrowRight } from "lucide-react";
 import { useStore } from "@/context/StoreContext";
 import { PRODUCTS, SHOP_THE_LOOK_ITEMS } from "@/data/products";
 
@@ -70,9 +70,10 @@ export const ShopTheLook: React.FC = () => {
                 sizes="(max-width: 1024px) 100vw, 550px"
                 className="object-cover object-top group-hover:scale-105 transition-transform duration-500"
               />
-              <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent lg:bg-black/25 opacity-100 lg:opacity-0 lg:group-hover:opacity-100 group-focus-visible:opacity-100 transition-opacity flex items-end p-4">
-                <span className="min-h-[44px] px-4 py-2 bg-white/95 text-neutral-900 text-xs uppercase tracking-wider font-semibold rounded-xs shadow-md flex items-center justify-center">
-                  View Featured Saree →
+              <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent lg:bg-black/25 opacity-100 lg:opacity-0 lg:group-hover:opacity-100 group-focus-visible:opacity-100 transition-opacity flex items-end p-3 sm:p-4">
+                <span className="min-h-[44px] px-3.5 sm:px-4 py-2 bg-white/95 text-neutral-900 text-[11px] sm:text-xs uppercase tracking-normal sm:tracking-wider font-semibold rounded-xs shadow-md flex items-center justify-center whitespace-nowrap gap-1.5">
+                  <span>View Featured Saree</span>
+                  <ArrowRight className="w-3.5 h-3.5 shrink-0" />
                 </span>
               </div>
             </Link>
