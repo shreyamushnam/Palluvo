@@ -18,7 +18,7 @@ export const CategoryGrid: React.FC = () => {
           </h2>
           <Link
             href="/shop"
-            className="text-xs uppercase tracking-wider text-[#541920] font-semibold hover:underline flex items-center gap-1"
+            className="min-h-[44px] px-2 -mr-2 inline-flex items-center gap-1 text-xs uppercase tracking-wider text-[#541920] font-semibold hover:underline focus-visible:ring-2 focus-visible:ring-[#541920] focus-visible:outline-none rounded-xs"
           >
             <span>View all</span>
             <ArrowRight className="w-3.5 h-3.5" />
