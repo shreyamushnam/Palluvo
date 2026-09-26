@@ -92,14 +92,14 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
         <button
           type="button"
           onClick={handleWishlist}
-          className={`absolute top-2.5 right-2.5 z-10 p-2 rounded-full backdrop-blur-md transition-all duration-200 cursor-pointer ${
+          className={`absolute top-1.5 right-1.5 sm:top-2.5 sm:right-2.5 z-10 w-11 h-11 min-w-[44px] min-h-[44px] rounded-full backdrop-blur-md transition-all duration-200 cursor-pointer flex items-center justify-center focus-visible:ring-2 focus-visible:ring-[#541920] focus-visible:outline-none ${
             isSaved
               ? "bg-[#541920] text-[#FAF7F2]"
-              : "bg-[#FAF7F2]/80 text-[#1C1A18] hover:text-[#541920] hover:bg-white"
+              : "bg-[#FAF7F2]/80 text-[#1C1A18] hover:text-[#541920] hover:bg-white shadow-xs"
           }`}
           aria-label={isSaved ? `Remove ${product.name} from wishlist` : `Add ${product.name} to wishlist`}
         >
-          <Heart size={15} className={isSaved ? "fill-current" : ""} />
+          <Heart size={16} className={isSaved ? "fill-current" : ""} />
         </button>
 
         {/* Quick View Button (Desktop Hover) */}
