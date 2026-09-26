@@ -29,7 +29,7 @@ export const MobileBottomNav: React.FC = () => {
             <button
               key={item.label}
               onClick={() => setIsCartOpen(true)}
-              className="flex flex-col items-center justify-center p-1 relative text-[#5E5A54] hover:text-[#541920]"
+              className="min-w-[44px] min-h-[44px] flex flex-col items-center justify-center p-1 relative text-[#5E5A54] hover:text-[#541920]"
             >
               <div className="relative">
                 <Icon size={20} />
@@ -50,7 +50,7 @@ export const MobileBottomNav: React.FC = () => {
           <Link
             key={item.label}
             href={item.href}
-            className={`flex flex-col items-center justify-center p-1 relative transition-colors ${
+            className={`min-w-[44px] min-h-[44px] flex flex-col items-center justify-center p-1 relative transition-colors ${
               isActive ? "text-[#541920] font-semibold" : "text-[#5E5A54] hover:text-[#541920]"
             }`}
           >
