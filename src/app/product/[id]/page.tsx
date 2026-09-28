@@ -94,15 +94,15 @@ export default function ProductDetailPage({
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-2 sm:gap-6 lg:gap-12">
           
           {/* Left Column: Vertical Thumbnails + Main Photo */}
-          <div className="lg:col-span-7 flex flex-col-reverse sm:flex-row gap-1.5 sm:gap-4 items-center sm:items-start">
+          <div className="lg:col-span-7 flex flex-col sm:flex-row gap-1.5 sm:gap-4 items-center sm:items-start w-full">
             
-            {/* Vertical Thumbnail Strip */}
-            <div className="flex sm:flex-col gap-1.5 sm:gap-3 overflow-x-auto sm:overflow-y-auto shrink-0 w-full sm:w-20 justify-center sm:justify-start">
+            {/* Desktop Vertical Thumbnail Strip */}
+            <div className="hidden sm:flex sm:flex-col gap-3 overflow-y-auto shrink-0 w-20">
               {product.images.map((img, idx) => (
                 <button
                   key={idx}
                   onClick={() => setActiveImageIdx(idx)}
-                  className={`relative w-11 sm:w-20 aspect-square sm:aspect-[3/4] rounded-xs overflow-hidden border-2 transition-all shrink-0 cursor-pointer ${
+                  className={`relative w-20 aspect-[3/4] rounded-xs overflow-hidden border-2 transition-all shrink-0 cursor-pointer ${
                     activeImageIdx === idx
                       ? "border-[#541920] ring-1 ring-[#541920]"
                       : "border-[#E8E2D9] opacity-75 hover:opacity-100"
@@ -120,7 +120,7 @@ export default function ProductDetailPage({
             </div>
 
             {/* Main Stage Image */}
-            <div className="relative aspect-[3/4] w-full max-w-[160px] sm:max-w-none flex-1 rounded-sm overflow-hidden bg-neutral-100 shadow-md border border-[#E8E2D9]">
+            <div className="relative aspect-[4/5] sm:aspect-[3/4] w-full max-w-[260px] sm:max-w-none flex-1 rounded-sm overflow-hidden bg-neutral-100 shadow-md border border-[#E8E2D9]">
               <Image
                 src={product.images[activeImageIdx] || product.images[0]}
                 alt={product.name}
@@ -130,20 +130,45 @@ export default function ProductDetailPage({
                 className="object-cover object-top transition-all duration-300"
               />
               {product.discountPercent > 0 && (
-                <div className="absolute top-4 left-4 bg-[#15803D] text-white text-xs font-bold px-2.5 py-1 rounded-xs uppercase tracking-wider shadow-xs">
+                <div className="absolute top-2.5 left-2.5 bg-[#15803D] text-white text-xs font-bold px-2.5 py-1 rounded-xs uppercase tracking-wider shadow-xs">
                   {product.discountPercent}% OFF
                 </div>
               )}
               {product.id === "pal-010" && activeImageIdx === 1 && (
-                <div className="absolute bottom-3 inset-x-3 bg-black/80 backdrop-blur-xs text-white text-[11px] px-3 py-1.5 rounded-xs text-center font-sans tracking-wide">
+                <div className="absolute bottom-2 left-2 right-auto sm:inset-x-3 bg-black/85 backdrop-blur-xs text-white text-[10px] sm:text-[11px] px-2 py-1 sm:py-1.5 rounded-xs text-center font-sans tracking-wide z-10 max-w-[155px] sm:max-w-none">
                   Styling Reference: Shown styled with Wine Tissue Silk Saree
                 </div>
               )}
+
+              {/* Mobile Floating Thumbnail Switcher */}
+              <div className="absolute bottom-2 right-2 z-20 flex sm:hidden gap-1.5 bg-black/40 backdrop-blur-xs p-1 rounded-xs">
+                {product.images.map((img, idx) => (
+                  <button
+                    key={idx}
+                    type="button"
+                    onClick={() => setActiveImageIdx(idx)}
+                    className={`relative w-11 h-11 rounded-xs overflow-hidden border-2 transition-all cursor-pointer ${
+                      activeImageIdx === idx
+                        ? "border-white ring-1 ring-white"
+                        : "border-white/50 opacity-75 hover:opacity-100"
+                    }`}
+                    aria-label={`View ${product.name} image ${idx + 1}`}
+                  >
+                    <Image
+                      src={img}
+                      alt=""
+                      fill
+                      sizes="44px"
+                      className="object-cover object-top"
+                    />
+                  </button>
+                ))}
+              </div>
             </div>
           </div>
 
           {/* Right Column: Product Details & Actions */}
-          <div className="lg:col-span-5 space-y-3 sm:space-y-6">
+          <div className="lg:col-span-5 space-y-2.5 sm:space-y-6">
             
             {/* Header info */}
             <div>
@@ -202,11 +227,11 @@ export default function ProductDetailPage({
 
             {/* Color Swatches */}
             {product.colors && product.colors.length > 0 && (
-              <div>
-                <label className="block text-xs font-semibold text-neutral-800 mb-2">
+              <div className="flex items-center gap-2 pt-1 border-t border-[#E8E2D9]">
+                <label className="text-xs font-semibold text-neutral-800 shrink-0">
                   Color: <span className="font-normal text-neutral-600">{selectedColor}</span>
                 </label>
-                <div className="flex flex-wrap items-center gap-1 -ml-2">
+                <div className="flex flex-wrap items-center gap-1">
                   {product.colors.map((c) => (
                     <button
                       key={c.name}
