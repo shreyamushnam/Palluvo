@@ -164,12 +164,13 @@ export const QuickViewModal: React.FC = () => {
                     <label className="block text-xs font-semibold uppercase tracking-wider text-neutral-700 mb-2">
                       Color: <span className="font-normal text-neutral-900">{selectedColor}</span>
                     </label>
-                    <div className="flex gap-2">
+                    <div className="flex flex-wrap gap-2">
                       {quickViewProduct.colors.map((color) => (
                         <button
                           key={color.name}
+                          type="button"
                           onClick={() => setSelectedColor(color.name)}
-                          className={`px-3 py-1.5 text-xs rounded-xs border transition-colors ${
+                          className={`min-h-[44px] px-3.5 py-2 text-xs rounded-xs border transition-colors cursor-pointer focus-visible:ring-2 focus-visible:ring-[#541920] focus-visible:outline-none ${
                             selectedColor === color.name
                               ? "border-[#541920] bg-[#541920] text-white font-medium"
                               : "border-[#DCD5C9] bg-white text-neutral-800 hover:border-neutral-400"
@@ -191,8 +192,9 @@ export const QuickViewModal: React.FC = () => {
                     {(quickViewProduct.blouseOptions || ["Unstitched (Included)", "Custom Stitched (+₹1,499)"]).map((opt: string) => (
                       <button
                         key={opt}
+                        type="button"
                         onClick={() => setBlouseOption(opt)}
-                        className={`p-2 text-xs text-left rounded-xs border transition-colors flex items-center justify-between ${
+                        className={`min-h-[44px] p-2.5 text-xs text-left rounded-xs border transition-colors flex items-center justify-between cursor-pointer focus-visible:ring-2 focus-visible:ring-[#541920] focus-visible:outline-none ${
                           blouseOption === opt
                             ? "border-[#541920] bg-white ring-1 ring-[#541920] text-neutral-900"
                             : "border-[#DCD5C9] bg-white/70 text-neutral-600 hover:border-neutral-400"
@@ -210,17 +212,21 @@ export const QuickViewModal: React.FC = () => {
                   <label className="block text-xs font-semibold uppercase tracking-wider text-neutral-700 mb-2">
                     Quantity:
                   </label>
-                  <div className="flex items-center w-28 border border-[#DCD5C9] rounded-xs bg-white">
+                  <div className="flex items-center w-fit border border-[#DCD5C9] rounded-xs bg-white">
                     <button
+                      type="button"
                       onClick={() => setQuantity((q) => Math.max(1, q - 1))}
-                      className="px-3 py-1.5 text-sm text-neutral-600 hover:bg-neutral-100"
+                      className="w-11 h-11 min-w-[44px] min-h-[44px] flex items-center justify-center text-sm font-medium text-neutral-600 hover:bg-neutral-100 hover:text-neutral-900 transition-colors cursor-pointer focus-visible:ring-2 focus-visible:ring-[#541920] focus-visible:outline-none"
+                      aria-label="Decrease quantity"
                     >
                       -
                     </button>
-                    <span className="flex-1 text-center text-xs font-semibold">{quantity}</span>
+                    <span className="min-w-[36px] px-2 text-center text-xs font-semibold select-none">{quantity}</span>
                     <button
+                      type="button"
                       onClick={() => setQuantity((q) => q + 1)}
-                      className="px-3 py-1.5 text-sm text-neutral-600 hover:bg-neutral-100"
+                      className="w-11 h-11 min-w-[44px] min-h-[44px] flex items-center justify-center text-sm font-medium text-neutral-600 hover:bg-neutral-100 hover:text-neutral-900 transition-colors cursor-pointer focus-visible:ring-2 focus-visible:ring-[#541920] focus-visible:outline-none"
+                      aria-label="Increase quantity"
                     >
                       +
                     </button>
@@ -233,20 +239,22 @@ export const QuickViewModal: React.FC = () => {
                 <div className="flex gap-2">
                   <button
                     onClick={handleAddToCart}
-                    className="flex-1 flex items-center justify-center gap-2 py-3 bg-[#541920] hover:bg-[#3D1217] text-white text-xs uppercase tracking-widest font-semibold rounded-xs shadow-sm transition-colors"
+                    className="flex-1 flex items-center justify-center gap-2 py-3 bg-[#541920] hover:bg-[#3D1217] text-white text-xs uppercase tracking-widest font-semibold rounded-xs shadow-sm transition-colors cursor-pointer"
                   >
                     <ShoppingBag className="w-4 h-4" />
                     <span>Add to Bag</span>
                   </button>
 
                   <button
+                    type="button"
                     onClick={() => toggleWishlist(quickViewProduct.id)}
-                    className={`p-3 border rounded-xs transition-colors ${
+                    className={`w-11 h-11 min-w-[44px] min-h-[44px] border rounded-xs transition-colors flex items-center justify-center cursor-pointer focus-visible:ring-2 focus-visible:ring-[#541920] focus-visible:outline-none ${
                       isFav
                         ? "border-[#541920] bg-[#541920]/10 text-[#541920]"
                         : "border-[#DCD5C9] bg-white text-neutral-600 hover:text-black"
                     }`}
                     title={isFav ? "Remove from wishlist" : "Add to wishlist"}
+                    aria-label={isFav ? "Remove from wishlist" : "Add to wishlist"}
                   >
                     <Heart className={`w-4 h-4 ${isFav ? "fill-[#541920]" : ""}`} />
                   </button>

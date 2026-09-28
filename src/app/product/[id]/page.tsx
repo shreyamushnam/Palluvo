@@ -197,20 +197,25 @@ export default function ProductDetailPage({
                 <label className="block text-xs font-semibold text-neutral-800 mb-2">
                   Color: <span className="font-normal text-neutral-600">{selectedColor}</span>
                 </label>
-                <div className="flex gap-2.5">
+                <div className="flex flex-wrap items-center gap-1 -ml-2">
                   {product.colors.map((c) => (
                     <button
                       key={c.name}
+                      type="button"
                       onClick={() => setSelectedColor(c.name)}
-                      className={`w-7 h-7 rounded-full transition-all border-2 min-h-[32px] min-w-[32px] focus-visible:ring-2 focus-visible:ring-[#541920] focus-visible:outline-none ${
-                        selectedColor === c.name
-                          ? "border-[#541920] ring-2 ring-[#541920]/30 scale-110"
-                          : "border-transparent opacity-80 hover:opacity-100"
-                      }`}
-                      style={{ backgroundColor: c.hex }}
+                      className="w-11 h-11 min-w-[44px] min-h-[44px] flex items-center justify-center rounded-full cursor-pointer focus-visible:ring-2 focus-visible:ring-[#541920] focus-visible:outline-none"
                       title={c.name}
                       aria-label={`Select color ${c.name}`}
-                    />
+                    >
+                      <span
+                        className={`w-7 h-7 rounded-full transition-all border-2 block ${
+                          selectedColor === c.name
+                            ? "border-[#541920] ring-2 ring-[#541920]/30 scale-110"
+                            : "border-transparent opacity-80 hover:opacity-100"
+                        }`}
+                        style={{ backgroundColor: c.hex }}
+                      />
+                    </button>
                   ))}
                 </div>
               </div>
@@ -244,28 +249,36 @@ export default function ProductDetailPage({
             <div className="flex items-center gap-3">
               <div className="flex items-center border border-[#DCD5C9] rounded-xs bg-white">
                 <button
+                  type="button"
                   onClick={() => setQuantity((q) => Math.max(1, q - 1))}
-                  className="px-3 py-1.5 text-sm text-neutral-600 hover:bg-neutral-100"
+                  className="w-11 h-11 min-w-[44px] min-h-[44px] flex items-center justify-center text-sm font-medium text-neutral-600 hover:bg-neutral-100 hover:text-neutral-900 transition-colors cursor-pointer focus-visible:ring-2 focus-visible:ring-[#541920] focus-visible:outline-none"
+                  aria-label="Decrease quantity"
                 >
                   -
                 </button>
-                <span className="px-3 text-xs font-semibold">{quantity}</span>
+                <span className="min-w-[36px] px-2 text-center text-xs font-semibold text-neutral-900 select-none">
+                  {quantity}
+                </span>
                 <button
+                  type="button"
                   onClick={() => setQuantity((q) => q + 1)}
-                  className="px-3 py-1.5 text-sm text-neutral-600 hover:bg-neutral-100"
+                  className="w-11 h-11 min-w-[44px] min-h-[44px] flex items-center justify-center text-sm font-medium text-neutral-600 hover:bg-neutral-100 hover:text-neutral-900 transition-colors cursor-pointer focus-visible:ring-2 focus-visible:ring-[#541920] focus-visible:outline-none"
+                  aria-label="Increase quantity"
                 >
                   +
                 </button>
               </div>
 
               <button
+                type="button"
                 onClick={() => toggleWishlist(product.id)}
-                className={`p-2.5 border rounded-xs transition-colors ${
+                className={`w-11 h-11 min-w-[44px] min-h-[44px] border rounded-xs transition-colors flex items-center justify-center cursor-pointer focus-visible:ring-2 focus-visible:ring-[#541920] focus-visible:outline-none ${
                   isFav
                     ? "border-[#541920] bg-[#541920]/10 text-[#541920]"
                     : "border-[#DCD5C9] bg-white text-neutral-600 hover:text-black"
                 }`}
                 title={isFav ? "Remove from wishlist" : "Add to wishlist"}
+                aria-label={isFav ? "Remove from wishlist" : "Add to wishlist"}
               >
                 <Heart className={`w-4 h-4 ${isFav ? "fill-[#541920]" : ""}`} />
               </button>
@@ -306,58 +319,62 @@ export default function ProductDetailPage({
             {/* Accordions */}
             <div className="border-t border-[#E8E2D9] divide-y divide-[#E8E2D9] text-xs">
               {/* Description */}
-              <div className="py-3">
+              <div className="py-1">
                 <button
+                  type="button"
                   onClick={() => toggleAccordion("description")}
-                  className="w-full flex items-center justify-between font-semibold text-neutral-900 text-left"
+                  className="w-full min-h-[44px] flex items-center justify-between font-semibold text-neutral-900 text-left cursor-pointer focus-visible:ring-2 focus-visible:ring-[#541920] focus-visible:outline-none"
                 >
                   <span>Description</span>
                   {openAccordions.description ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
                 </button>
                 {openAccordions.description && (
-                  <p className="mt-2 text-neutral-600 leading-relaxed font-sans">
+                  <p className="pb-3 text-neutral-600 leading-relaxed font-sans">
                     {product.description}
                   </p>
                 )}
               </div>
 
               {/* Shipping & Delivery */}
-              <div className="py-3">
+              <div className="py-1">
                 <button
+                  type="button"
                   onClick={() => toggleAccordion("shipping")}
-                  className="w-full flex items-center justify-between font-semibold text-neutral-900 text-left"
+                  className="w-full min-h-[44px] flex items-center justify-between font-semibold text-neutral-900 text-left cursor-pointer focus-visible:ring-2 focus-visible:ring-[#541920] focus-visible:outline-none"
                 >
                   <span>Shipping & Delivery</span>
                   {openAccordions.shipping ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
                 </button>
                 {openAccordions.shipping && (
-                  <p className="mt-2 text-neutral-600 leading-relaxed font-sans">
+                  <p className="pb-3 text-neutral-600 leading-relaxed font-sans">
                     Free express shipping on all orders above ₹1,999. Dispatches within 24-48 hours. Delivered safely in a tamper-proof luxury keepsake box.
                   </p>
                 )}
               </div>
 
               {/* Returns */}
-              <div className="py-3">
+              <div className="py-1">
                 <button
+                  type="button"
                   onClick={() => toggleAccordion("returns")}
-                  className="w-full flex items-center justify-between font-semibold text-neutral-900 text-left"
+                  className="w-full min-h-[44px] flex items-center justify-between font-semibold text-neutral-900 text-left cursor-pointer focus-visible:ring-2 focus-visible:ring-[#541920] focus-visible:outline-none"
                 >
                   <span>Returns</span>
                   {openAccordions.returns ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
                 </button>
                 {openAccordions.returns && (
-                  <p className="mt-2 text-neutral-600 leading-relaxed font-sans">
+                  <p className="pb-3 text-neutral-600 leading-relaxed font-sans">
                     7-day hassle-free return and exchange policy. Doorstep reverse pickup available across India.
                   </p>
                 )}
               </div>
 
               {/* Care Guide */}
-              <div className="py-3">
+              <div className="py-1">
                 <button
+                  type="button"
                   onClick={() => toggleAccordion("care")}
-                  className="w-full flex items-center justify-between font-semibold text-neutral-900 text-left"
+                  className="w-full min-h-[44px] flex items-center justify-between font-semibold text-neutral-900 text-left cursor-pointer focus-visible:ring-2 focus-visible:ring-[#541920] focus-visible:outline-none"
                 >
                   <span>Care Guide</span>
                   {openAccordions.care ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
