@@ -134,6 +134,11 @@ export default function ProductDetailPage({
                   {product.discountPercent}% OFF
                 </div>
               )}
+              {product.id === "pal-010" && activeImageIdx === 1 && (
+                <div className="absolute bottom-3 inset-x-3 bg-black/80 backdrop-blur-xs text-white text-[11px] px-3 py-1.5 rounded-xs text-center font-sans tracking-wide">
+                  Styling Reference: Shown styled with Wine Tissue Silk Saree
+                </div>
+              )}
             </div>
           </div>
 
@@ -144,7 +149,11 @@ export default function ProductDetailPage({
             <div>
               <div className="flex items-center justify-between">
                 <span className="text-xs uppercase tracking-widest text-[#541920] font-semibold">
-                  {product.category} {product.hasBlousePiece ? "Sarees" : "Collection"}
+                  {product.tags?.includes("blouse")
+                    ? "Designer Blouse Piece"
+                    : product.tags?.includes("jewelry")
+                    ? "Heritage Jewellery"
+                    : `${product.category} ${product.hasBlousePiece ? "Sarees" : "Collection"}`}
                 </span>
                 <button
                   onClick={handleShare}

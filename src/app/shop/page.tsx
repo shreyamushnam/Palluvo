@@ -174,7 +174,7 @@ function ShopContent() {
           <nav className="text-xs text-neutral-500 mb-2 flex items-center gap-1.5 font-sans">
             <Link href="/" className="hover:text-black">Home</Link>
             <span>/</span>
-            <span className="text-neutral-900 font-medium">Shop Sarees</span>
+            <span className="text-neutral-900 font-medium">{selectedCategory ? "Shop" : "All Products"}</span>
             {selectedCategory && (
               <>
                 <span>/</span>
@@ -184,10 +184,12 @@ function ShopContent() {
           </nav>
 
           <h1 className="text-3xl sm:text-4xl font-serif font-normal text-neutral-900">
-            {selectedCategory || "All Handcrafted Sarees"}
+            {selectedCategory || "All Handcrafted Products"}
           </h1>
           <p className="text-xs sm:text-sm text-neutral-600 mt-1 font-sans max-w-2xl">
-            Explore authentic zari brocades, handloom weaves, and royal silk drapes curated with Silk Mark purity.
+            {selectedCategory
+              ? "Explore authentic zari brocades, handloom weaves, and royal silk drapes curated with Silk Mark purity."
+              : "Explore authentic zari brocades, royal silk drapes, designer blouses, and handcrafted jewellery curated with Silk Mark purity."}
           </p>
         </div>
       </div>
@@ -206,7 +208,14 @@ function ShopContent() {
             </button>
 
             <span className="text-xs text-neutral-600 font-sans">
-              Showing <strong className="text-neutral-900">{filteredProducts.length}</strong> {filteredProducts.length === 1 ? "saree" : "sarees"}
+              Showing <strong className="text-neutral-900">{filteredProducts.length}</strong>{" "}
+              {selectedCategory && selectedCategory.toLowerCase().includes("saree")
+                ? filteredProducts.length === 1
+                  ? "saree"
+                  : "sarees"
+                : filteredProducts.length === 1
+                ? "product"
+                : "products"}
             </span>
           </div>
 

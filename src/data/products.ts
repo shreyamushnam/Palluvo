@@ -422,9 +422,12 @@ export const PRODUCTS: Product[] = [
     color: "Wine",
     colorHex: "#541920",
     occasion: "Festive",
-    primaryImage: "/images/products/wine-tissue-silk.jpg",
+    primaryImage: "/images/products/wine-blouse-piece.jpg",
     hoverImage: "/images/products/wine-tissue-silk.jpg",
-    images: ["/images/products/wine-tissue-silk.jpg"],
+    images: [
+      "/images/products/wine-blouse-piece.jpg",
+      "/images/products/wine-tissue-silk.jpg",
+    ],
     description: "Complementary unstitched 0.8m designer embroidered silk blouse piece with matching gold zari work to complete your Wine Tissue Silk drape.",
     details: {
       length: "0.8 m unstitched",
@@ -495,7 +498,7 @@ export const SHOP_THE_LOOK_ITEMS: LookItem[] = [
     title: "Matching Blouse",
     role: "Blouse",
     price: 999,
-    image: "/images/products/wine-tissue-silk.jpg",
+    image: "/images/products/wine-blouse-piece.jpg",
     fabricOrMaterial: "Embroidered Silk (Unstitched 0.8m)",
     productId: "pal-010",
   },
