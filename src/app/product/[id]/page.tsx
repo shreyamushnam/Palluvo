@@ -90,19 +90,19 @@ export default function ProductDetailPage({
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3.5 sm:py-8 lg:py-12">
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-12">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-2.5 sm:py-8 lg:py-12">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-3 sm:gap-6 lg:gap-12">
           
           {/* Left Column: Vertical Thumbnails + Main Photo */}
-          <div className="lg:col-span-7 flex flex-col-reverse sm:flex-row gap-3 sm:gap-4 items-center sm:items-start">
+          <div className="lg:col-span-7 flex flex-col-reverse sm:flex-row gap-2 sm:gap-4 items-center sm:items-start">
             
             {/* Vertical Thumbnail Strip */}
-            <div className="flex sm:flex-col gap-2.5 sm:gap-3 overflow-x-auto sm:overflow-y-auto shrink-0 w-full sm:w-20 justify-center sm:justify-start">
+            <div className="flex sm:flex-col gap-2 sm:gap-3 overflow-x-auto sm:overflow-y-auto shrink-0 w-full sm:w-20 justify-center sm:justify-start">
               {product.images.map((img, idx) => (
                 <button
                   key={idx}
                   onClick={() => setActiveImageIdx(idx)}
-                  className={`relative w-14 sm:w-20 aspect-[3/4] rounded-xs overflow-hidden border-2 transition-all shrink-0 cursor-pointer ${
+                  className={`relative w-12 sm:w-20 aspect-[3/4] rounded-xs overflow-hidden border-2 transition-all shrink-0 cursor-pointer ${
                     activeImageIdx === idx
                       ? "border-[#541920] ring-1 ring-[#541920]"
                       : "border-[#E8E2D9] opacity-75 hover:opacity-100"
@@ -120,7 +120,7 @@ export default function ProductDetailPage({
             </div>
 
             {/* Main Stage Image */}
-            <div className="relative aspect-[3/4] w-full max-w-[250px] sm:max-w-none flex-1 rounded-sm overflow-hidden bg-neutral-100 shadow-md border border-[#E8E2D9]">
+            <div className="relative aspect-[3/4] w-full max-w-[215px] sm:max-w-none flex-1 rounded-sm overflow-hidden bg-neutral-100 shadow-md border border-[#E8E2D9]">
               <Image
                 src={product.images[activeImageIdx] || product.images[0]}
                 alt={product.name}
@@ -143,7 +143,7 @@ export default function ProductDetailPage({
           </div>
 
           {/* Right Column: Product Details & Actions */}
-          <div className="lg:col-span-5 space-y-6">
+          <div className="lg:col-span-5 space-y-4 sm:space-y-6">
             
             {/* Header info */}
             <div>

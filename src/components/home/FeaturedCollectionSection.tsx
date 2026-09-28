@@ -82,11 +82,11 @@ export const FeaturedCollectionSection: React.FC = () => {
           </div>
 
           {/* Tab Controls (New Arrivals, Popular, Bestsellers) */}
-          <div className="w-full sm:w-auto max-w-full min-w-0 overflow-hidden">
+          <div className="w-full sm:w-auto max-w-full min-w-0">
             <div
               role="tablist"
               aria-label="Product Collections"
-              className="flex items-center gap-1 sm:gap-1.5 p-1 bg-[#F4EFE6] border border-[#DCD5C9] rounded-sm overflow-x-auto max-w-full w-full sm:w-auto scrollbar-none"
+              className="grid grid-cols-3 sm:flex items-center gap-1 sm:gap-1.5 p-1 bg-[#F4EFE6] border border-[#DCD5C9] rounded-sm w-full sm:w-auto overflow-x-auto"
             >
               {TABS.map((tab, idx) => {
                 const isActive = activeTabId === tab.id;
@@ -100,7 +100,7 @@ export const FeaturedCollectionSection: React.FC = () => {
                     tabIndex={isActive ? 0 : -1}
                     onClick={() => setActiveTabId(tab.id)}
                     onKeyDown={(e) => handleKeyDown(e, idx)}
-                    className={`min-h-[44px] flex-1 sm:flex-initial px-2.5 sm:px-4 py-2 text-[11px] sm:text-xs uppercase tracking-wider font-semibold rounded-xs transition-all whitespace-nowrap cursor-pointer flex items-center justify-center shrink-0 focus-visible:ring-2 focus-visible:ring-[#541920] focus-visible:outline-none ${
+                    className={`min-h-[44px] sm:flex-initial px-1 sm:px-4 py-2 text-[10px] sm:text-xs uppercase tracking-tight sm:tracking-wider font-semibold rounded-xs transition-all whitespace-nowrap cursor-pointer flex items-center justify-center text-center focus-visible:ring-2 focus-visible:ring-[#541920] focus-visible:outline-none ${
                       isActive
                         ? "bg-[#541920] text-white shadow-xs"
                         : "text-neutral-700 hover:text-neutral-900 hover:bg-white/60"
