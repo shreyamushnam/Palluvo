@@ -72,14 +72,14 @@ export default function ProductDetailPage({
   const relatedProducts = PRODUCTS.filter((p) => p.id !== product.id).slice(0, 4);
 
   return (
-    <div className="min-h-screen bg-[#FAF7F2]">
+    <div className="min-h-screen bg-[#FAF7F2] pb-24 lg:pb-12">
       {/* Breadcrumb Navigation */}
-      <div className="bg-[#F4EFE6] border-b border-[#E8E2D9] py-3.5">
+      <div className="bg-[#F4EFE6] border-b border-[#E8E2D9] py-2 sm:py-3.5">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <nav className="text-xs text-neutral-500 flex items-center gap-1.5 font-sans overflow-x-auto whitespace-nowrap">
             <Link href="/" className="hover:text-black">Home</Link>
             <span>/</span>
-            <Link href="/shop" className="hover:text-black">Shop Sarees</Link>
+            <Link href="/shop" className="hover:text-black">Shop</Link>
             <span>/</span>
             <Link href={`/shop?category=${encodeURIComponent(product.category)}`} className="hover:text-black">
               {product.category}
@@ -90,19 +90,19 @@ export default function ProductDetailPage({
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 lg:py-12">
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3.5 sm:py-8 lg:py-12">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-12">
           
           {/* Left Column: Vertical Thumbnails + Main Photo */}
-          <div className="lg:col-span-7 flex flex-col-reverse sm:flex-row gap-4 items-start">
+          <div className="lg:col-span-7 flex flex-col-reverse sm:flex-row gap-3 sm:gap-4 items-center sm:items-start">
             
             {/* Vertical Thumbnail Strip */}
-            <div className="flex sm:flex-col gap-3 overflow-x-auto sm:overflow-y-auto shrink-0 w-full sm:w-20">
+            <div className="flex sm:flex-col gap-2.5 sm:gap-3 overflow-x-auto sm:overflow-y-auto shrink-0 w-full sm:w-20 justify-center sm:justify-start">
               {product.images.map((img, idx) => (
                 <button
                   key={idx}
                   onClick={() => setActiveImageIdx(idx)}
-                  className={`relative w-16 sm:w-20 aspect-[3/4] rounded-xs overflow-hidden border-2 transition-all shrink-0 ${
+                  className={`relative w-14 sm:w-20 aspect-[3/4] rounded-xs overflow-hidden border-2 transition-all shrink-0 cursor-pointer ${
                     activeImageIdx === idx
                       ? "border-[#541920] ring-1 ring-[#541920]"
                       : "border-[#E8E2D9] opacity-75 hover:opacity-100"
@@ -120,7 +120,7 @@ export default function ProductDetailPage({
             </div>
 
             {/* Main Stage Image */}
-            <div className="relative aspect-[3/4] flex-1 w-full rounded-sm overflow-hidden bg-neutral-100 shadow-md border border-[#E8E2D9]">
+            <div className="relative aspect-[3/4] w-full max-w-[250px] sm:max-w-none flex-1 rounded-sm overflow-hidden bg-neutral-100 shadow-md border border-[#E8E2D9]">
               <Image
                 src={product.images[activeImageIdx] || product.images[0]}
                 alt={product.name}

@@ -75,14 +75,14 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
         </Link>
 
         {/* Badges */}
-        <div className="absolute top-2.5 left-2.5 flex flex-col gap-1 z-10 pointer-events-none">
+        <div className="absolute bottom-2 left-2 sm:bottom-auto sm:top-2.5 sm:left-2.5 flex flex-col gap-1 z-10 pointer-events-none items-start">
           {product.isBestseller && (
-            <span className="px-2 py-0.5 bg-[#541920] text-[#FAF7F2] text-[9px] uppercase tracking-wider font-semibold">
+            <span className="px-2 py-0.5 bg-[#541920] text-[#FAF7F2] text-[9px] uppercase tracking-wider font-semibold rounded-2xs w-fit">
               Bestseller
             </span>
           )}
           {product.discountPercent > 0 && (
-            <span className="px-2 py-0.5 bg-[#15803D] text-[#FAF7F2] text-[9px] uppercase tracking-wider font-semibold">
+            <span className="px-2 py-0.5 bg-[#15803D] text-[#FAF7F2] text-[9px] uppercase tracking-wider font-semibold rounded-2xs w-fit">
               {product.discountPercent}% OFF
             </span>
           )}
