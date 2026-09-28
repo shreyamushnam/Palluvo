@@ -74,9 +74,9 @@ export default function ProductDetailPage({
   return (
     <div className="min-h-screen bg-[#FAF7F2] pb-24 lg:pb-12">
       {/* Breadcrumb Navigation */}
-      <div className="bg-[#F4EFE6] border-b border-[#E8E2D9] py-1 sm:py-3.5">
+      <div className="bg-[#F4EFE6] border-b border-[#E8E2D9] py-0.5 sm:py-3.5">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <nav className="text-xs text-neutral-500 flex items-center gap-1.5 font-sans overflow-x-auto whitespace-nowrap">
+          <nav className="text-[11px] sm:text-xs text-neutral-500 flex items-center gap-1.5 font-sans overflow-x-auto whitespace-nowrap">
             <Link href="/" className="hover:text-black">Home</Link>
             <span>/</span>
             <Link href="/shop" className="hover:text-black">Shop</Link>
@@ -120,7 +120,7 @@ export default function ProductDetailPage({
             </div>
 
             {/* Main Stage Image */}
-            <div className="relative aspect-[4/5] sm:aspect-[3/4] w-full max-w-[260px] sm:max-w-none flex-1 rounded-sm overflow-hidden bg-neutral-100 shadow-md border border-[#E8E2D9]">
+            <div className="relative aspect-square sm:aspect-[3/4] w-full max-w-[255px] sm:max-w-none flex-1 rounded-sm overflow-hidden bg-neutral-100 shadow-md border border-[#E8E2D9]">
               <Image
                 src={product.images[activeImageIdx] || product.images[0]}
                 alt={product.name}
@@ -168,7 +168,7 @@ export default function ProductDetailPage({
           </div>
 
           {/* Right Column: Product Details & Actions */}
-          <div className="lg:col-span-5 space-y-2.5 sm:space-y-6">
+          <div className="lg:col-span-5 space-y-2 sm:space-y-6">
             
             {/* Header info */}
             <div>
