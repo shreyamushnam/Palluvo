@@ -74,7 +74,7 @@ export default function ProductDetailPage({
   return (
     <div className="min-h-screen bg-[#FAF7F2] pb-24 lg:pb-12">
       {/* Breadcrumb Navigation */}
-      <div className="bg-[#F4EFE6] border-b border-[#E8E2D9] py-1.5 sm:py-3.5">
+      <div className="bg-[#F4EFE6] border-b border-[#E8E2D9] py-1 sm:py-3.5">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <nav className="text-xs text-neutral-500 flex items-center gap-1.5 font-sans overflow-x-auto whitespace-nowrap">
             <Link href="/" className="hover:text-black">Home</Link>
@@ -90,7 +90,7 @@ export default function ProductDetailPage({
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-2 sm:py-8 lg:py-12">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-1.5 sm:py-8 lg:py-12">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-2 sm:gap-6 lg:gap-12">
           
           {/* Left Column: Vertical Thumbnails + Main Photo */}
@@ -102,7 +102,7 @@ export default function ProductDetailPage({
                 <button
                   key={idx}
                   onClick={() => setActiveImageIdx(idx)}
-                  className={`relative w-11 sm:w-20 aspect-[3/4] rounded-xs overflow-hidden border-2 transition-all shrink-0 cursor-pointer ${
+                  className={`relative w-11 sm:w-20 aspect-square sm:aspect-[3/4] rounded-xs overflow-hidden border-2 transition-all shrink-0 cursor-pointer ${
                     activeImageIdx === idx
                       ? "border-[#541920] ring-1 ring-[#541920]"
                       : "border-[#E8E2D9] opacity-75 hover:opacity-100"
@@ -120,7 +120,7 @@ export default function ProductDetailPage({
             </div>
 
             {/* Main Stage Image */}
-            <div className="relative aspect-[3/4] w-full max-w-[185px] sm:max-w-none flex-1 rounded-sm overflow-hidden bg-neutral-100 shadow-md border border-[#E8E2D9]">
+            <div className="relative aspect-[3/4] w-full max-w-[160px] sm:max-w-none flex-1 rounded-sm overflow-hidden bg-neutral-100 shadow-md border border-[#E8E2D9]">
               <Image
                 src={product.images[activeImageIdx] || product.images[0]}
                 alt={product.name}
@@ -143,7 +143,7 @@ export default function ProductDetailPage({
           </div>
 
           {/* Right Column: Product Details & Actions */}
-          <div className="lg:col-span-5 space-y-4 sm:space-y-6">
+          <div className="lg:col-span-5 space-y-3 sm:space-y-6">
             
             {/* Header info */}
             <div>
@@ -170,7 +170,7 @@ export default function ProductDetailPage({
               </h1>
 
               {/* Rating and Reviews */}
-              <div className="flex items-center gap-2 mt-2">
+              <div className="flex items-center gap-2 mt-1">
                 <div className="flex items-center text-[#C5A575]">
                   <Star className="w-4 h-4 fill-current" />
                   <span className="text-xs font-bold text-neutral-900 ml-1">{product.rating}</span>
@@ -182,13 +182,13 @@ export default function ProductDetailPage({
             </div>
 
             {/* Price block */}
-            <div className="pt-2 border-t border-[#E8E2D9]">
-              <div className="flex items-baseline gap-3">
-                <span className="text-2xl sm:text-3xl font-serif font-bold text-[#541920]">
+            <div className="pt-1.5 border-t border-[#E8E2D9]">
+              <div className="flex items-baseline gap-2.5 sm:gap-3 flex-wrap">
+                <span className="text-xl sm:text-3xl font-serif font-bold text-[#541920]">
                   {formatPrice(product.price)}
                 </span>
                 {product.originalPrice > product.price && (
-                  <span className="text-base text-neutral-400 line-through">
+                  <span className="text-sm sm:text-base text-neutral-400 line-through">
                     {formatPrice(product.originalPrice)}
                   </span>
                 )}
