@@ -151,11 +151,6 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
                 {formatPrice(product.originalPrice)}
               </span>
             )}
-            {product.discountPercent > 0 && (
-              <span className="text-[11px] text-[#15803D] font-semibold whitespace-nowrap">
-                {product.discountPercent}% OFF
-              </span>
-            )}
           </div>
 
           {/* Add to Bag Button */}
