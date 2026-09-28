@@ -74,7 +74,7 @@ export default function ProductDetailPage({
   return (
     <div className="min-h-screen bg-[#FAF7F2] pb-24 lg:pb-12">
       {/* Breadcrumb Navigation */}
-      <div className="bg-[#F4EFE6] border-b border-[#E8E2D9] py-0.5 sm:py-3.5">
+      <div className="hidden sm:block bg-[#F4EFE6] border-b border-[#E8E2D9] py-0.5 sm:py-3.5">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <nav className="text-[11px] sm:text-xs text-neutral-500 flex items-center gap-1.5 font-sans overflow-x-auto whitespace-nowrap">
             <Link href="/" className="hover:text-black">Home</Link>
@@ -90,8 +90,8 @@ export default function ProductDetailPage({
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-1.5 sm:py-8 lg:py-12">
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-2 sm:gap-6 lg:gap-12">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-0.5 sm:py-8 lg:py-12">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-1 sm:gap-6 lg:gap-12">
           
           {/* Left Column: Vertical Thumbnails + Main Photo */}
           <div className="lg:col-span-7 flex flex-col sm:flex-row gap-1.5 sm:gap-4 items-center sm:items-start w-full">
@@ -120,7 +120,7 @@ export default function ProductDetailPage({
             </div>
 
             {/* Main Stage Image */}
-            <div className="relative aspect-square sm:aspect-[3/4] w-full max-w-[255px] sm:max-w-none flex-1 rounded-sm overflow-hidden bg-neutral-100 shadow-md border border-[#E8E2D9]">
+            <div className="relative aspect-[3/4] w-full max-w-[250px] sm:max-w-none flex-1 rounded-sm overflow-hidden bg-neutral-100 shadow-md border border-[#E8E2D9]">
               <Image
                 src={product.images[activeImageIdx] || product.images[0]}
                 alt={product.name}
@@ -168,7 +168,7 @@ export default function ProductDetailPage({
           </div>
 
           {/* Right Column: Product Details & Actions */}
-          <div className="lg:col-span-5 space-y-2 sm:space-y-6">
+          <div className="lg:col-span-5 space-y-1.5 sm:space-y-6">
             
             {/* Header info */}
             <div>
@@ -180,40 +180,38 @@ export default function ProductDetailPage({
                     ? "Heritage Jewellery"
                     : `${product.category} ${product.hasBlousePiece ? "Sarees" : "Collection"}`}
                 </span>
-                <button
-                  onClick={handleShare}
-                  className="text-neutral-400 hover:text-black p-1 transition-colors min-h-[44px] min-w-[44px] flex items-center justify-center focus-visible:ring-2 focus-visible:ring-[#541920] focus-visible:outline-none"
-                  title="Share product link"
-                  aria-label="Share product link"
-                >
-                  <Share2 className="w-4 h-4" />
-                </button>
+                <div className="flex items-center gap-2">
+                  <div className="flex items-center text-[#C5A575]">
+                    <Star className="w-3.5 h-3.5 fill-current" />
+                    <span className="text-xs font-bold text-neutral-900 ml-1">{product.rating}</span>
+                    <span className="text-[11px] text-neutral-500 font-sans ml-0.5">
+                      ({product.reviewsCount || 120})
+                    </span>
+                  </div>
+                  <button
+                    onClick={handleShare}
+                    className="text-neutral-400 hover:text-black p-1 transition-colors min-h-[44px] min-w-[44px] flex items-center justify-center focus-visible:ring-2 focus-visible:ring-[#541920] focus-visible:outline-none"
+                    title="Share product link"
+                    aria-label="Share product link"
+                  >
+                    <Share2 className="w-4 h-4" />
+                  </button>
+                </div>
               </div>
 
-              <h1 className="text-xl sm:text-3xl font-serif font-medium text-neutral-900 mt-0.5 sm:mt-1 leading-snug">
+              <h1 className="text-lg sm:text-3xl font-serif font-medium text-neutral-900 mt-0.5 sm:mt-1 leading-snug">
                 {product.name}
               </h1>
-
-              {/* Rating and Reviews */}
-              <div className="flex items-center gap-2 mt-1">
-                <div className="flex items-center text-[#C5A575]">
-                  <Star className="w-4 h-4 fill-current" />
-                  <span className="text-xs font-bold text-neutral-900 ml-1">{product.rating}</span>
-                </div>
-                <span className="text-xs text-neutral-500 font-sans">
-                  ({product.reviewsCount || 120} Reviews)
-                </span>
-              </div>
             </div>
 
-            {/* Price block */}
-            <div className="pt-1.5 border-t border-[#E8E2D9]">
-              <div className="flex items-baseline gap-2.5 sm:gap-3 flex-wrap">
+            {/* Price & Color block */}
+            <div className="pt-1.5 border-t border-[#E8E2D9] flex items-center justify-between gap-2 flex-wrap">
+              <div className="flex items-baseline gap-2 sm:gap-3 flex-wrap">
                 <span className="text-xl sm:text-3xl font-serif font-bold text-[#541920]">
                   {formatPrice(product.price)}
                 </span>
                 {product.originalPrice > product.price && (
-                  <span className="text-sm sm:text-base text-neutral-400 line-through">
+                  <span className="text-xs sm:text-base text-neutral-400 line-through">
                     {formatPrice(product.originalPrice)}
                   </span>
                 )}
@@ -223,37 +221,37 @@ export default function ProductDetailPage({
                   </span>
                 )}
               </div>
-            </div>
 
-            {/* Color Swatches */}
-            {product.colors && product.colors.length > 0 && (
-              <div className="flex items-center gap-2 pt-1 border-t border-[#E8E2D9]">
-                <label className="text-xs font-semibold text-neutral-800 shrink-0">
-                  Color: <span className="font-normal text-neutral-600">{selectedColor}</span>
-                </label>
-                <div className="flex flex-wrap items-center gap-1">
-                  {product.colors.map((c) => (
-                    <button
-                      key={c.name}
-                      type="button"
-                      onClick={() => setSelectedColor(c.name)}
-                      className="w-11 h-11 min-w-[44px] min-h-[44px] flex items-center justify-center rounded-full cursor-pointer focus-visible:ring-2 focus-visible:ring-[#541920] focus-visible:outline-none"
-                      title={c.name}
-                      aria-label={`Select color ${c.name}`}
-                    >
-                      <span
-                        className={`w-7 h-7 rounded-full transition-all border-2 block ${
-                          selectedColor === c.name
-                            ? "border-[#541920] ring-2 ring-[#541920]/30 scale-110"
-                            : "border-transparent opacity-80 hover:opacity-100"
-                        }`}
-                        style={{ backgroundColor: c.hex }}
-                      />
-                    </button>
-                  ))}
+              {/* Color Swatches */}
+              {product.colors && product.colors.length > 0 && (
+                <div className="flex items-center gap-1.5">
+                  <span className="text-xs font-semibold text-neutral-800">
+                    Color: <span className="font-normal text-neutral-600">{selectedColor}</span>
+                  </span>
+                  <div className="flex items-center gap-1">
+                    {product.colors.map((c) => (
+                      <button
+                        key={c.name}
+                        type="button"
+                        onClick={() => setSelectedColor(c.name)}
+                        className="w-11 h-11 min-w-[44px] min-h-[44px] flex items-center justify-center rounded-full cursor-pointer focus-visible:ring-2 focus-visible:ring-[#541920] focus-visible:outline-none"
+                        title={c.name}
+                        aria-label={`Select color ${c.name}`}
+                      >
+                        <span
+                          className={`w-7 h-7 rounded-full transition-all border-2 block ${
+                            selectedColor === c.name
+                              ? "border-[#541920] ring-2 ring-[#541920]/30 scale-110"
+                              : "border-transparent opacity-80 hover:opacity-100"
+                          }`}
+                          style={{ backgroundColor: c.hex }}
+                        />
+                      </button>
+                    ))}
+                  </div>
                 </div>
-              </div>
-            )}
+              )}
+            </div>
 
             {/* Blouse Option */}
             {product.hasBlousePiece && (
