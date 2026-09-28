@@ -124,7 +124,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
               <Star size={12} className="fill-current" />
               <span className="text-[11px] font-semibold text-[#1C1A18] ml-0.5">{product.rating}</span>
             </div>
-            <span className="text-[10px] text-[#8A857E]">({product.reviewsCount})</span>
+            <span className="text-[10px] text-[#5E5A54]">({product.reviewsCount})</span>
           </div>
 
           {/* Product Name */}
@@ -135,7 +135,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
           </Link>
 
           {/* Fabric / Type */}
-          <p className="text-xs text-[#8A857E] mt-0.5 line-clamp-1 font-light">
+          <p className="text-xs text-[#5E5A54] mt-0.5 line-clamp-1 font-normal">
             {product.fabric}
           </p>
         </div>
@@ -147,7 +147,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
               {formatPrice(product.price)}
             </span>
             {product.originalPrice > product.price && (
-              <span className="text-xs text-[#8A857E] line-through font-light">
+              <span className="text-xs text-[#5E5A54] line-through font-normal">
                 {formatPrice(product.originalPrice)}
               </span>
             )}

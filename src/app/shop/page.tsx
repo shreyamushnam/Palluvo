@@ -199,7 +199,7 @@ function ShopContent() {
           <div className="flex items-center gap-3">
             <button
               onClick={() => setIsMobileFilterOpen(true)}
-              className="lg:hidden inline-flex items-center gap-2 px-3.5 py-2 bg-white border border-[#DCD5C9] rounded-xs text-xs font-semibold text-neutral-800"
+              className="lg:hidden inline-flex items-center gap-2 px-3.5 py-2.5 min-h-[44px] bg-white border border-[#DCD5C9] rounded-xs text-xs font-semibold text-neutral-800 hover:bg-[#FAF7F2] transition-colors cursor-pointer focus-visible:ring-2 focus-visible:ring-[#541920] focus-visible:outline-none"
             >
               <SlidersHorizontal className="w-3.5 h-3.5" />
               <span>Filters {activeFiltersCount > 0 && `(${activeFiltersCount})`}</span>
@@ -474,8 +474,9 @@ function ShopContent() {
               <div className="p-4 border-b border-[#E8E2D9] flex items-center justify-between bg-[#F4EFE6]">
                 <h3 className="font-serif text-base font-semibold">Filter Sarees</h3>
                 <button
+                  type="button"
                   onClick={() => setIsMobileFilterOpen(false)}
-                  className="p-1 text-neutral-500 hover:text-black rounded-full"
+                  className="w-11 h-11 min-w-[44px] min-h-[44px] -mr-2 text-neutral-500 hover:text-black rounded-full flex items-center justify-center transition-colors cursor-pointer focus-visible:ring-2 focus-visible:ring-[#541920] focus-visible:outline-none"
                   aria-label="Close filters"
                 >
                   <X className="w-5 h-5" />
@@ -501,9 +502,10 @@ function ShopContent() {
                       return (
                         <button
                           key={cat.id}
+                          type="button"
                           onClick={() => handleCategoryToggle(cat.name)}
-                          className={`w-full flex items-center justify-between py-1.5 text-xs text-left cursor-pointer ${
-                            isSelected ? "text-[#541920] font-bold" : "text-neutral-600"
+                          className={`w-full min-h-[44px] flex items-center justify-between px-2.5 py-2 text-xs text-left rounded-xs transition-colors cursor-pointer focus-visible:ring-2 focus-visible:ring-[#541920] focus-visible:outline-none ${
+                            isSelected ? "text-[#541920] font-bold bg-[#541920]/5" : "text-neutral-600 hover:bg-black/5"
                           }`}
                         >
                           <span>{cat.name}</span>
@@ -519,15 +521,18 @@ function ShopContent() {
                   <h4 className="text-xs font-semibold uppercase tracking-wider text-neutral-800 mb-2">
                     Price Range
                   </h4>
-                  <div className="space-y-1.5">
+                  <div className="space-y-1">
                     {PRICE_RANGES.map((range, idx) => (
-                      <label key={idx} className="flex items-center gap-2 text-xs text-neutral-600">
+                      <label
+                        key={idx}
+                        className="min-h-[44px] flex items-center gap-2.5 px-2.5 py-2 text-xs text-neutral-600 rounded-xs hover:bg-black/5 cursor-pointer transition-colors"
+                      >
                         <input
                           type="radio"
                           name="mobile-price"
                           checked={selectedPriceRange === idx}
                           onChange={() => setSelectedPriceRange(idx)}
-                          className="text-[#541920]"
+                          className="w-4 h-4 text-[#541920] accent-[#541920]"
                         />
                         <span>{range.label}</span>
                       </label>
@@ -544,12 +549,14 @@ function ShopContent() {
                     {FABRICS.map((fabric) => (
                       <button
                         key={fabric}
+                        type="button"
                         onClick={() => setSelectedFabric(selectedFabric === fabric ? "" : fabric)}
-                        className={`w-full text-left text-xs py-1.5 ${
-                          selectedFabric === fabric ? "text-[#541920] font-bold" : "text-neutral-600"
+                        className={`w-full min-h-[44px] px-2.5 py-2 flex items-center justify-between text-left text-xs rounded-xs transition-colors cursor-pointer focus-visible:ring-2 focus-visible:ring-[#541920] focus-visible:outline-none ${
+                          selectedFabric === fabric ? "text-[#541920] font-bold bg-[#541920]/5" : "text-neutral-600 hover:bg-black/5"
                         }`}
                       >
-                        {fabric}
+                        <span>{fabric}</span>
+                        {selectedFabric === fabric && <Check className="w-3.5 h-3.5 text-[#541920]" />}
                       </button>
                     ))}
                   </div>
@@ -558,14 +565,16 @@ function ShopContent() {
 
               <div className="p-4 border-t border-[#E8E2D9] bg-[#F4EFE6] flex gap-2">
                 <button
+                  type="button"
                   onClick={clearAllFilters}
-                  className="flex-1 py-2.5 bg-white border border-[#DCD5C9] text-xs font-semibold rounded-xs"
+                  className="flex-1 min-h-[44px] py-2.5 bg-white border border-[#DCD5C9] text-xs font-semibold rounded-xs hover:bg-neutral-50 transition-colors cursor-pointer"
                 >
                   Clear All
                 </button>
                 <button
+                  type="button"
                   onClick={() => setIsMobileFilterOpen(false)}
-                  className="flex-1 py-2.5 bg-[#541920] text-white text-xs font-semibold rounded-xs"
+                  className="flex-1 min-h-[44px] py-2.5 bg-[#541920] text-white text-xs font-semibold rounded-xs hover:bg-[#3D1217] transition-colors cursor-pointer"
                 >
                   Apply Filters
                 </button>
