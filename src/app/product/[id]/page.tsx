@@ -90,7 +90,7 @@ export default function ProductDetailPage({
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-0.5 sm:py-8 lg:py-12">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-0 sm:py-8 lg:py-12">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-1 sm:gap-6 lg:gap-12">
           
           {/* Left Column: Vertical Thumbnails + Main Photo */}
@@ -190,7 +190,7 @@ export default function ProductDetailPage({
                   </div>
                   <button
                     onClick={handleShare}
-                    className="hidden sm:flex text-neutral-400 hover:text-black p-1 transition-colors min-h-[44px] min-w-[44px] items-center justify-center focus-visible:ring-2 focus-visible:ring-[#541920] focus-visible:outline-none"
+                    className="text-neutral-400 hover:text-black p-1 transition-colors min-h-[44px] min-w-[44px] flex items-center justify-center focus-visible:ring-2 focus-visible:ring-[#541920] focus-visible:outline-none"
                     title="Share product link"
                     aria-label="Share product link"
                   >
@@ -199,13 +199,13 @@ export default function ProductDetailPage({
                 </div>
               </div>
 
-              <h1 className="text-base sm:text-3xl font-serif font-medium text-neutral-900 mt-0.5 sm:mt-1 leading-snug">
+              <h1 className="text-base sm:text-3xl font-serif font-medium text-neutral-900 mt-0 sm:mt-1 leading-snug">
                 {product.name}
               </h1>
             </div>
 
-            {/* Price & Color block */}
-            <div className="pt-1 sm:pt-1.5 border-t border-[#E8E2D9] flex items-center justify-between gap-1.5 sm:gap-2 flex-wrap">
+            {/* Price & Quantity Stepper */}
+            <div className="pt-0.5 sm:pt-1.5 border-t border-[#E8E2D9] flex items-center justify-between gap-2 flex-wrap">
               <div className="flex items-baseline gap-1.5 sm:gap-3 flex-wrap">
                 <span className="text-xl sm:text-3xl font-serif font-bold text-[#541920]">
                   {formatPrice(product.price)}
@@ -222,40 +222,8 @@ export default function ProductDetailPage({
                 )}
               </div>
 
-              {/* Color Swatches */}
-              {product.colors && product.colors.length > 0 && (
-                <div className="flex items-center gap-1">
-                  <span className="text-xs font-semibold text-neutral-800">
-                    Color: <span className="font-normal text-neutral-600">{selectedColor}</span>
-                  </span>
-                  <div className="flex items-center gap-1">
-                    {product.colors.map((c) => (
-                      <button
-                        key={c.name}
-                        type="button"
-                        onClick={() => setSelectedColor(c.name)}
-                        className="w-11 h-11 min-w-[44px] min-h-[44px] flex items-center justify-center rounded-full cursor-pointer focus-visible:ring-2 focus-visible:ring-[#541920] focus-visible:outline-none"
-                        title={c.name}
-                        aria-label={`Select color ${c.name}`}
-                      >
-                        <span
-                          className={`w-7 h-7 rounded-full transition-all border-2 block ${
-                            selectedColor === c.name
-                              ? "border-[#541920] ring-2 ring-[#541920]/30 scale-110"
-                              : "border-transparent opacity-80 hover:opacity-100"
-                          }`}
-                          style={{ backgroundColor: c.hex }}
-                        />
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </div>
-
-            {/* Quantity Stepper & Heart & Share */}
-            <div className="flex items-center gap-2.5 sm:gap-3 pt-0.5">
-              <div className="flex items-center border border-[#DCD5C9] rounded-xs bg-white">
+              {/* Quantity Stepper */}
+              <div className="flex items-center border border-[#DCD5C9] rounded-xs bg-white shrink-0">
                 <button
                   type="button"
                   onClick={() => setQuantity((q) => Math.max(1, q - 1))}
@@ -264,7 +232,7 @@ export default function ProductDetailPage({
                 >
                   -
                 </button>
-                <span className="min-w-[36px] px-2 text-center text-xs font-semibold text-neutral-900 select-none">
+                <span className="min-w-[32px] px-1 text-center text-xs font-semibold text-neutral-900 select-none">
                   {quantity}
                 </span>
                 <button
@@ -276,31 +244,37 @@ export default function ProductDetailPage({
                   +
                 </button>
               </div>
-
-              <button
-                type="button"
-                onClick={() => toggleWishlist(product.id)}
-                className={`w-11 h-11 min-w-[44px] min-h-[44px] border rounded-xs transition-colors flex items-center justify-center cursor-pointer focus-visible:ring-2 focus-visible:ring-[#541920] focus-visible:outline-none ${
-                  isFav
-                    ? "border-[#541920] bg-[#541920]/10 text-[#541920]"
-                    : "border-[#DCD5C9] bg-white text-neutral-600 hover:text-black"
-                }`}
-                title={isFav ? "Remove from wishlist" : "Add to wishlist"}
-                aria-label={isFav ? "Remove from wishlist" : "Add to wishlist"}
-              >
-                <Heart className={`w-4 h-4 ${isFav ? "fill-[#541920]" : ""}`} />
-              </button>
-
-              <button
-                type="button"
-                onClick={handleShare}
-                className="w-11 h-11 min-w-[44px] min-h-[44px] border border-[#DCD5C9] bg-white text-neutral-600 hover:text-black rounded-xs transition-colors flex items-center justify-center cursor-pointer focus-visible:ring-2 focus-visible:ring-[#541920] focus-visible:outline-none sm:hidden"
-                title="Share product link"
-                aria-label="Share product link"
-              >
-                <Share2 className="w-4 h-4" />
-              </button>
             </div>
+
+            {/* Color Swatches */}
+            {product.colors && product.colors.length > 0 && (
+              <div className="flex items-center gap-1.5 pt-0.5">
+                <span className="text-xs font-semibold text-neutral-800 shrink-0">
+                  Color: <span className="font-normal text-neutral-600">{selectedColor}</span>
+                </span>
+                <div className="flex items-center gap-1">
+                  {product.colors.map((c) => (
+                    <button
+                      key={c.name}
+                      type="button"
+                      onClick={() => setSelectedColor(c.name)}
+                      className="w-11 h-11 min-w-[44px] min-h-[44px] flex items-center justify-center rounded-full cursor-pointer focus-visible:ring-2 focus-visible:ring-[#541920] focus-visible:outline-none"
+                      title={c.name}
+                      aria-label={`Select color ${c.name}`}
+                    >
+                      <span
+                        className={`w-7 h-7 rounded-full transition-all border-2 block ${
+                          selectedColor === c.name
+                            ? "border-[#541920] ring-2 ring-[#541920]/30 scale-110"
+                            : "border-transparent opacity-80 hover:opacity-100"
+                        }`}
+                        style={{ backgroundColor: c.hex }}
+                      />
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
 
             {/* Blouse Option */}
             {product.hasBlousePiece && (
@@ -326,21 +300,35 @@ export default function ProductDetailPage({
               </div>
             )}
 
-            {/* Action Buttons: ADD TO BAG & BUY NOW */}
-            <div className="flex flex-col sm:flex-row gap-3 pt-2">
+            {/* Action Buttons: ADD TO BAG & BUY NOW & WISHLIST */}
+            <div className="flex items-center gap-2 pt-1 sticky bottom-[54px] z-30 sm:static bg-[#FAF7F2]/95 sm:bg-transparent backdrop-blur-xs sm:backdrop-blur-none py-1 sm:py-0 border-t border-[#1C1A18]/6 sm:border-0 shadow-xs sm:shadow-none -mx-4 px-4 sm:mx-0 sm:px-0">
               <button
                 onClick={handleAddToCart}
-                className="flex-1 py-3.5 bg-[#541920] hover:bg-[#3D1217] text-white text-xs uppercase tracking-widest font-semibold rounded-xs shadow-md transition-all flex items-center justify-center gap-2"
+                className="flex-1 min-h-[44px] py-3 bg-[#541920] hover:bg-[#3D1217] text-white text-xs uppercase tracking-wider sm:tracking-widest font-semibold rounded-xs shadow-md transition-all flex items-center justify-center gap-1.5"
               >
-                <ShoppingBag className="w-4 h-4" />
+                <ShoppingBag className="w-4 h-4 shrink-0" />
                 <span>Add to Bag</span>
               </button>
 
               <button
                 onClick={handleBuyNow}
-                className="flex-1 py-3.5 bg-white border border-[#541920] hover:bg-[#FAF7F2] text-[#541920] text-xs uppercase tracking-widest font-semibold rounded-xs transition-colors text-center"
+                className="flex-1 min-h-[44px] py-3 bg-white border border-[#541920] hover:bg-[#FAF7F2] text-[#541920] text-xs uppercase tracking-wider sm:tracking-widest font-semibold rounded-xs transition-colors text-center"
               >
                 Buy Now
+              </button>
+
+              <button
+                type="button"
+                onClick={() => toggleWishlist(product.id)}
+                className={`w-11 h-11 min-w-[44px] min-h-[44px] border rounded-xs transition-colors flex items-center justify-center cursor-pointer shrink-0 focus-visible:ring-2 focus-visible:ring-[#541920] focus-visible:outline-none ${
+                  isFav
+                    ? "border-[#541920] bg-[#541920]/10 text-[#541920]"
+                    : "border-[#DCD5C9] bg-white text-neutral-600 hover:text-black"
+                }`}
+                title={isFav ? "Remove from wishlist" : "Add to wishlist"}
+                aria-label={isFav ? "Remove from wishlist" : "Add to wishlist"}
+              >
+                <Heart className={`w-4 h-4 ${isFav ? "fill-[#541920]" : ""}`} />
               </button>
             </div>
 
@@ -440,7 +428,7 @@ export default function ProductDetailPage({
             </h2>
             <Link
               href="/shop"
-              className="text-xs uppercase tracking-wider text-[#541920] font-semibold hover:underline"
+              className="min-h-[44px] min-w-[44px] px-2 -mr-2 inline-flex items-center justify-center text-xs uppercase tracking-wider text-[#541920] font-semibold hover:underline focus-visible:ring-2 focus-visible:ring-[#541920] focus-visible:outline-none rounded-xs"
             >
               View all →
             </Link>
