@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, use } from "react";
+import React, { useState, useRef, useEffect, use } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -45,6 +45,29 @@ export default function ProductDetailPage({
     returns: false,
     care: false,
   });
+
+  const optionsRef = useRef<HTMLDivElement>(null);
+  const ctaRef = useRef<HTMLDivElement>(null);
+  const [optionsPassed, setOptionsPassed] = useState(false);
+
+  useEffect(() => {
+    const handleScroll = () => {
+      if (!optionsRef.current) return;
+      const rect = optionsRef.current.getBoundingClientRect();
+      const ctaHeight = ctaRef.current?.offsetHeight || 52;
+      // Pinned when options have scrolled above the sticky CTA's docked position (bottom: 54px)
+      const threshold = window.innerHeight - 54 - ctaHeight;
+      setOptionsPassed(rect.bottom <= threshold);
+    };
+
+    handleScroll();
+    window.addEventListener("scroll", handleScroll, { passive: true });
+    window.addEventListener("resize", handleScroll, { passive: true });
+    return () => {
+      window.removeEventListener("scroll", handleScroll);
+      window.removeEventListener("resize", handleScroll);
+    };
+  }, []);
 
   const isFav = isInWishlist(product.id);
 
@@ -205,8 +228,8 @@ export default function ProductDetailPage({
             </div>
 
             {/* Price & Quantity Stepper */}
-            <div className="pt-0.5 sm:pt-1.5 border-t border-[#E8E2D9] flex items-center justify-between gap-2 flex-wrap">
-              <div className="flex items-baseline gap-1.5 sm:gap-3 flex-wrap">
+            <div className="pt-0.5 sm:pt-1.5 border-t border-[#E8E2D9] flex items-center justify-between gap-1 sm:gap-2">
+              <div className="flex items-baseline gap-1 sm:gap-3 shrink-0">
                 <span className="text-xl sm:text-3xl font-serif font-bold text-[#541920]">
                   {formatPrice(product.price)}
                 </span>
@@ -246,62 +269,72 @@ export default function ProductDetailPage({
               </div>
             </div>
 
-            {/* Color Swatches */}
-            {product.colors && product.colors.length > 0 && (
-              <div className="flex items-center gap-1.5 pt-0.5">
-                <span className="text-xs font-semibold text-neutral-800 shrink-0">
-                  Color: <span className="font-normal text-neutral-600">{selectedColor}</span>
-                </span>
-                <div className="flex items-center gap-1">
-                  {product.colors.map((c) => (
-                    <button
-                      key={c.name}
-                      type="button"
-                      onClick={() => setSelectedColor(c.name)}
-                      className="w-11 h-11 min-w-[44px] min-h-[44px] flex items-center justify-center rounded-full cursor-pointer focus-visible:ring-2 focus-visible:ring-[#541920] focus-visible:outline-none"
-                      title={c.name}
-                      aria-label={`Select color ${c.name}`}
-                    >
-                      <span
-                        className={`w-7 h-7 rounded-full transition-all border-2 block ${
-                          selectedColor === c.name
-                            ? "border-[#541920] ring-2 ring-[#541920]/30 scale-110"
-                            : "border-transparent opacity-80 hover:opacity-100"
-                        }`}
-                        style={{ backgroundColor: c.hex }}
-                      />
-                    </button>
-                  ))}
+            {/* Variant Options Container (Color & Blouse) */}
+            <div ref={optionsRef} className="space-y-1">
+              {/* Color Swatches */}
+              {product.colors && product.colors.length > 0 && (
+                <div className="flex items-center gap-1.5 pt-0.5">
+                  <span className="text-xs font-semibold text-neutral-800 shrink-0">
+                    Color: <span className="font-normal text-neutral-600">{selectedColor}</span>
+                  </span>
+                  <div className="flex items-center gap-1">
+                    {product.colors.map((c) => (
+                      <button
+                        key={c.name}
+                        type="button"
+                        onClick={() => setSelectedColor(c.name)}
+                        className="w-11 h-11 min-w-[44px] min-h-[44px] flex items-center justify-center rounded-full cursor-pointer focus-visible:ring-2 focus-visible:ring-[#541920] focus-visible:outline-none"
+                        title={c.name}
+                        aria-label={`Select color ${c.name}`}
+                      >
+                        <span
+                          className={`w-7 h-7 rounded-full transition-all border-2 block ${
+                            selectedColor === c.name
+                              ? "border-[#541920] ring-2 ring-[#541920]/30 scale-110"
+                              : "border-transparent opacity-80 hover:opacity-100"
+                          }`}
+                          style={{ backgroundColor: c.hex }}
+                        />
+                      </button>
+                    ))}
+                  </div>
                 </div>
-              </div>
-            )}
+              )}
 
-            {/* Blouse Option */}
-            {product.hasBlousePiece && (
-              <div className="flex items-center gap-2 pt-0.5">
-                <span className="text-xs font-semibold text-neutral-800 shrink-0">
-                  Blouse:
-                </span>
-                <div className="flex gap-2">
-                  {["With Blouse", "Without Blouse"].map((opt) => (
-                    <button
-                      key={opt}
-                      onClick={() => setBlouseOption(opt)}
-                      className={`min-h-[44px] px-2.5 sm:px-4 py-2 text-xs rounded-xs border transition-all font-medium focus-visible:ring-2 focus-visible:ring-[#541920] focus-visible:outline-none cursor-pointer ${
-                        blouseOption === opt
-                          ? "border-[#541920] bg-[#FAF7F2] text-[#541920] ring-1 ring-[#541920]"
-                          : "border-[#DCD5C9] bg-white text-neutral-700 hover:border-neutral-400"
-                      }`}
-                    >
-                      {opt}
-                    </button>
-                  ))}
+              {/* Blouse Option */}
+              {product.hasBlousePiece && (
+                <div className="flex items-center gap-2 pt-0.5">
+                  <span className="text-xs font-semibold text-neutral-800 shrink-0">
+                    Blouse:
+                  </span>
+                  <div className="flex gap-2">
+                    {["With Blouse", "Without Blouse"].map((opt) => (
+                      <button
+                        key={opt}
+                        onClick={() => setBlouseOption(opt)}
+                        className={`min-h-[44px] px-2.5 sm:px-4 py-2 text-xs rounded-xs border transition-all font-medium focus-visible:ring-2 focus-visible:ring-[#541920] focus-visible:outline-none cursor-pointer ${
+                          blouseOption === opt
+                            ? "border-[#541920] bg-[#FAF7F2] text-[#541920] ring-1 ring-[#541920]"
+                            : "border-[#DCD5C9] bg-white text-neutral-700 hover:border-neutral-400"
+                        }`}
+                      >
+                        {opt}
+                      </button>
+                    ))}
+                  </div>
                 </div>
-              </div>
-            )}
+              )}
+            </div>
 
             {/* Action Buttons: ADD TO BAG & BUY NOW & WISHLIST */}
-            <div className="flex items-center gap-2 pt-1 sticky bottom-[54px] z-30 sm:static bg-[#FAF7F2]/95 sm:bg-transparent backdrop-blur-xs sm:backdrop-blur-none py-1 sm:py-0 border-t border-[#1C1A18]/6 sm:border-0 shadow-xs sm:shadow-none -mx-4 px-4 sm:mx-0 sm:px-0">
+            <div
+              ref={ctaRef}
+              className={`flex items-center gap-2 pt-1 z-30 sm:static ${
+                optionsPassed
+                  ? "sticky bottom-[54px] bg-[#FAF7F2]/95 backdrop-blur-xs py-1 border-t border-[#1C1A18]/6 shadow-xs -mx-4 px-4"
+                  : "static bg-transparent py-0 border-0 shadow-none mx-0 px-0"
+              } sm:bg-transparent sm:backdrop-blur-none sm:py-0 sm:border-0 sm:shadow-none sm:mx-0 sm:px-0`}
+            >
               <button
                 onClick={handleAddToCart}
                 className="flex-1 min-h-[44px] py-3 bg-[#541920] hover:bg-[#3D1217] text-white text-xs uppercase tracking-wider sm:tracking-widest font-semibold rounded-xs shadow-md transition-all flex items-center justify-center gap-1.5"
@@ -421,7 +454,7 @@ export default function ProductDetailPage({
         </div>
 
         {/* You May Also Like */}
-        <div className="mt-16 pt-12 border-t border-[#E8E2D9]">
+        <div className="mt-6 pt-6 sm:mt-16 sm:pt-12 border-t border-[#E8E2D9]">
           <div className="flex items-center justify-between mb-8">
             <h2 className="text-xl sm:text-2xl font-serif font-normal text-neutral-900">
               You May Also Like
