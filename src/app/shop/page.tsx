@@ -41,8 +41,11 @@ export function getOccasionItemCount(occ: string): number {
   const occTerms = occ.toLowerCase().split(/[&,\s]+/).filter((term) => term.length > 2);
   return PRODUCTS.filter((product) => {
     const prodOcc = product.occasion.toLowerCase();
+    const prodDetailsOcc = product.details?.occasion?.toLowerCase() || "";
     const prodCat = product.category.toLowerCase();
-    return occTerms.some((term) => prodOcc.includes(term) || prodCat.includes(term));
+    return occTerms.some(
+      (term) => prodOcc.includes(term) || prodDetailsOcc.includes(term) || prodCat.includes(term)
+    );
   }).length;
 }
 
@@ -148,8 +151,11 @@ function ShopContent() {
       if (selectedOccasion) {
         const occTerms = selectedOccasion.toLowerCase().split(/[&,\s]+/).filter(term => term.length > 2);
         const prodOcc = product.occasion.toLowerCase();
+        const prodDetailsOcc = product.details?.occasion?.toLowerCase() || "";
         const prodCat = product.category.toLowerCase();
-        const matches = occTerms.some(term => prodOcc.includes(term) || prodCat.includes(term));
+        const matches = occTerms.some(
+          term => prodOcc.includes(term) || prodDetailsOcc.includes(term) || prodCat.includes(term)
+        );
         if (!matches) return false;
       }
       // Price range filter
@@ -400,7 +406,7 @@ function ShopContent() {
                         }`}
                       >
                         <span>{cat.name}</span>
-                        <span className="text-[11px] text-neutral-400">({cat.itemCount})</span>
+                        <span className={`text-[11px] ${isDisabled ? "text-neutral-400" : isSelected ? "text-[#541920]" : "text-neutral-600 font-medium"}`}>({cat.itemCount})</span>
                       </button>
                     );
                   })}
@@ -456,7 +462,7 @@ function ShopContent() {
                         }`}
                       >
                         <span>{fabric}</span>
-                        <span className="text-[11px] text-neutral-400">({count})</span>
+                        <span className={`text-[11px] ${isDisabled ? "text-neutral-400" : selectedFabric === fabric ? "text-[#541920]" : "text-neutral-600 font-medium"}`}>({count})</span>
                       </button>
                     );
                   })}
@@ -488,7 +494,7 @@ function ShopContent() {
                         }`}
                       >
                         <span>{occ}</span>
-                        <span className="text-[11px] text-neutral-400">({count})</span>
+                        <span className={`text-[11px] ${isDisabled ? "text-neutral-400" : selectedOccasion === occ ? "text-[#541920]" : "text-neutral-600 font-medium"}`}>({count})</span>
                       </button>
                     );
                   })}
@@ -590,7 +596,7 @@ function ShopContent() {
                         >
                           <span className="flex items-center gap-1.5">
                             <span>{cat.name}</span>
-                            <span className="text-[11px] text-neutral-400">({cat.itemCount})</span>
+                            <span className={`text-[11px] ${isDisabled ? "text-neutral-400" : isSelected ? "text-[#541920]" : "text-neutral-600 font-medium"}`}>({cat.itemCount})</span>
                           </span>
                           {isSelected && <Check className="w-3.5 h-3.5 text-[#541920]" />}
                         </button>
@@ -650,7 +656,7 @@ function ShopContent() {
                         >
                           <span className="flex items-center gap-1.5">
                             <span>{fabric}</span>
-                            <span className="text-[11px] text-neutral-400">({count})</span>
+                            <span className={`text-[11px] ${isDisabled ? "text-neutral-400" : selectedFabric === fabric ? "text-[#541920]" : "text-neutral-600 font-medium"}`}>({count})</span>
                           </span>
                           {selectedFabric === fabric && <Check className="w-3.5 h-3.5 text-[#541920]" />}
                         </button>
@@ -686,7 +692,7 @@ function ShopContent() {
                         >
                           <span className="flex items-center gap-1.5">
                             <span>{occ}</span>
-                            <span className="text-[11px] text-neutral-400">({count})</span>
+                            <span className={`text-[11px] ${isDisabled ? "text-neutral-400" : selectedOccasion === occ ? "text-[#541920]" : "text-neutral-600 font-medium"}`}>({count})</span>
                           </span>
                           {selectedOccasion === occ && <Check className="w-3.5 h-3.5 text-[#541920]" />}
                         </button>
