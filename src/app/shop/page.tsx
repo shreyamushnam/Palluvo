@@ -47,7 +47,9 @@ function ShopContent() {
   const [isMobileFilterOpen, setIsMobileFilterOpen] = useState(false);
 
   const handleCategoryToggle = (catName: string) => {
-    const params = new URLSearchParams(searchParams.toString());
+    const targetCat = CATEGORIES.find(
+      (c) => c.name.toLowerCase() === catName.toLowerCase()
+    );
     const isCurrent =
       selectedCategory.toLowerCase() === catName.toLowerCase() ||
       (catName.toLowerCase().includes("silk") && selectedCategory.toLowerCase() === "silk") ||
@@ -56,6 +58,12 @@ function ShopContent() {
       (catName.toLowerCase().includes("bridal") && selectedCategory.toLowerCase() === "bridal") ||
       (catName.toLowerCase().includes("new") && selectedCategory.toLowerCase().includes("new"));
 
+    // Prevent selecting categories with zero items
+    if (targetCat && targetCat.itemCount === 0 && !isCurrent) {
+      return;
+    }
+
+    const params = new URLSearchParams(searchParams.toString());
     if (isCurrent) {
       params.delete("category");
     } else {
@@ -118,8 +126,12 @@ function ShopContent() {
         return false;
       }
       // Occasion filter
-      if (selectedOccasion && !product.occasion.toLowerCase().includes(selectedOccasion.toLowerCase().split(" ")[0])) {
-        return false;
+      if (selectedOccasion) {
+        const occTerms = selectedOccasion.toLowerCase().split(/[&,\s]+/).filter(term => term.length > 2);
+        const prodOcc = product.occasion.toLowerCase();
+        const prodCat = product.category.toLowerCase();
+        const matches = occTerms.some(term => prodOcc.includes(term) || prodCat.includes(term));
+        if (!matches) return false;
       }
       // Price range filter
       if (selectedPriceRange !== null) {
@@ -167,7 +179,7 @@ function ShopContent() {
   };
 
   return (
-    <div className="min-h-screen bg-[#FAF7F2]">
+    <div className="min-h-screen bg-[#FAF7F2] pb-24 lg:pb-12">
       {/* Breadcrumb & Header */}
       <div className="bg-[#F4EFE6] border-b border-[#E8E2D9] py-8">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -352,14 +364,20 @@ function ShopContent() {
                       (cat.name.toLowerCase().includes("bridal") && selectedCategory.toLowerCase() === "bridal") ||
                       (cat.name.toLowerCase().includes("new") && selectedCategory.toLowerCase().includes("new"));
 
+                    const isDisabled = cat.itemCount === 0 && !isSelected;
+
                     return (
                       <button
                         key={cat.id}
-                        onClick={() => handleCategoryToggle(cat.name)}
-                        className={`w-full flex items-center justify-between py-1 text-xs text-left transition-colors cursor-pointer ${
-                          isSelected
-                            ? "text-[#541920] font-bold"
-                            : "text-neutral-600 hover:text-black"
+                        disabled={isDisabled}
+                        aria-disabled={isDisabled}
+                        onClick={() => !isDisabled && handleCategoryToggle(cat.name)}
+                        className={`w-full flex items-center justify-between py-1 text-xs text-left transition-colors ${
+                          isDisabled
+                            ? "opacity-40 cursor-not-allowed text-neutral-400"
+                            : isSelected
+                            ? "text-[#541920] font-bold cursor-pointer"
+                            : "text-neutral-600 hover:text-black cursor-pointer"
                         }`}
                       >
                         <span>{cat.name}</span>
@@ -508,16 +526,27 @@ function ShopContent() {
                         (cat.name.toLowerCase().includes("bridal") && selectedCategory.toLowerCase() === "bridal") ||
                         (cat.name.toLowerCase().includes("new") && selectedCategory.toLowerCase().includes("new"));
 
+                      const isDisabled = cat.itemCount === 0 && !isSelected;
+
                       return (
                         <button
                           key={cat.id}
                           type="button"
-                          onClick={() => handleCategoryToggle(cat.name)}
-                          className={`w-full min-h-[44px] flex items-center justify-between px-2.5 py-2 text-xs text-left rounded-xs transition-colors cursor-pointer focus-visible:ring-2 focus-visible:ring-[#541920] focus-visible:outline-none ${
-                            isSelected ? "text-[#541920] font-bold bg-[#541920]/5" : "text-neutral-600 hover:bg-black/5"
+                          disabled={isDisabled}
+                          aria-disabled={isDisabled}
+                          onClick={() => !isDisabled && handleCategoryToggle(cat.name)}
+                          className={`w-full min-h-[44px] flex items-center justify-between px-2.5 py-2 text-xs text-left rounded-xs transition-colors focus-visible:ring-2 focus-visible:ring-[#541920] focus-visible:outline-none ${
+                            isDisabled
+                              ? "opacity-40 cursor-not-allowed text-neutral-400"
+                              : isSelected
+                              ? "text-[#541920] font-bold bg-[#541920]/5 cursor-pointer"
+                              : "text-neutral-600 hover:bg-black/5 cursor-pointer"
                           }`}
                         >
-                          <span>{cat.name}</span>
+                          <span className="flex items-center gap-1.5">
+                            <span>{cat.name}</span>
+                            <span className="text-[11px] text-neutral-400">({cat.itemCount})</span>
+                          </span>
                           {isSelected && <Check className="w-3.5 h-3.5 text-[#541920]" />}
                         </button>
                       );
@@ -566,6 +595,30 @@ function ShopContent() {
                       >
                         <span>{fabric}</span>
                         {selectedFabric === fabric && <Check className="w-3.5 h-3.5 text-[#541920]" />}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Occasion */}
+                <div className="border-t border-[#E8E2D9] pt-4">
+                  <h4 className="text-xs font-semibold uppercase tracking-wider text-neutral-800 mb-2">
+                    Occasion
+                  </h4>
+                  <div className="space-y-1">
+                    {OCCASIONS.map((occ) => (
+                      <button
+                        key={occ}
+                        type="button"
+                        onClick={() => setSelectedOccasion(selectedOccasion === occ ? "" : occ)}
+                        className={`w-full min-h-[44px] px-2.5 py-2 flex items-center justify-between text-left text-xs rounded-xs transition-colors cursor-pointer focus-visible:ring-2 focus-visible:ring-[#541920] focus-visible:outline-none ${
+                          selectedOccasion === occ
+                            ? "text-[#541920] font-bold bg-[#541920]/5"
+                            : "text-neutral-600 hover:bg-black/5"
+                        }`}
+                      >
+                        <span>{occ}</span>
+                        {selectedOccasion === occ && <Check className="w-3.5 h-3.5 text-[#541920]" />}
                       </button>
                     ))}
                   </div>
