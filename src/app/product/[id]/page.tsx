@@ -143,7 +143,7 @@ export default function ProductDetailPage({
             </div>
 
             {/* Main Stage Image */}
-            <div className="relative aspect-[3/4] w-full max-w-[250px] sm:max-w-none flex-1 rounded-sm overflow-hidden bg-neutral-100 shadow-md border border-[#E8E2D9]">
+            <div className="relative aspect-[3/4] w-full max-w-[228px] sm:max-w-none flex-1 rounded-sm overflow-hidden bg-neutral-100 shadow-md border border-[#E8E2D9]">
               <Image
                 src={product.images[activeImageIdx] || product.images[0]}
                 alt={product.name}
@@ -213,7 +213,7 @@ export default function ProductDetailPage({
                   </div>
                   <button
                     onClick={handleShare}
-                    className="text-neutral-400 hover:text-black p-1 transition-colors min-h-[44px] min-w-[44px] flex items-center justify-center focus-visible:ring-2 focus-visible:ring-[#541920] focus-visible:outline-none"
+                    className="text-neutral-700 hover:text-black p-1 transition-colors min-h-[44px] min-w-[44px] flex items-center justify-center focus-visible:ring-2 focus-visible:ring-[#541920] focus-visible:outline-none cursor-pointer -my-2 sm:my-0"
                     title="Share product link"
                     aria-label="Share product link"
                   >
@@ -222,7 +222,7 @@ export default function ProductDetailPage({
                 </div>
               </div>
 
-              <h1 className="text-base sm:text-3xl font-serif font-medium text-neutral-900 mt-0 sm:mt-1 leading-snug">
+              <h1 className="text-base sm:text-3xl font-serif font-medium text-neutral-900 mt-0 sm:mt-1 leading-tight sm:leading-snug">
                 {product.name}
               </h1>
             </div>
@@ -270,7 +270,7 @@ export default function ProductDetailPage({
             </div>
 
             {/* Variant Options Container (Color & Blouse) */}
-            <div ref={optionsRef} className="space-y-1">
+            <div ref={optionsRef} className="space-y-0.5 sm:space-y-1">
               {/* Color Swatches */}
               {product.colors && product.colors.length > 0 && (
                 <div className="flex items-center gap-1.5 pt-0.5">
@@ -283,7 +283,7 @@ export default function ProductDetailPage({
                         key={c.name}
                         type="button"
                         onClick={() => setSelectedColor(c.name)}
-                        className="w-11 h-11 min-w-[44px] min-h-[44px] flex items-center justify-center rounded-full cursor-pointer focus-visible:ring-2 focus-visible:ring-[#541920] focus-visible:outline-none"
+                        className="w-11 h-11 min-w-[44px] min-h-[44px] flex items-center justify-center rounded-full cursor-pointer focus-visible:ring-2 focus-visible:ring-[#541920] focus-visible:outline-none -my-1 sm:my-0"
                         title={c.name}
                         aria-label={`Select color ${c.name}`}
                       >
@@ -329,7 +329,7 @@ export default function ProductDetailPage({
             {/* Action Buttons: ADD TO BAG & BUY NOW & WISHLIST */}
             <div
               ref={ctaRef}
-              className={`flex items-center gap-2 pt-1 z-30 sm:static ${
+              className={`flex items-center gap-2 pt-0.5 sm:pt-1 z-30 sm:static ${
                 optionsPassed
                   ? "sticky bottom-[54px] bg-[#FAF7F2]/95 backdrop-blur-xs py-1 border-t border-[#1C1A18]/6 shadow-xs -mx-4 px-4"
                   : "static bg-transparent py-0 border-0 shadow-none mx-0 px-0"
@@ -337,7 +337,7 @@ export default function ProductDetailPage({
             >
               <button
                 onClick={handleAddToCart}
-                className="flex-1 min-h-[44px] py-3 bg-[#541920] hover:bg-[#3D1217] text-white text-xs uppercase tracking-wider sm:tracking-widest font-semibold rounded-xs shadow-md transition-all flex items-center justify-center gap-1.5"
+                className="flex-1 min-h-[44px] py-2.5 sm:py-3 bg-[#541920] hover:bg-[#3D1217] text-white text-xs uppercase tracking-wider sm:tracking-widest font-semibold rounded-xs shadow-md transition-all flex items-center justify-center gap-1.5 cursor-pointer"
               >
                 <ShoppingBag className="w-4 h-4 shrink-0" />
                 <span>Add to Bag</span>
@@ -345,7 +345,7 @@ export default function ProductDetailPage({
 
               <button
                 onClick={handleBuyNow}
-                className="flex-1 min-h-[44px] py-3 bg-white border border-[#541920] hover:bg-[#FAF7F2] text-[#541920] text-xs uppercase tracking-wider sm:tracking-widest font-semibold rounded-xs transition-colors text-center"
+                className="flex-1 min-h-[44px] py-2.5 sm:py-3 bg-white border border-[#541920] hover:bg-[#FAF7F2] text-[#541920] text-xs uppercase tracking-wider sm:tracking-widest font-semibold rounded-xs transition-colors text-center cursor-pointer"
               >
                 Buy Now
               </button>
