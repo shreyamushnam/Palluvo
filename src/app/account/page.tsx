@@ -123,9 +123,9 @@ export default function AccountPage() {
   };
 
   return (
-    <div className="min-h-screen bg-[#FAF7F2]">
+    <div className="min-h-screen bg-[#FAF7F2] pb-24 lg:pb-12">
       {/* Header */}
-      <div className="bg-[#F4EFE6] border-b border-[#E8E2D9] py-8">
+      <div className="bg-[#F4EFE6] border-b border-[#E8E2D9] py-4 sm:py-8">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <nav className="text-xs text-neutral-500 mb-2 flex items-center gap-1.5 font-sans">
             <Link href="/" className="hover:text-black">Home</Link>
@@ -149,44 +149,44 @@ export default function AccountPage() {
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12">
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-12">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 sm:gap-8 items-start">
           
           {/* Left Navigation Tabs */}
-          <div className="lg:col-span-3 bg-white p-3 rounded-sm border border-[#E8E2D9] space-y-1">
+          <div className="lg:col-span-3 bg-white p-1.5 sm:p-3 rounded-sm border border-[#E8E2D9] flex lg:flex-col overflow-x-auto gap-1 sm:gap-0 lg:space-y-1">
             <button
               onClick={() => setActiveTab("orders")}
-              className={`w-full flex items-center gap-3 px-4 py-3 text-xs font-semibold rounded-xs transition-colors text-left ${
+              className={`flex-1 lg:w-full flex items-center justify-center lg:justify-start gap-2 sm:gap-3 px-3 sm:px-4 py-2.5 sm:py-3 min-h-[44px] text-xs font-semibold rounded-xs transition-colors whitespace-nowrap shrink-0 cursor-pointer focus-visible:ring-2 focus-visible:ring-[#541920] focus-visible:outline-none ${
                 activeTab === "orders"
                   ? "bg-[#541920] text-white shadow-xs"
                   : "text-neutral-700 hover:bg-[#F4EFE6]"
               }`}
             >
-              <Package className="w-4 h-4" />
+              <Package className="w-4 h-4 shrink-0" />
               <span>My Orders ({orders.length})</span>
             </button>
 
             <button
               onClick={() => setActiveTab("addresses")}
-              className={`w-full flex items-center gap-3 px-4 py-3 text-xs font-semibold rounded-xs transition-colors text-left ${
+              className={`flex-1 lg:w-full flex items-center justify-center lg:justify-start gap-2 sm:gap-3 px-3 sm:px-4 py-2.5 sm:py-3 min-h-[44px] text-xs font-semibold rounded-xs transition-colors whitespace-nowrap shrink-0 cursor-pointer focus-visible:ring-2 focus-visible:ring-[#541920] focus-visible:outline-none ${
                 activeTab === "addresses"
                   ? "bg-[#541920] text-white shadow-xs"
                   : "text-neutral-700 hover:bg-[#F4EFE6]"
               }`}
             >
-              <MapPin className="w-4 h-4" />
+              <MapPin className="w-4 h-4 shrink-0" />
               <span>Saved Addresses ({addresses.length})</span>
             </button>
 
             <button
               onClick={() => setActiveTab("profile")}
-              className={`w-full flex items-center gap-3 px-4 py-3 text-xs font-semibold rounded-xs transition-colors text-left ${
+              className={`flex-1 lg:w-full flex items-center justify-center lg:justify-start gap-2 sm:gap-3 px-3 sm:px-4 py-2.5 sm:py-3 min-h-[44px] text-xs font-semibold rounded-xs transition-colors whitespace-nowrap shrink-0 cursor-pointer focus-visible:ring-2 focus-visible:ring-[#541920] focus-visible:outline-none ${
                 activeTab === "profile"
                   ? "bg-[#541920] text-white shadow-xs"
                   : "text-neutral-700 hover:bg-[#F4EFE6]"
               }`}
             >
-              <User className="w-4 h-4" />
+              <User className="w-4 h-4 shrink-0" />
               <span>Profile & Settings</span>
             </button>
           </div>
@@ -248,31 +248,33 @@ export default function AccountPage() {
                         {/* Order Items */}
                         <div className="p-4 sm:p-5 divide-y divide-[#EFEAE1]">
                           {order.items.map((item, idx) => (
-                            <div key={idx} className="pt-3 first:pt-0 flex gap-4 items-center">
-                              <div className="relative w-16 h-20 shrink-0 rounded-xs overflow-hidden bg-neutral-200">
-                                <Image
-                                  src={item.image}
-                                  alt={item.name}
-                                  fill
-                                  sizes="64px"
-                                  className="object-cover object-top"
-                                />
-                              </div>
-                              <div className="flex-1 min-w-0">
-                                <h4 className="text-sm font-serif font-medium text-neutral-900 truncate">
-                                  {item.name}
-                                </h4>
-                                <p className="text-xs text-neutral-500 mt-0.5">
-                                  Qty: {item.quantity} {item.color && `• Color: ${item.color}`}
-                                </p>
-                                <p className="text-xs font-semibold text-[#541920] mt-1">
-                                  {formatPrice(item.price * item.quantity)}
-                                </p>
+                            <div key={idx} className="pt-3 first:pt-0 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                              <div className="flex gap-3 sm:gap-4 items-center flex-1 min-w-0">
+                                <div className="relative w-16 h-20 shrink-0 rounded-xs overflow-hidden bg-neutral-200">
+                                  <Image
+                                    src={item.image}
+                                    alt={item.name}
+                                    fill
+                                    sizes="64px"
+                                    className="object-cover object-top"
+                                  />
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                  <h4 className="text-sm font-serif font-medium text-neutral-900 leading-snug break-words">
+                                    {item.name}
+                                  </h4>
+                                  <p className="text-xs text-neutral-500 mt-0.5">
+                                    Qty: {item.quantity} {item.color && `• Color: ${item.color}`}
+                                  </p>
+                                  <p className="text-xs font-semibold text-[#541920] mt-1">
+                                    {formatPrice(item.price * item.quantity)}
+                                  </p>
+                                </div>
                               </div>
 
                               <Link
                                 href={`/product/${item.id}`}
-                                className="px-3 py-1.5 border border-[#DCD5C9] text-neutral-700 hover:text-black hover:border-black text-xs font-medium rounded-xs transition-colors shrink-0"
+                                className="w-full sm:w-auto min-h-[44px] px-4 py-2.5 border border-[#DCD5C9] hover:border-[#541920] bg-white text-neutral-800 hover:text-[#541920] text-xs font-medium rounded-xs transition-colors shrink-0 inline-flex items-center justify-center text-center cursor-pointer focus-visible:ring-2 focus-visible:ring-[#541920] focus-visible:outline-none"
                               >
                                 View Saree
                               </Link>
