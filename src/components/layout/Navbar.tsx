@@ -123,8 +123,8 @@ export const Navbar: React.FC = () => {
       <header
         className={`sticky top-0 z-40 w-full transition-all duration-300 ${
           isScrolled
-            ? "bg-[#FAF7F2]/95 backdrop-blur-md shadow-sm border-b border-[#1C1A18]/8 py-2.5 sm:py-3.5"
-            : "bg-[#FAF7F2] border-b border-[#1C1A18]/6 py-2 sm:py-5"
+            ? "bg-[#FAF7F2]/95 backdrop-blur-md shadow-sm border-b border-[#1C1A18]/8 py-2 sm:py-3.5"
+            : "bg-[#FAF7F2] border-b border-[#1C1A18]/6 py-1.5 sm:py-5"
         }`}
       >
         <div className="max-w-7xl mx-auto px-3 sm:px-6 xl:px-8 2xl:px-10 flex items-center justify-between w-full min-w-0">

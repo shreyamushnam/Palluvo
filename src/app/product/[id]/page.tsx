@@ -190,7 +190,7 @@ export default function ProductDetailPage({
                   </div>
                   <button
                     onClick={handleShare}
-                    className="text-neutral-400 hover:text-black p-1 transition-colors min-h-[44px] min-w-[44px] flex items-center justify-center focus-visible:ring-2 focus-visible:ring-[#541920] focus-visible:outline-none"
+                    className="hidden sm:flex text-neutral-400 hover:text-black p-1 transition-colors min-h-[44px] min-w-[44px] items-center justify-center focus-visible:ring-2 focus-visible:ring-[#541920] focus-visible:outline-none"
                     title="Share product link"
                     aria-label="Share product link"
                   >
@@ -199,14 +199,14 @@ export default function ProductDetailPage({
                 </div>
               </div>
 
-              <h1 className="text-lg sm:text-3xl font-serif font-medium text-neutral-900 mt-0.5 sm:mt-1 leading-snug">
+              <h1 className="text-base sm:text-3xl font-serif font-medium text-neutral-900 mt-0.5 sm:mt-1 leading-snug">
                 {product.name}
               </h1>
             </div>
 
             {/* Price & Color block */}
-            <div className="pt-1.5 border-t border-[#E8E2D9] flex items-center justify-between gap-2 flex-wrap">
-              <div className="flex items-baseline gap-2 sm:gap-3 flex-wrap">
+            <div className="pt-1 sm:pt-1.5 border-t border-[#E8E2D9] flex items-center justify-between gap-1.5 sm:gap-2 flex-wrap">
+              <div className="flex items-baseline gap-1.5 sm:gap-3 flex-wrap">
                 <span className="text-xl sm:text-3xl font-serif font-bold text-[#541920]">
                   {formatPrice(product.price)}
                 </span>
@@ -216,7 +216,7 @@ export default function ProductDetailPage({
                   </span>
                 )}
                 {product.discountPercent > 0 && (
-                  <span className="text-xs font-bold text-[#15803D]">
+                  <span className="text-[11px] sm:text-xs font-bold text-[#15803D]">
                     {product.discountPercent}% OFF
                   </span>
                 )}
@@ -224,9 +224,10 @@ export default function ProductDetailPage({
 
               {/* Color Swatches */}
               {product.colors && product.colors.length > 0 && (
-                <div className="flex items-center gap-1.5">
+                <div className="flex items-center gap-1">
                   <span className="text-xs font-semibold text-neutral-800">
-                    Color: <span className="font-normal text-neutral-600">{selectedColor}</span>
+                    <span className="hidden xs:inline">Color: </span>
+                    <span className="font-normal text-neutral-600">{selectedColor}</span>
                   </span>
                   <div className="flex items-center gap-1">
                     {product.colors.map((c) => (
@@ -278,7 +279,7 @@ export default function ProductDetailPage({
             )}
 
             {/* Quantity Stepper & Heart */}
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2.5 sm:gap-3">
               <div className="flex items-center border border-[#DCD5C9] rounded-xs bg-white">
                 <button
                   type="button"
@@ -313,6 +314,16 @@ export default function ProductDetailPage({
                 aria-label={isFav ? "Remove from wishlist" : "Add to wishlist"}
               >
                 <Heart className={`w-4 h-4 ${isFav ? "fill-[#541920]" : ""}`} />
+              </button>
+
+              <button
+                type="button"
+                onClick={handleShare}
+                className="w-11 h-11 min-w-[44px] min-h-[44px] border border-[#DCD5C9] bg-white text-neutral-600 hover:text-black rounded-xs transition-colors flex items-center justify-center cursor-pointer focus-visible:ring-2 focus-visible:ring-[#541920] focus-visible:outline-none sm:hidden"
+                title="Share product link"
+                aria-label="Share product link"
+              >
+                <Share2 className="w-4 h-4" />
               </button>
             </div>
 
