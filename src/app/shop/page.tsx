@@ -11,11 +11,15 @@ import { ProductCard } from "@/components/ecommerce/ProductCard";
 const FABRICS = [
   "Pure Silk",
   "Kanjeevaram Silk",
+  "Tissue Silk",
+  "Cotton Silk",
+  "Handloom Silk",
+  "Katan Silk",
+  "Tissue Organza",
+  "Chiffon",
   "Banarasi Brocade Silk",
   "Paithani Silk",
   "Pure Linen",
-  "Tissue Organza",
-  "Chiffon",
   "Handspun Tussar Silk",
 ];
 
@@ -26,6 +30,21 @@ const OCCASIONS = [
   "Cocktail & Evening",
   "Workwear & Casual",
 ];
+
+export function getFabricItemCount(fabricName: string): number {
+  return PRODUCTS.filter((product) =>
+    product.fabric.toLowerCase().includes(fabricName.toLowerCase())
+  ).length;
+}
+
+export function getOccasionItemCount(occ: string): number {
+  const occTerms = occ.toLowerCase().split(/[&,\s]+/).filter((term) => term.length > 2);
+  return PRODUCTS.filter((product) => {
+    const prodOcc = product.occasion.toLowerCase();
+    const prodCat = product.category.toLowerCase();
+    return occTerms.some((term) => prodOcc.includes(term) || prodCat.includes(term));
+  }).length;
+}
 
 const PRICE_RANGES = [
   { label: "Under ₹5,000", min: 0, max: 5000 },
@@ -418,19 +437,29 @@ function ShopContent() {
                   Fabric & Weave
                 </h4>
                 <div className="space-y-1.5">
-                  {FABRICS.map((fabric) => (
-                    <button
-                      key={fabric}
-                      onClick={() => setSelectedFabric(selectedFabric === fabric ? "" : fabric)}
-                      className={`w-full text-left text-xs py-1 transition-colors ${
-                        selectedFabric === fabric
-                          ? "text-[#541920] font-bold"
-                          : "text-neutral-600 hover:text-black"
-                      }`}
-                    >
-                      {fabric}
-                    </button>
-                  ))}
+                  {FABRICS.map((fabric) => {
+                    const count = getFabricItemCount(fabric);
+                    const isDisabled = count === 0 && selectedFabric !== fabric;
+
+                    return (
+                      <button
+                        key={fabric}
+                        disabled={isDisabled}
+                        aria-disabled={isDisabled}
+                        onClick={() => !isDisabled && setSelectedFabric(selectedFabric === fabric ? "" : fabric)}
+                        className={`w-full flex items-center justify-between text-xs py-1 transition-colors ${
+                          isDisabled
+                            ? "opacity-40 cursor-not-allowed text-neutral-400"
+                            : selectedFabric === fabric
+                            ? "text-[#541920] font-bold cursor-pointer"
+                            : "text-neutral-600 hover:text-black cursor-pointer"
+                        }`}
+                      >
+                        <span>{fabric}</span>
+                        <span className="text-[11px] text-neutral-400">({count})</span>
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
 
@@ -440,19 +469,29 @@ function ShopContent() {
                   Occasion
                 </h4>
                 <div className="space-y-1.5">
-                  {OCCASIONS.map((occ) => (
-                    <button
-                      key={occ}
-                      onClick={() => setSelectedOccasion(selectedOccasion === occ ? "" : occ)}
-                      className={`w-full text-left text-xs py-1 transition-colors ${
-                        selectedOccasion === occ
-                          ? "text-[#541920] font-bold"
-                          : "text-neutral-600 hover:text-black"
-                      }`}
-                    >
-                      {occ}
-                    </button>
-                  ))}
+                  {OCCASIONS.map((occ) => {
+                    const count = getOccasionItemCount(occ);
+                    const isDisabled = count === 0 && selectedOccasion !== occ;
+
+                    return (
+                      <button
+                        key={occ}
+                        disabled={isDisabled}
+                        aria-disabled={isDisabled}
+                        onClick={() => !isDisabled && setSelectedOccasion(selectedOccasion === occ ? "" : occ)}
+                        className={`w-full flex items-center justify-between text-xs py-1 transition-colors ${
+                          isDisabled
+                            ? "opacity-40 cursor-not-allowed text-neutral-400"
+                            : selectedOccasion === occ
+                            ? "text-[#541920] font-bold cursor-pointer"
+                            : "text-neutral-600 hover:text-black cursor-pointer"
+                        }`}
+                      >
+                        <span>{occ}</span>
+                        <span className="text-[11px] text-neutral-400">({count})</span>
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
 
@@ -464,7 +503,9 @@ function ShopContent() {
             {filteredProducts.length === 0 ? (
               <div className="bg-white p-12 rounded-sm border border-[#E8E2D9] text-center space-y-4">
                 <p className="font-serif text-lg text-neutral-800">
-                  No sarees found matching your selected filters.
+                  {selectedCategory && selectedCategory.toLowerCase().includes("saree")
+                    ? "No sarees found matching your selected filters."
+                    : "No products found matching your selected filters."}
                 </p>
                 <p className="text-xs text-neutral-500 max-w-sm mx-auto">
                   Try clearing some filter criteria to browse our handcrafted catalogue.
@@ -499,7 +540,11 @@ function ShopContent() {
             <div className="w-screen max-w-xs bg-[#FAF7F2] text-[#1C1A18] flex flex-col shadow-2xl">
               
               <div className="p-4 border-b border-[#E8E2D9] flex items-center justify-between bg-[#F4EFE6]">
-                <h3 className="font-serif text-base font-semibold">Filter Sarees</h3>
+                <h3 className="font-serif text-base font-semibold">
+                  {selectedCategory && selectedCategory.toLowerCase().includes("saree")
+                    ? "Filter Sarees"
+                    : "Filter Products"}
+                </h3>
                 <button
                   type="button"
                   onClick={() => setIsMobileFilterOpen(false)}
@@ -584,19 +629,33 @@ function ShopContent() {
                     Fabric
                   </h4>
                   <div className="space-y-1">
-                    {FABRICS.map((fabric) => (
-                      <button
-                        key={fabric}
-                        type="button"
-                        onClick={() => setSelectedFabric(selectedFabric === fabric ? "" : fabric)}
-                        className={`w-full min-h-[44px] px-2.5 py-2 flex items-center justify-between text-left text-xs rounded-xs transition-colors cursor-pointer focus-visible:ring-2 focus-visible:ring-[#541920] focus-visible:outline-none ${
-                          selectedFabric === fabric ? "text-[#541920] font-bold bg-[#541920]/5" : "text-neutral-600 hover:bg-black/5"
-                        }`}
-                      >
-                        <span>{fabric}</span>
-                        {selectedFabric === fabric && <Check className="w-3.5 h-3.5 text-[#541920]" />}
-                      </button>
-                    ))}
+                    {FABRICS.map((fabric) => {
+                      const count = getFabricItemCount(fabric);
+                      const isDisabled = count === 0 && selectedFabric !== fabric;
+
+                      return (
+                        <button
+                          key={fabric}
+                          type="button"
+                          disabled={isDisabled}
+                          aria-disabled={isDisabled}
+                          onClick={() => !isDisabled && setSelectedFabric(selectedFabric === fabric ? "" : fabric)}
+                          className={`w-full min-h-[44px] px-2.5 py-2 flex items-center justify-between text-left text-xs rounded-xs transition-colors focus-visible:ring-2 focus-visible:ring-[#541920] focus-visible:outline-none ${
+                            isDisabled
+                              ? "opacity-40 cursor-not-allowed text-neutral-400"
+                              : selectedFabric === fabric
+                              ? "text-[#541920] font-bold bg-[#541920]/5 cursor-pointer"
+                              : "text-neutral-600 hover:bg-black/5 cursor-pointer"
+                          }`}
+                        >
+                          <span className="flex items-center gap-1.5">
+                            <span>{fabric}</span>
+                            <span className="text-[11px] text-neutral-400">({count})</span>
+                          </span>
+                          {selectedFabric === fabric && <Check className="w-3.5 h-3.5 text-[#541920]" />}
+                        </button>
+                      );
+                    })}
                   </div>
                 </div>
 
@@ -606,21 +665,33 @@ function ShopContent() {
                     Occasion
                   </h4>
                   <div className="space-y-1">
-                    {OCCASIONS.map((occ) => (
-                      <button
-                        key={occ}
-                        type="button"
-                        onClick={() => setSelectedOccasion(selectedOccasion === occ ? "" : occ)}
-                        className={`w-full min-h-[44px] px-2.5 py-2 flex items-center justify-between text-left text-xs rounded-xs transition-colors cursor-pointer focus-visible:ring-2 focus-visible:ring-[#541920] focus-visible:outline-none ${
-                          selectedOccasion === occ
-                            ? "text-[#541920] font-bold bg-[#541920]/5"
-                            : "text-neutral-600 hover:bg-black/5"
-                        }`}
-                      >
-                        <span>{occ}</span>
-                        {selectedOccasion === occ && <Check className="w-3.5 h-3.5 text-[#541920]" />}
-                      </button>
-                    ))}
+                    {OCCASIONS.map((occ) => {
+                      const count = getOccasionItemCount(occ);
+                      const isDisabled = count === 0 && selectedOccasion !== occ;
+
+                      return (
+                        <button
+                          key={occ}
+                          type="button"
+                          disabled={isDisabled}
+                          aria-disabled={isDisabled}
+                          onClick={() => !isDisabled && setSelectedOccasion(selectedOccasion === occ ? "" : occ)}
+                          className={`w-full min-h-[44px] px-2.5 py-2 flex items-center justify-between text-left text-xs rounded-xs transition-colors focus-visible:ring-2 focus-visible:ring-[#541920] focus-visible:outline-none ${
+                            isDisabled
+                              ? "opacity-40 cursor-not-allowed text-neutral-400"
+                              : selectedOccasion === occ
+                              ? "text-[#541920] font-bold bg-[#541920]/5 cursor-pointer"
+                              : "text-neutral-600 hover:bg-black/5 cursor-pointer"
+                          }`}
+                        >
+                          <span className="flex items-center gap-1.5">
+                            <span>{occ}</span>
+                            <span className="text-[11px] text-neutral-400">({count})</span>
+                          </span>
+                          {selectedOccasion === occ && <Check className="w-3.5 h-3.5 text-[#541920]" />}
+                        </button>
+                      );
+                    })}
                   </div>
                 </div>
               </div>
@@ -652,7 +723,7 @@ function ShopContent() {
 
 export default function ShopPage() {
   return (
-    <Suspense fallback={<div className="p-12 text-center text-xs text-neutral-500 font-sans">Loading sarees...</div>}>
+    <Suspense fallback={<div className="p-12 text-center text-xs text-neutral-500 font-sans">Loading products...</div>}>
       <ShopContent />
     </Suspense>
   );
