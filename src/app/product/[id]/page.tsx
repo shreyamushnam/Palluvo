@@ -168,7 +168,7 @@ export default function ProductDetailPage({
           </div>
 
           {/* Right Column: Product Details & Actions */}
-          <div className="lg:col-span-5 space-y-1.5 sm:space-y-6">
+          <div className="lg:col-span-5 space-y-1 sm:space-y-6">
             
             {/* Header info */}
             <div>
@@ -254,32 +254,8 @@ export default function ProductDetailPage({
               )}
             </div>
 
-            {/* Blouse Option */}
-            {product.hasBlousePiece && (
-              <div>
-                <label className="block text-xs font-semibold text-neutral-800 mb-2">
-                  Select Blouse Option:
-                </label>
-                <div className="flex gap-3">
-                  {["With Blouse", "Without Blouse"].map((opt) => (
-                    <button
-                      key={opt}
-                      onClick={() => setBlouseOption(opt)}
-                      className={`min-h-[44px] px-4 py-2 text-xs rounded-xs border transition-all font-medium focus-visible:ring-2 focus-visible:ring-[#541920] focus-visible:outline-none cursor-pointer ${
-                        blouseOption === opt
-                          ? "border-[#541920] bg-[#FAF7F2] text-[#541920] ring-1 ring-[#541920]"
-                          : "border-[#DCD5C9] bg-white text-neutral-700 hover:border-neutral-400"
-                      }`}
-                    >
-                      {opt}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* Quantity Stepper & Heart */}
-            <div className="flex items-center gap-2.5 sm:gap-3">
+            {/* Quantity Stepper & Heart & Share */}
+            <div className="flex items-center gap-2.5 sm:gap-3 pt-0.5">
               <div className="flex items-center border border-[#DCD5C9] rounded-xs bg-white">
                 <button
                   type="button"
@@ -326,6 +302,30 @@ export default function ProductDetailPage({
                 <Share2 className="w-4 h-4" />
               </button>
             </div>
+
+            {/* Blouse Option */}
+            {product.hasBlousePiece && (
+              <div className="flex items-center gap-2 pt-0.5">
+                <span className="text-xs font-semibold text-neutral-800 shrink-0">
+                  Blouse:
+                </span>
+                <div className="flex gap-2">
+                  {["With Blouse", "Without Blouse"].map((opt) => (
+                    <button
+                      key={opt}
+                      onClick={() => setBlouseOption(opt)}
+                      className={`min-h-[44px] px-2.5 sm:px-4 py-2 text-xs rounded-xs border transition-all font-medium focus-visible:ring-2 focus-visible:ring-[#541920] focus-visible:outline-none cursor-pointer ${
+                        blouseOption === opt
+                          ? "border-[#541920] bg-[#FAF7F2] text-[#541920] ring-1 ring-[#541920]"
+                          : "border-[#DCD5C9] bg-white text-neutral-700 hover:border-neutral-400"
+                      }`}
+                    >
+                      {opt}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
 
             {/* Action Buttons: ADD TO BAG & BUY NOW */}
             <div className="flex flex-col sm:flex-row gap-3 pt-2">
