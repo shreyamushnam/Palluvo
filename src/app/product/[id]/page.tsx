@@ -143,7 +143,7 @@ export default function ProductDetailPage({
             </div>
 
             {/* Main Stage Image */}
-            <div className="relative aspect-[3/4] w-full max-w-[228px] sm:max-w-none flex-1 rounded-sm overflow-hidden bg-neutral-100 shadow-md border border-[#E8E2D9]">
+            <div className="relative aspect-[3/4] w-full max-w-[220px] sm:max-w-none flex-1 rounded-sm overflow-hidden bg-neutral-100 shadow-md border border-[#E8E2D9]">
               <Image
                 src={product.images[activeImageIdx] || product.images[0]}
                 alt={product.name}
@@ -273,17 +273,17 @@ export default function ProductDetailPage({
             <div ref={optionsRef} className="space-y-0.5 sm:space-y-1">
               {/* Color Swatches */}
               {product.colors && product.colors.length > 0 && (
-                <div className="flex items-center gap-1.5 pt-0.5">
+                <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 pt-0.5">
                   <span className="text-xs font-semibold text-neutral-800 shrink-0">
                     Color: <span className="font-normal text-neutral-600">{selectedColor}</span>
                   </span>
-                  <div className="flex items-center gap-1">
+                  <div className="flex items-center gap-1 flex-wrap">
                     {product.colors.map((c) => (
                       <button
                         key={c.name}
                         type="button"
                         onClick={() => setSelectedColor(c.name)}
-                        className="w-11 h-11 min-w-[44px] min-h-[44px] flex items-center justify-center rounded-full cursor-pointer focus-visible:ring-2 focus-visible:ring-[#541920] focus-visible:outline-none -my-1 sm:my-0"
+                        className="w-11 h-11 min-w-[44px] min-h-[44px] flex items-center justify-center rounded-full cursor-pointer focus-visible:ring-2 focus-visible:ring-[#541920] focus-visible:outline-none -my-1 sm:my-0 shrink-0"
                         title={c.name}
                         aria-label={`Select color ${c.name}`}
                       >

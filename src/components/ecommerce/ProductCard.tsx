@@ -135,7 +135,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
           </Link>
 
           {/* Fabric / Type */}
-          <p className="text-xs text-[#5E5A54] mt-0.5 line-clamp-1 font-normal">
+          <p className="text-xs text-[#5E5A54] mt-0.5 line-clamp-2 font-normal">
             {product.fabric}
           </p>
         </div>
