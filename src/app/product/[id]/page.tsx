@@ -211,7 +211,7 @@ export default function ProductDetailPage({
                   {formatPrice(product.price)}
                 </span>
                 {product.originalPrice > product.price && (
-                  <span className="text-xs sm:text-base text-neutral-400 line-through">
+                  <span className="text-xs sm:text-base text-neutral-600 line-through">
                     {formatPrice(product.originalPrice)}
                   </span>
                 )}
@@ -226,8 +226,7 @@ export default function ProductDetailPage({
               {product.colors && product.colors.length > 0 && (
                 <div className="flex items-center gap-1">
                   <span className="text-xs font-semibold text-neutral-800">
-                    <span className="hidden xs:inline">Color: </span>
-                    <span className="font-normal text-neutral-600">{selectedColor}</span>
+                    Color: <span className="font-normal text-neutral-600">{selectedColor}</span>
                   </span>
                   <div className="flex items-center gap-1">
                     {product.colors.map((c) => (
