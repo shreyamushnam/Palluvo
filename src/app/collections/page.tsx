@@ -108,7 +108,7 @@ export default function CollectionsPage() {
 
               <div className="p-6 sm:p-8 flex-1 flex flex-col justify-between space-y-4">
                 <div>
-                  <span className="text-[10px] uppercase font-bold tracking-[0.2em] text-[#C5A575] block">
+                  <span className="text-[10px] uppercase font-bold tracking-[0.2em] text-[#7C5C26] block">
                     {col.tagline}
                   </span>
                   <h2 className="font-serif text-2xl sm:text-3xl text-neutral-900 mt-1">

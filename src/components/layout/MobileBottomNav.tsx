@@ -57,7 +57,7 @@ export const MobileBottomNav: React.FC = () => {
             <div className="relative">
               <Icon size={20} />
               {item.count !== undefined && item.count > 0 && (
-                <span className="absolute -top-1 -right-2 bg-[#BF6A54] text-[#FAF7F2] text-[8px] font-bold w-3.5 h-3.5 rounded-full flex items-center justify-center">
+                <span className="absolute -top-1 -right-2 bg-[#8E371F] text-[#FAF7F2] text-[8px] font-bold w-3.5 h-3.5 rounded-full flex items-center justify-center">
                   {item.count}
                 </span>
               )}

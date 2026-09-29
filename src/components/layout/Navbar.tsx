@@ -191,7 +191,7 @@ export const Navbar: React.FC = () => {
             >
               <Heart size={20} strokeWidth={1.8} />
               {wishlistCount > 0 && (
-                <span className="absolute top-1.5 right-1.5 bg-[#BF6A54] text-[#FAF7F2] text-[9px] font-bold w-4 h-4 rounded-full flex items-center justify-center">
+                <span className="absolute top-1.5 right-1.5 bg-[#8E371F] text-[#FAF7F2] text-[9px] font-bold w-4 h-4 rounded-full flex items-center justify-center">
                   {wishlistCount}
                 </span>
               )}
