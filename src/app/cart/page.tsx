@@ -28,6 +28,7 @@ export default function CartPage() {
 
   const freeShippingLeft = Math.max(0, freeShippingThreshold - subtotal);
   const progressPercent = Math.min(100, Math.round((subtotal / freeShippingThreshold) * 100));
+  const totalItems = cart.reduce((sum, item) => sum + item.quantity, 0);
 
   const handleApplyCoupon = (e: React.FormEvent) => {
     e.preventDefault();
@@ -56,8 +57,11 @@ export default function CartPage() {
             <span>/</span>
             <span className="text-neutral-900 font-medium">Shopping Bag</span>
           </nav>
-          <h1 className="text-3xl sm:text-4xl font-serif font-normal text-neutral-900">
-            Shopping Bag ({cart.reduce((sum, item) => sum + item.quantity, 0)} Items)
+          <h1 className="text-2xl sm:text-4xl font-serif font-normal text-neutral-900 flex flex-wrap items-center gap-2 sm:gap-3">
+            <span>Shopping Bag</span>
+            <span className="text-xs sm:text-sm font-sans font-medium text-neutral-600 bg-white border border-[#DCD5C9] px-2.5 py-0.5 rounded-full whitespace-nowrap">
+              {totalItems} {totalItems === 1 ? "Item" : "Items"}
+            </span>
           </h1>
         </div>
       </div>

@@ -153,10 +153,11 @@ export default function AccountPage() {
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 sm:gap-8 items-start">
           
           {/* Left Navigation Tabs */}
-          <div className="lg:col-span-3 bg-white p-1.5 sm:p-3 rounded-sm border border-[#E8E2D9] flex lg:flex-col overflow-x-auto gap-1 sm:gap-0 lg:space-y-1">
+          <div className="lg:col-span-3 bg-white p-2 sm:p-3 rounded-sm border border-[#E8E2D9] flex flex-col space-y-1">
             <button
+              type="button"
               onClick={() => setActiveTab("orders")}
-              className={`flex-1 lg:w-full flex items-center justify-center lg:justify-start gap-2 sm:gap-3 px-3 sm:px-4 py-2.5 sm:py-3 min-h-[44px] text-xs font-semibold rounded-xs transition-colors whitespace-nowrap shrink-0 cursor-pointer focus-visible:ring-2 focus-visible:ring-[#541920] focus-visible:outline-none ${
+              className={`w-full flex items-center justify-start gap-3 px-3.5 sm:px-4 py-2.5 sm:py-3 min-h-[44px] text-xs font-semibold rounded-xs transition-colors cursor-pointer focus-visible:ring-2 focus-visible:ring-[#541920] focus-visible:outline-none ${
                 activeTab === "orders"
                   ? "bg-[#541920] text-white shadow-xs"
                   : "text-neutral-700 hover:bg-[#F4EFE6]"
@@ -167,8 +168,9 @@ export default function AccountPage() {
             </button>
 
             <button
+              type="button"
               onClick={() => setActiveTab("addresses")}
-              className={`flex-1 lg:w-full flex items-center justify-center lg:justify-start gap-2 sm:gap-3 px-3 sm:px-4 py-2.5 sm:py-3 min-h-[44px] text-xs font-semibold rounded-xs transition-colors whitespace-nowrap shrink-0 cursor-pointer focus-visible:ring-2 focus-visible:ring-[#541920] focus-visible:outline-none ${
+              className={`w-full flex items-center justify-start gap-3 px-3.5 sm:px-4 py-2.5 sm:py-3 min-h-[44px] text-xs font-semibold rounded-xs transition-colors cursor-pointer focus-visible:ring-2 focus-visible:ring-[#541920] focus-visible:outline-none ${
                 activeTab === "addresses"
                   ? "bg-[#541920] text-white shadow-xs"
                   : "text-neutral-700 hover:bg-[#F4EFE6]"
@@ -179,8 +181,9 @@ export default function AccountPage() {
             </button>
 
             <button
+              type="button"
               onClick={() => setActiveTab("profile")}
-              className={`flex-1 lg:w-full flex items-center justify-center lg:justify-start gap-2 sm:gap-3 px-3 sm:px-4 py-2.5 sm:py-3 min-h-[44px] text-xs font-semibold rounded-xs transition-colors whitespace-nowrap shrink-0 cursor-pointer focus-visible:ring-2 focus-visible:ring-[#541920] focus-visible:outline-none ${
+              className={`w-full flex items-center justify-start gap-3 px-3.5 sm:px-4 py-2.5 sm:py-3 min-h-[44px] text-xs font-semibold rounded-xs transition-colors cursor-pointer focus-visible:ring-2 focus-visible:ring-[#541920] focus-visible:outline-none ${
                 activeTab === "profile"
                   ? "bg-[#541920] text-white shadow-xs"
                   : "text-neutral-700 hover:bg-[#F4EFE6]"
