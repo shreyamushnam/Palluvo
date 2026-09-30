@@ -313,61 +313,66 @@ function ShopContent() {
           <div className="flex flex-wrap items-center gap-2 py-4 border-b border-[#E8E2D9]">
             <span className="text-xs text-neutral-500 font-medium">Active Filters:</span>
             {selectedCategory && (
-              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-white border border-[#DCD5C9] rounded-full text-xs text-neutral-800">
-                Category: {selectedCategory}
+              <span className="inline-flex items-center pl-3 pr-1 py-0.5 bg-white border border-[#DCD5C9] rounded-full text-xs text-neutral-800">
+                <span>Category: {selectedCategory}</span>
                 <button
+                  type="button"
                   onClick={() => {
                     const params = new URLSearchParams(searchParams.toString());
                     params.delete("category");
                     const qStr = params.toString();
                     router.push(qStr ? `/shop?${qStr}` : "/shop", { scroll: false });
                   }}
-                  className="hover:text-red-600 cursor-pointer"
+                  className="w-11 h-11 min-w-[44px] min-h-[44px] -my-2.5 -mr-1 flex items-center justify-center text-neutral-500 hover:text-red-600 transition-colors cursor-pointer rounded-full focus-visible:ring-2 focus-visible:ring-[#541920] focus-visible:outline-none"
                   aria-label={`Remove category filter: ${selectedCategory}`}
                 >
-                  <X className="w-3 h-3" />
+                  <X className="w-3.5 h-3.5" />
                 </button>
               </span>
             )}
             {selectedFabric && (
-              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-white border border-[#DCD5C9] rounded-full text-xs text-neutral-800">
-                Fabric: {selectedFabric}
+              <span className="inline-flex items-center pl-3 pr-1 py-0.5 bg-white border border-[#DCD5C9] rounded-full text-xs text-neutral-800">
+                <span>Fabric: {selectedFabric}</span>
                 <button
+                  type="button"
                   onClick={() => setSelectedFabric("")}
-                  className="hover:text-red-600 cursor-pointer"
+                  className="w-11 h-11 min-w-[44px] min-h-[44px] -my-2.5 -mr-1 flex items-center justify-center text-neutral-500 hover:text-red-600 transition-colors cursor-pointer rounded-full focus-visible:ring-2 focus-visible:ring-[#541920] focus-visible:outline-none"
                   aria-label={`Remove fabric filter: ${selectedFabric}`}
                 >
-                  <X className="w-3 h-3" />
+                  <X className="w-3.5 h-3.5" />
                 </button>
               </span>
             )}
             {selectedOccasion && (
-              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-white border border-[#DCD5C9] rounded-full text-xs text-neutral-800">
-                Occasion: {selectedOccasion}
+              <span className="inline-flex items-center pl-3 pr-1 py-0.5 bg-white border border-[#DCD5C9] rounded-full text-xs text-neutral-800">
+                <span>Occasion: {selectedOccasion}</span>
                 <button
+                  type="button"
                   onClick={() => setSelectedOccasion("")}
-                  className="hover:text-red-600 cursor-pointer"
+                  className="w-11 h-11 min-w-[44px] min-h-[44px] -my-2.5 -mr-1 flex items-center justify-center text-neutral-500 hover:text-red-600 transition-colors cursor-pointer rounded-full focus-visible:ring-2 focus-visible:ring-[#541920] focus-visible:outline-none"
                   aria-label={`Remove occasion filter: ${selectedOccasion}`}
                 >
-                  <X className="w-3 h-3" />
+                  <X className="w-3.5 h-3.5" />
                 </button>
               </span>
             )}
             {selectedPriceRange !== null && (
-              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-white border border-[#DCD5C9] rounded-full text-xs text-neutral-800">
-                Price: {PRICE_RANGES[selectedPriceRange].label}
+              <span className="inline-flex items-center pl-3 pr-1 py-0.5 bg-white border border-[#DCD5C9] rounded-full text-xs text-neutral-800">
+                <span>Price: {PRICE_RANGES[selectedPriceRange].label}</span>
                 <button
+                  type="button"
                   onClick={() => setSelectedPriceRange(null)}
-                  className="hover:text-red-600 cursor-pointer"
+                  className="w-11 h-11 min-w-[44px] min-h-[44px] -my-2.5 -mr-1 flex items-center justify-center text-neutral-500 hover:text-red-600 transition-colors cursor-pointer rounded-full focus-visible:ring-2 focus-visible:ring-[#541920] focus-visible:outline-none"
                   aria-label={`Remove price filter: ${PRICE_RANGES[selectedPriceRange].label}`}
                 >
-                  <X className="w-3 h-3" />
+                  <X className="w-3.5 h-3.5" />
                 </button>
               </span>
             )}
             <button
+              type="button"
               onClick={clearAllFilters}
-              className="text-xs text-[#541920] font-semibold hover:underline ml-2 cursor-pointer"
+              className="min-h-[44px] min-w-[44px] inline-flex items-center justify-center px-2.5 py-2 text-xs text-[#541920] font-semibold hover:underline cursor-pointer focus-visible:ring-2 focus-visible:ring-[#541920] focus-visible:outline-none"
             >
               Clear All
             </button>
