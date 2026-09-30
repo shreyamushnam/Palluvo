@@ -2,13 +2,13 @@
 
 import React from "react";
 import Link from "next/link";
-import { Heart, ShoppingBag, ArrowRight } from "lucide-react";
+import { Heart, ArrowRight } from "lucide-react";
 import { PRODUCTS } from "@/data/products";
 import { useStore } from "@/context/StoreContext";
 import { ProductCard } from "@/components/ecommerce/ProductCard";
 
 export default function WishlistPage() {
-  const { wishlist, formatPrice } = useStore();
+  const { wishlist } = useStore();
 
   const wishlistProducts = PRODUCTS.filter((p) => wishlist.includes(p.id));
 
@@ -24,11 +24,14 @@ export default function WishlistPage() {
           </nav>
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-3xl sm:text-4xl font-serif font-normal text-neutral-900">
-                My Saved Sarees ({wishlistProducts.length})
+              <h1 className="text-2xl sm:text-4xl font-serif font-normal text-neutral-900 flex flex-wrap items-center gap-2 sm:gap-3">
+                <span>My Wishlist</span>
+                <span className="text-xs sm:text-sm font-sans font-medium text-neutral-600 bg-white border border-[#DCD5C9] px-2.5 py-0.5 rounded-full whitespace-nowrap">
+                  {wishlistProducts.length} {wishlistProducts.length === 1 ? "Item" : "Items"}
+                </span>
               </h1>
               <p className="text-xs sm:text-sm text-neutral-600 mt-1 font-sans">
-                Keep track of your dream weaves and celebratory drapes.
+                Keep track of your favourite handcrafted pieces and celebratory drapes.
               </p>
             </div>
             {wishlistProducts.length > 0 && (
@@ -53,14 +56,14 @@ export default function WishlistPage() {
             <div>
               <h2 className="text-xl font-serif text-neutral-900">Your wishlist is empty</h2>
               <p className="text-xs text-neutral-500 mt-1">
-                Tap the heart icon on any saree to save it to your personal collection.
+                Tap the heart icon on any product to save it to your personal collection.
               </p>
             </div>
             <Link
               href="/shop"
               className="inline-block px-8 py-3 bg-[#541920] hover:bg-[#3D1217] text-white text-xs uppercase tracking-widest font-semibold rounded-xs transition-colors shadow-xs"
             >
-              Discover Handcrafted Sarees
+              Discover Handcrafted Collection
             </Link>
           </div>
         ) : (

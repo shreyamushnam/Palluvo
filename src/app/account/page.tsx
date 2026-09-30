@@ -347,14 +347,14 @@ export default function AccountPage() {
                             {addr.type}
                           </span>
                           {addr.isDefault ? (
-                            <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-[#15803D]">
-                              <Check className="w-3 h-3" /> Default Address
+                            <span className="min-h-[44px] -my-2.5 inline-flex items-center gap-1 text-[11px] font-semibold text-[#15803D]">
+                              <Check className="w-3.5 h-3.5" /> Default Address
                             </span>
                           ) : (
                             <button
                               type="button"
                               onClick={() => handleSetDefaultAddress(addr.id)}
-                              className="text-[11px] text-neutral-500 hover:text-[#541920] font-medium"
+                              className="min-h-[44px] -my-2.5 -mr-2 px-2.5 inline-flex items-center text-[11px] text-neutral-500 hover:text-[#541920] font-medium cursor-pointer rounded-xs focus-visible:ring-2 focus-visible:ring-[#541920] focus-visible:outline-none"
                             >
                               Set as Default
                             </button>
@@ -376,24 +376,24 @@ export default function AccountPage() {
                         <p className="text-xs text-neutral-600 pt-1">
                           Phone: <strong className="text-neutral-900">{addr.phone}</strong>
                         </p>
-                        <div className="pt-3 border-t border-[#E8E2D9] flex gap-3 text-xs font-medium">
+                        <div className="pt-2 border-t border-[#E8E2D9] flex items-center gap-1 text-xs font-medium -ml-2">
                           <button
                             type="button"
                             onClick={() => handleOpenEditAddress(addr)}
-                            className="text-[#541920] hover:underline flex items-center gap-1 cursor-pointer"
+                            className="min-h-[44px] px-2.5 inline-flex items-center gap-1.5 text-[#541920] hover:bg-[#541920]/5 rounded-xs transition-colors cursor-pointer focus-visible:ring-2 focus-visible:ring-[#541920] focus-visible:outline-none"
                             aria-label={`Edit recipient address for ${addr.name}`}
                           >
-                            <Edit2 className="w-3 h-3" />
+                            <Edit2 className="w-3.5 h-3.5" />
                             <span>Edit</span>
                           </button>
-                          <span className="text-neutral-300">•</span>
+                          <span className="text-neutral-300 select-none">•</span>
                           <button
                             type="button"
                             onClick={() => handleDeleteAddress(addr.id, addr.name)}
-                            className="text-neutral-500 hover:text-red-600 flex items-center gap-1 cursor-pointer"
+                            className="min-h-[44px] px-2.5 inline-flex items-center gap-1.5 text-neutral-500 hover:text-red-600 hover:bg-red-50 rounded-xs transition-colors cursor-pointer focus-visible:ring-2 focus-visible:ring-[#541920] focus-visible:outline-none"
                             aria-label={`Delete recipient address for ${addr.name}`}
                           >
-                            <Trash2 className="w-3 h-3" />
+                            <Trash2 className="w-3.5 h-3.5" />
                             <span>Delete</span>
                           </button>
                         </div>
