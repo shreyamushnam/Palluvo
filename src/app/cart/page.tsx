@@ -75,14 +75,14 @@ export default function CartPage() {
             <div>
               <h2 className="text-xl font-serif text-neutral-900">Your shopping bag is empty</h2>
               <p className="text-xs text-neutral-500 mt-1">
-                Explore our handloom silks, bridal masterpieces, and festive drapes.
+                Explore our handcrafted silks, royal drapes, and artisanal accessories.
               </p>
             </div>
             <Link
               href="/shop"
               className="inline-block px-8 py-3 bg-[#541920] hover:bg-[#3D1217] text-white text-xs uppercase tracking-widest font-semibold rounded-xs transition-colors shadow-xs"
             >
-              Explore Sarees Catalogue
+              Explore Products
             </Link>
           </div>
         ) : (

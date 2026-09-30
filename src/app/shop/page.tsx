@@ -428,14 +428,14 @@ function ShopContent() {
                         onClick={() => !isDisabled && handleCategoryToggle(cat.name)}
                         className={`w-full flex items-center justify-between py-1 text-xs text-left transition-colors ${
                           isDisabled
-                            ? "opacity-40 cursor-not-allowed text-neutral-400"
+                            ? "cursor-not-allowed text-neutral-600"
                             : isSelected
                             ? "text-[#541920] font-bold cursor-pointer"
-                            : "text-neutral-600 hover:text-black cursor-pointer"
+                            : "text-neutral-800 hover:text-black cursor-pointer"
                         }`}
                       >
                         <span>{cat.name}</span>
-                        <span className={`text-[11px] ${isDisabled ? "text-neutral-400" : isSelected ? "text-[#541920]" : "text-neutral-600 font-medium"}`}>({count})</span>
+                        <span className={`text-[11px] ${isDisabled ? "text-neutral-500" : isSelected ? "text-[#541920]" : "text-neutral-600 font-medium"}`}>({count})</span>
                       </button>
                     );
                   })}
@@ -484,14 +484,14 @@ function ShopContent() {
                         onClick={() => !isDisabled && setSelectedFabric(selectedFabric === fabric ? "" : fabric)}
                         className={`w-full flex items-center justify-between text-xs py-1 transition-colors ${
                           isDisabled
-                            ? "opacity-40 cursor-not-allowed text-neutral-400"
+                            ? "cursor-not-allowed text-neutral-600"
                             : selectedFabric === fabric
                             ? "text-[#541920] font-bold cursor-pointer"
-                            : "text-neutral-600 hover:text-black cursor-pointer"
+                            : "text-neutral-800 hover:text-black cursor-pointer"
                         }`}
                       >
                         <span>{fabric}</span>
-                        <span className={`text-[11px] ${isDisabled ? "text-neutral-400" : selectedFabric === fabric ? "text-[#541920]" : "text-neutral-600 font-medium"}`}>({count})</span>
+                        <span className={`text-[11px] ${isDisabled ? "text-neutral-500" : selectedFabric === fabric ? "text-[#541920]" : "text-neutral-600 font-medium"}`}>({count})</span>
                       </button>
                     );
                   })}
@@ -516,14 +516,14 @@ function ShopContent() {
                         onClick={() => !isDisabled && setSelectedOccasion(selectedOccasion === occ ? "" : occ)}
                         className={`w-full flex items-center justify-between text-xs py-1 transition-colors ${
                           isDisabled
-                            ? "opacity-40 cursor-not-allowed text-neutral-400"
+                            ? "cursor-not-allowed text-neutral-600"
                             : selectedOccasion === occ
                             ? "text-[#541920] font-bold cursor-pointer"
-                            : "text-neutral-600 hover:text-black cursor-pointer"
+                            : "text-neutral-800 hover:text-black cursor-pointer"
                         }`}
                       >
                         <span>{occ}</span>
-                        <span className={`text-[11px] ${isDisabled ? "text-neutral-400" : selectedOccasion === occ ? "text-[#541920]" : "text-neutral-600 font-medium"}`}>({count})</span>
+                        <span className={`text-[11px] ${isDisabled ? "text-neutral-500" : selectedOccasion === occ ? "text-[#541920]" : "text-neutral-600 font-medium"}`}>({count})</span>
                       </button>
                     );
                   })}
@@ -623,15 +623,15 @@ function ShopContent() {
                           onClick={() => !isDisabled && handleCategoryToggle(cat.name)}
                           className={`w-full min-h-[44px] flex items-center justify-between px-2.5 py-2 text-xs text-left rounded-xs transition-colors focus-visible:ring-2 focus-visible:ring-[#541920] focus-visible:outline-none ${
                             isDisabled
-                              ? "opacity-40 cursor-not-allowed text-neutral-400"
+                              ? "cursor-not-allowed text-neutral-600 bg-neutral-200/20"
                               : isSelected
                               ? "text-[#541920] font-bold bg-[#541920]/5 cursor-pointer"
-                              : "text-neutral-600 hover:bg-black/5 cursor-pointer"
+                              : "text-neutral-800 hover:bg-black/5 cursor-pointer"
                           }`}
                         >
                           <span className="flex items-center gap-1.5">
                             <span>{cat.name}</span>
-                            <span className={`text-[11px] ${isDisabled ? "text-neutral-400" : isSelected ? "text-[#541920]" : "text-neutral-600 font-medium"}`}>({count})</span>
+                            <span className={`text-[11px] ${isDisabled ? "text-neutral-500" : isSelected ? "text-[#541920]" : "text-neutral-600 font-medium"}`}>({count})</span>
                           </span>
                           {isSelected && <Check className="w-3.5 h-3.5 text-[#541920]" />}
                         </button>
@@ -683,15 +683,15 @@ function ShopContent() {
                           onClick={() => !isDisabled && setSelectedFabric(selectedFabric === fabric ? "" : fabric)}
                           className={`w-full min-h-[44px] px-2.5 py-2 flex items-center justify-between text-left text-xs rounded-xs transition-colors focus-visible:ring-2 focus-visible:ring-[#541920] focus-visible:outline-none ${
                             isDisabled
-                              ? "opacity-40 cursor-not-allowed text-neutral-400"
+                              ? "cursor-not-allowed text-neutral-600 bg-neutral-200/20"
                               : selectedFabric === fabric
                               ? "text-[#541920] font-bold bg-[#541920]/5 cursor-pointer"
-                              : "text-neutral-600 hover:bg-black/5 cursor-pointer"
+                              : "text-neutral-800 hover:bg-black/5 cursor-pointer"
                           }`}
                         >
                           <span className="flex items-center gap-1.5">
                             <span>{fabric}</span>
-                            <span className={`text-[11px] ${isDisabled ? "text-neutral-400" : selectedFabric === fabric ? "text-[#541920]" : "text-neutral-600 font-medium"}`}>({count})</span>
+                            <span className={`text-[11px] ${isDisabled ? "text-neutral-500" : selectedFabric === fabric ? "text-[#541920]" : "text-neutral-600 font-medium"}`}>({count})</span>
                           </span>
                           {selectedFabric === fabric && <Check className="w-3.5 h-3.5 text-[#541920]" />}
                         </button>
@@ -719,15 +719,15 @@ function ShopContent() {
                           onClick={() => !isDisabled && setSelectedOccasion(selectedOccasion === occ ? "" : occ)}
                           className={`w-full min-h-[44px] px-2.5 py-2 flex items-center justify-between text-left text-xs rounded-xs transition-colors focus-visible:ring-2 focus-visible:ring-[#541920] focus-visible:outline-none ${
                             isDisabled
-                              ? "opacity-40 cursor-not-allowed text-neutral-400"
+                              ? "cursor-not-allowed text-neutral-600 bg-neutral-200/20"
                               : selectedOccasion === occ
                               ? "text-[#541920] font-bold bg-[#541920]/5 cursor-pointer"
-                              : "text-neutral-600 hover:bg-black/5 cursor-pointer"
+                              : "text-neutral-800 hover:bg-black/5 cursor-pointer"
                           }`}
                         >
                           <span className="flex items-center gap-1.5">
                             <span>{occ}</span>
-                            <span className={`text-[11px] ${isDisabled ? "text-neutral-400" : selectedOccasion === occ ? "text-[#541920]" : "text-neutral-600 font-medium"}`}>({count})</span>
+                            <span className={`text-[11px] ${isDisabled ? "text-neutral-500" : selectedOccasion === occ ? "text-[#541920]" : "text-neutral-600 font-medium"}`}>({count})</span>
                           </span>
                           {selectedOccasion === occ && <Check className="w-3.5 h-3.5 text-[#541920]" />}
                         </button>

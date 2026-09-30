@@ -105,7 +105,7 @@ export const CartDrawer: React.FC = () => {
                 <div>
                   <h3 className="font-serif text-lg text-neutral-800">Your bag is empty</h3>
                   <p className="text-xs text-neutral-500 mt-1 max-w-xs mx-auto">
-                    Explore our handpicked collection of royal weaves and artisanal sarees.
+                    Explore our handpicked collection of royal weaves and artisanal creations.
                   </p>
                 </div>
                 <Link
@@ -113,7 +113,7 @@ export const CartDrawer: React.FC = () => {
                   onClick={() => setIsCartOpen(false)}
                   className="inline-block px-6 py-2.5 bg-[#541920] text-white text-xs uppercase tracking-widest font-medium hover:bg-[#3D1217] transition-colors rounded-sm"
                 >
-                  Explore Sarees
+                  Explore Products
                 </Link>
               </div>
             ) : (
