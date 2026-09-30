@@ -31,22 +31,87 @@ const OCCASIONS = [
   "Workwear & Casual",
 ];
 
-export function getFabricItemCount(fabricName: string): number {
-  return PRODUCTS.filter((product) =>
-    product.fabric.toLowerCase().includes(fabricName.toLowerCase())
-  ).length;
+export function matchesCategory(product: Product, category: string): boolean {
+  if (!category) return true;
+  const norm = category.toLowerCase().trim();
+  if (norm.includes("new arrival")) {
+    return !!product.isNewArrival;
+  } else if (norm.includes("silk") && !norm.includes("cotton")) {
+    return product.category.toLowerCase() === "silk" || product.fabric.toLowerCase().includes("silk");
+  } else if (norm.includes("handloom")) {
+    return product.category.toLowerCase() === "handloom" || product.fabric.toLowerCase().includes("handloom");
+  } else if (norm.includes("cotton")) {
+    return product.category.toLowerCase() === "cotton" || product.fabric.toLowerCase().includes("cotton");
+  } else if (norm.includes("festive")) {
+    return product.category.toLowerCase() === "festive" || product.occasion.toLowerCase() === "festive";
+  } else if (norm.includes("bridal") || norm.includes("wedding")) {
+    return product.category.toLowerCase() === "bridal" || product.occasion.toLowerCase() === "wedding";
+  } else if (norm.includes("party")) {
+    return product.category.toLowerCase() === "party wear" || product.occasion.toLowerCase() === "party";
+  } else if (norm.includes("printed")) {
+    return product.category.toLowerCase() === "printed";
+  } else {
+    const root = norm.replace(/sarees?/g, "").trim();
+    return (
+      product.category.toLowerCase().includes(root) ||
+      product.fabric.toLowerCase().includes(root) ||
+      product.occasion.toLowerCase().includes(root)
+    );
+  }
 }
 
-export function getOccasionItemCount(occ: string): number {
+export function matchesFabric(product: Product, fabric: string): boolean {
+  if (!fabric) return true;
+  return product.fabric.toLowerCase().includes(fabric.toLowerCase());
+}
+
+export function matchesOccasion(product: Product, occ: string): boolean {
+  if (!occ) return true;
   const occTerms = occ.toLowerCase().split(/[&,\s]+/).filter((term) => term.length > 2);
-  return PRODUCTS.filter((product) => {
-    const prodOcc = product.occasion.toLowerCase();
-    const prodDetailsOcc = product.details?.occasion?.toLowerCase() || "";
-    const prodCat = product.category.toLowerCase();
-    return occTerms.some(
-      (term) => prodOcc.includes(term) || prodDetailsOcc.includes(term) || prodCat.includes(term)
-    );
-  }).length;
+  const prodOcc = product.occasion.toLowerCase();
+  const prodDetailsOcc = product.details?.occasion?.toLowerCase() || "";
+  const prodCat = product.category.toLowerCase();
+  return occTerms.some(
+    (term) => prodOcc.includes(term) || prodDetailsOcc.includes(term) || prodCat.includes(term)
+  );
+}
+
+export function matchesPrice(product: Product, priceRangeIndex: number | null): boolean {
+  if (priceRangeIndex === null) return true;
+  const range = PRICE_RANGES[priceRangeIndex];
+  if (!range) return true;
+  return product.price >= range.min && product.price <= range.max;
+}
+
+export function matchesSearch(product: Product, query: string): boolean {
+  if (!query) return true;
+  const q = query.toLowerCase();
+  return (
+    product.name.toLowerCase().includes(q) ||
+    product.fabric.toLowerCase().includes(q) ||
+    product.category.toLowerCase().includes(q)
+  );
+}
+
+export function getFabricItemCount(
+  fabricName: string,
+  productList: Product[] = PRODUCTS
+): number {
+  return productList.filter((product) => matchesFabric(product, fabricName)).length;
+}
+
+export function getOccasionItemCount(
+  occ: string,
+  productList: Product[] = PRODUCTS
+): number {
+  return productList.filter((product) => matchesOccasion(product, occ)).length;
+}
+
+export function getCategoryItemCount(
+  categoryName: string,
+  productList: Product[] = PRODUCTS
+): number {
+  return productList.filter((product) => matchesCategory(product, categoryName)).length;
 }
 
 const PRICE_RANGES = [
@@ -68,10 +133,37 @@ function ShopContent() {
   const [sortBy, setSortBy] = useState<string>(searchParams.get("sort") || "featured");
   const [isMobileFilterOpen, setIsMobileFilterOpen] = useState(false);
 
-  const handleCategoryToggle = (catName: string) => {
-    const targetCat = CATEGORIES.find(
-      (c) => c.name.toLowerCase() === catName.toLowerCase()
+  // Products matching all filters except fabric
+  const productsForFabricCounts = useMemo(() => {
+    return PRODUCTS.filter((p) =>
+      matchesCategory(p, selectedCategory) &&
+      matchesOccasion(p, selectedOccasion) &&
+      matchesPrice(p, selectedPriceRange) &&
+      matchesSearch(p, initialQuery)
     );
+  }, [selectedCategory, selectedOccasion, selectedPriceRange, initialQuery]);
+
+  // Products matching all filters except occasion
+  const productsForOccasionCounts = useMemo(() => {
+    return PRODUCTS.filter((p) =>
+      matchesCategory(p, selectedCategory) &&
+      matchesFabric(p, selectedFabric) &&
+      matchesPrice(p, selectedPriceRange) &&
+      matchesSearch(p, initialQuery)
+    );
+  }, [selectedCategory, selectedFabric, selectedPriceRange, initialQuery]);
+
+  // Products matching all filters except category
+  const productsForCategoryCounts = useMemo(() => {
+    return PRODUCTS.filter((p) =>
+      matchesFabric(p, selectedFabric) &&
+      matchesOccasion(p, selectedOccasion) &&
+      matchesPrice(p, selectedPriceRange) &&
+      matchesSearch(p, initialQuery)
+    );
+  }, [selectedFabric, selectedOccasion, selectedPriceRange, initialQuery]);
+
+  const handleCategoryToggle = (catName: string) => {
     const isCurrent =
       selectedCategory.toLowerCase() === catName.toLowerCase() ||
       (catName.toLowerCase().includes("silk") && selectedCategory.toLowerCase() === "silk") ||
@@ -80,8 +172,10 @@ function ShopContent() {
       (catName.toLowerCase().includes("bridal") && selectedCategory.toLowerCase() === "bridal") ||
       (catName.toLowerCase().includes("new") && selectedCategory.toLowerCase().includes("new"));
 
-    // Prevent selecting categories with zero items
-    if (targetCat && targetCat.itemCount === 0 && !isCurrent) {
+    const count = getCategoryItemCount(catName, productsForCategoryCounts);
+
+    // Prevent selecting categories with zero items for active filters
+    if (count === 0 && !isCurrent) {
       return;
     }
 
@@ -98,82 +192,11 @@ function ShopContent() {
   // Filter and sort products
   const filteredProducts = useMemo(() => {
     return PRODUCTS.filter((product) => {
-      // Category filter with intelligent matching
-      if (selectedCategory) {
-        const norm = selectedCategory.toLowerCase().trim();
-        if (norm.includes("new arrival")) {
-          if (!product.isNewArrival) return false;
-        } else if (norm.includes("silk") && !norm.includes("cotton")) {
-          if (product.category.toLowerCase() !== "silk" && !product.fabric.toLowerCase().includes("silk")) {
-            return false;
-          }
-        } else if (norm.includes("handloom")) {
-          if (product.category.toLowerCase() !== "handloom" && !product.fabric.toLowerCase().includes("handloom")) {
-            return false;
-          }
-        } else if (norm.includes("cotton")) {
-          if (product.category.toLowerCase() !== "cotton" && !product.fabric.toLowerCase().includes("cotton")) {
-            return false;
-          }
-        } else if (norm.includes("festive")) {
-          if (product.category.toLowerCase() !== "festive" && product.occasion.toLowerCase() !== "festive") {
-            return false;
-          }
-        } else if (norm.includes("bridal") || norm.includes("wedding")) {
-          if (product.category.toLowerCase() !== "bridal" && product.occasion.toLowerCase() !== "wedding") {
-            return false;
-          }
-        } else if (norm.includes("party")) {
-          if (product.category.toLowerCase() !== "party wear" && product.occasion.toLowerCase() !== "party") {
-            return false;
-          }
-        } else if (norm.includes("printed")) {
-          if (product.category.toLowerCase() !== "printed") {
-            return false;
-          }
-        } else {
-          const root = norm.replace(/sarees?/g, "").trim();
-          if (
-            !product.category.toLowerCase().includes(root) &&
-            !product.fabric.toLowerCase().includes(root) &&
-            !product.occasion.toLowerCase().includes(root)
-          ) {
-            return false;
-          }
-        }
-      }
-
-      // Fabric filter
-      if (selectedFabric && !product.fabric.toLowerCase().includes(selectedFabric.toLowerCase())) {
-        return false;
-      }
-      // Occasion filter
-      if (selectedOccasion) {
-        const occTerms = selectedOccasion.toLowerCase().split(/[&,\s]+/).filter(term => term.length > 2);
-        const prodOcc = product.occasion.toLowerCase();
-        const prodDetailsOcc = product.details?.occasion?.toLowerCase() || "";
-        const prodCat = product.category.toLowerCase();
-        const matches = occTerms.some(
-          term => prodOcc.includes(term) || prodDetailsOcc.includes(term) || prodCat.includes(term)
-        );
-        if (!matches) return false;
-      }
-      // Price range filter
-      if (selectedPriceRange !== null) {
-        const range = PRICE_RANGES[selectedPriceRange];
-        if (product.price < range.min || product.price > range.max) {
-          return false;
-        }
-      }
-      // Search query
-      if (initialQuery) {
-        const q = initialQuery.toLowerCase();
-        const matches =
-          product.name.toLowerCase().includes(q) ||
-          product.fabric.toLowerCase().includes(q) ||
-          product.category.toLowerCase().includes(q);
-        if (!matches) return false;
-      }
+      if (!matchesCategory(product, selectedCategory)) return false;
+      if (!matchesFabric(product, selectedFabric)) return false;
+      if (!matchesOccasion(product, selectedOccasion)) return false;
+      if (!matchesPrice(product, selectedPriceRange)) return false;
+      if (!matchesSearch(product, initialQuery)) return false;
       return true;
     }).sort((a, b) => {
       if (sortBy === "price-low") return a.price - b.price;
@@ -389,7 +412,8 @@ function ShopContent() {
                       (cat.name.toLowerCase().includes("bridal") && selectedCategory.toLowerCase() === "bridal") ||
                       (cat.name.toLowerCase().includes("new") && selectedCategory.toLowerCase().includes("new"));
 
-                    const isDisabled = cat.itemCount === 0 && !isSelected;
+                    const count = getCategoryItemCount(cat.name, productsForCategoryCounts);
+                    const isDisabled = count === 0 && !isSelected;
 
                     return (
                       <button
@@ -406,7 +430,7 @@ function ShopContent() {
                         }`}
                       >
                         <span>{cat.name}</span>
-                        <span className={`text-[11px] ${isDisabled ? "text-neutral-400" : isSelected ? "text-[#541920]" : "text-neutral-600 font-medium"}`}>({cat.itemCount})</span>
+                        <span className={`text-[11px] ${isDisabled ? "text-neutral-400" : isSelected ? "text-[#541920]" : "text-neutral-600 font-medium"}`}>({count})</span>
                       </button>
                     );
                   })}
@@ -444,7 +468,7 @@ function ShopContent() {
                 </h4>
                 <div className="space-y-1.5">
                   {FABRICS.map((fabric) => {
-                    const count = getFabricItemCount(fabric);
+                    const count = getFabricItemCount(fabric, productsForFabricCounts);
                     const isDisabled = count === 0 && selectedFabric !== fabric;
 
                     return (
@@ -476,7 +500,7 @@ function ShopContent() {
                 </h4>
                 <div className="space-y-1.5">
                   {OCCASIONS.map((occ) => {
-                    const count = getOccasionItemCount(occ);
+                    const count = getOccasionItemCount(occ, productsForOccasionCounts);
                     const isDisabled = count === 0 && selectedOccasion !== occ;
 
                     return (
@@ -546,11 +570,16 @@ function ShopContent() {
             <div className="w-screen max-w-xs bg-[#FAF7F2] text-[#1C1A18] flex flex-col shadow-2xl">
               
               <div className="p-4 border-b border-[#E8E2D9] flex items-center justify-between bg-[#F4EFE6]">
-                <h3 className="font-serif text-base font-semibold">
-                  {selectedCategory && selectedCategory.toLowerCase().includes("saree")
-                    ? "Filter Sarees"
-                    : "Filter Products"}
-                </h3>
+                <div>
+                  <h3 className="font-serif text-base font-semibold">
+                    {selectedCategory && selectedCategory.toLowerCase().includes("saree")
+                      ? "Filter Sarees"
+                      : "Filter Products"}
+                  </h3>
+                  <p className="text-[11px] text-neutral-500 mt-0.5">
+                    Showing {filteredProducts.length} {filteredProducts.length === 1 ? (selectedCategory?.toLowerCase().includes("saree") ? "saree" : "product") : (selectedCategory?.toLowerCase().includes("saree") ? "sarees" : "products")}
+                  </p>
+                </div>
                 <button
                   type="button"
                   onClick={() => setIsMobileFilterOpen(false)}
@@ -577,7 +606,8 @@ function ShopContent() {
                         (cat.name.toLowerCase().includes("bridal") && selectedCategory.toLowerCase() === "bridal") ||
                         (cat.name.toLowerCase().includes("new") && selectedCategory.toLowerCase().includes("new"));
 
-                      const isDisabled = cat.itemCount === 0 && !isSelected;
+                      const count = getCategoryItemCount(cat.name, productsForCategoryCounts);
+                      const isDisabled = count === 0 && !isSelected;
 
                       return (
                         <button
@@ -596,7 +626,7 @@ function ShopContent() {
                         >
                           <span className="flex items-center gap-1.5">
                             <span>{cat.name}</span>
-                            <span className={`text-[11px] ${isDisabled ? "text-neutral-400" : isSelected ? "text-[#541920]" : "text-neutral-600 font-medium"}`}>({cat.itemCount})</span>
+                            <span className={`text-[11px] ${isDisabled ? "text-neutral-400" : isSelected ? "text-[#541920]" : "text-neutral-600 font-medium"}`}>({count})</span>
                           </span>
                           {isSelected && <Check className="w-3.5 h-3.5 text-[#541920]" />}
                         </button>
@@ -636,7 +666,7 @@ function ShopContent() {
                   </h4>
                   <div className="space-y-1">
                     {FABRICS.map((fabric) => {
-                      const count = getFabricItemCount(fabric);
+                      const count = getFabricItemCount(fabric, productsForFabricCounts);
                       const isDisabled = count === 0 && selectedFabric !== fabric;
 
                       return (
@@ -672,7 +702,7 @@ function ShopContent() {
                   </h4>
                   <div className="space-y-1">
                     {OCCASIONS.map((occ) => {
-                      const count = getOccasionItemCount(occ);
+                      const count = getOccasionItemCount(occ, productsForOccasionCounts);
                       const isDisabled = count === 0 && selectedOccasion !== occ;
 
                       return (
@@ -715,7 +745,7 @@ function ShopContent() {
                   onClick={() => setIsMobileFilterOpen(false)}
                   className="flex-1 min-h-[44px] py-2.5 bg-[#541920] text-white text-xs font-semibold rounded-xs hover:bg-[#3D1217] transition-colors cursor-pointer"
                 >
-                  Apply Filters
+                  Close Filters
                 </button>
               </div>
 
