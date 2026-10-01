@@ -307,7 +307,7 @@ export default function AccountPage() {
             {/* Saved Addresses Tab */}
             {activeTab === "addresses" && (
               <div className="space-y-6">
-                <div className="flex items-center justify-between">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
                   <div>
                     <h2 className="font-serif text-xl text-neutral-900">Saved Delivery Addresses</h2>
                     <p className="text-xs text-neutral-500 mt-0.5">Manage your shipping destinations for faster checkout.</p>
@@ -315,7 +315,7 @@ export default function AccountPage() {
                   <button
                     type="button"
                     onClick={handleOpenAddAddress}
-                    className="flex items-center gap-1.5 px-4 py-2 bg-[#541920] hover:bg-[#3D1217] text-white text-xs uppercase tracking-wider font-semibold rounded-xs shadow-xs transition-colors cursor-pointer"
+                    className="self-start sm:self-auto inline-flex items-center gap-1.5 px-4 py-2 bg-[#541920] hover:bg-[#3D1217] text-white text-xs uppercase tracking-wider font-semibold rounded-xs shadow-xs transition-colors cursor-pointer whitespace-nowrap shrink-0"
                   >
                     <Plus className="w-3.5 h-3.5" />
                     <span>Add New Address</span>
@@ -362,7 +362,7 @@ export default function AccountPage() {
                         </div>
 
                         <div>
-                          <span className="text-[10px] uppercase font-semibold text-neutral-400 tracking-wider block">
+                          <span className="text-[10px] uppercase font-semibold text-neutral-600 tracking-wider block">
                             Recipient
                           </span>
                           <h4 className="font-serif text-sm font-semibold text-neutral-900">
