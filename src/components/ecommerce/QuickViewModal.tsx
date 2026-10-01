@@ -143,7 +143,7 @@ export const QuickViewModal: React.FC = () => {
                     {formatPrice(quickViewProduct.price)}
                   </span>
                   {quickViewProduct.originalPrice && (
-                    <span className="text-sm text-neutral-400 line-through">
+                    <span className="text-sm text-neutral-600 line-through">
                       {formatPrice(quickViewProduct.originalPrice)}
                     </span>
                   )}

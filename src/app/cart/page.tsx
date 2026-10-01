@@ -155,7 +155,7 @@ export default function CartPage() {
                               {formatPrice(item.product.price * item.quantity)}
                             </span>
                             {item.product.originalPrice && (
-                              <p className="text-xs text-neutral-400 line-through">
+                              <p className="text-xs text-neutral-600 line-through">
                                 {formatPrice(item.product.originalPrice * item.quantity)}
                               </p>
                             )}

@@ -156,7 +156,7 @@ export const HeroBanner: React.FC = () => {
 
                     <div className="flex items-baseline gap-1.5 sm:gap-2 mt-0.5">
                       <span className="text-xs sm:text-sm font-bold text-[#541920]">{slide.product.price}</span>
-                      <span className="text-[11px] text-neutral-400 line-through">{slide.product.originalPrice}</span>
+                      <span className="text-[11px] text-neutral-600 line-through">{slide.product.originalPrice}</span>
                     </div>
                   </div>
 

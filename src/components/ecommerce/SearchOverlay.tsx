@@ -241,7 +241,7 @@ export const SearchOverlay: React.FC = () => {
                               {formatPrice(product.price)}
                             </span>
                             {product.originalPrice && (
-                              <span className="text-[10px] text-neutral-400 line-through">
+                              <span className="text-[10px] text-neutral-600 line-through">
                                 {formatPrice(product.originalPrice)}
                               </span>
                             )}

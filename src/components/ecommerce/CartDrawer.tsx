@@ -169,7 +169,7 @@ export const CartDrawer: React.FC = () => {
                           {formatPrice(item.product.price)}
                         </span>
                         {item.product.originalPrice && (
-                          <span className="text-[10px] text-neutral-400 line-through">
+                          <span className="text-[10px] text-neutral-600 line-through">
                             {formatPrice(item.product.originalPrice)}
                           </span>
                         )}

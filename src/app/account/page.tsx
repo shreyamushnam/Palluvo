@@ -225,10 +225,10 @@ export default function AccountPage() {
                         {/* Order Header */}
                         <div className="p-4 sm:p-5 bg-[#F4EFE6] border-b border-[#E8E2D9] flex flex-wrap items-center justify-between gap-3 text-xs">
                           <div>
-                            <span className="text-neutral-500">Order Placed: </span>
+                            <span className="text-neutral-600 font-medium">Order Placed: </span>
                             <span className="font-semibold text-neutral-900">{order.date}</span>
-                            <span className="text-neutral-300 mx-2">•</span>
-                            <span className="text-neutral-500">Order #: </span>
+                            <span className="text-neutral-400 mx-2">•</span>
+                            <span className="text-neutral-600 font-medium">Order #: </span>
                             <span className="font-mono font-semibold text-neutral-900">{order.orderNumber}</span>
                           </div>
 
@@ -293,8 +293,8 @@ export default function AccountPage() {
                               Delivery Address: {order.shippingAddress}
                             </span>
                           </div>
-                          <span className="text-neutral-500">
-                            Payment: {order.paymentMethod}
+                          <span className="text-neutral-600">
+                            Payment: <span className="font-semibold text-neutral-900">{order.paymentMethod}</span>
                           </span>
                         </div>
                       </div>
