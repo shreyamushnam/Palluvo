@@ -3,8 +3,8 @@
 import React, { useState, useMemo, Suspense } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Filter, X, ChevronDown, SlidersHorizontal, Check } from "lucide-react";
-import { PRODUCTS, Product } from "@/data/products";
+import { Filter, X, SlidersHorizontal, Check } from "lucide-react";
+import { PRODUCTS, type Product } from "@/data/products";
 import { CATEGORIES } from "@/data/categories";
 import { ProductCard } from "@/components/ecommerce/ProductCard";
 

@@ -59,9 +59,8 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [quickViewProduct, setQuickViewProduct] = useState<Product | null>(null);
-  const [couponCode, setCouponCode] = useState("");
+  const [couponCode] = useState("");
   const [appliedCoupon, setAppliedCoupon] = useState<string | null>(null);
-  const [discountAmount, setDiscountAmount] = useState(0);
   const [toast, setToast] = useState<ToastInfo | null>(null);
 
   // Load from localStorage on client mount
@@ -161,7 +160,6 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const clearCart = () => {
     setCart([]);
     setAppliedCoupon(null);
-    setDiscountAmount(0);
   };
 
   const toggleWishlist = (productId: string) => {
@@ -183,23 +181,21 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const freeShippingThreshold = 1999;
   const shippingFee = subtotal >= freeShippingThreshold || subtotal === 0 ? 0 : 149;
 
-  // Re-calculate coupon discount if subtotal changes
-  useEffect(() => {
-    if (appliedCoupon === "PALLUVO10") {
-      setDiscountAmount(Math.round(subtotal * 0.1));
-    }
-  }, [subtotal, appliedCoupon]);
+  // Calculate coupon discount directly from subtotal and applied coupon
+  const discountAmount = appliedCoupon === "PALLUVO10"
+    ? Math.round(subtotal * 0.1)
+    : appliedCoupon === "MAGIC500"
+    ? (subtotal >= 3000 ? 500 : 0)
+    : 0;
 
   const applyCoupon = (code: string) => {
     const formatted = code.trim().toUpperCase();
     if (formatted === "PALLUVO10") {
       setAppliedCoupon("PALLUVO10");
-      setDiscountAmount(Math.round(subtotal * 0.1));
       showToast("Coupon PALLUVO10 applied: 10% discount!");
       return { success: true, message: "10% discount applied successfully!" };
     } else if (formatted === "MAGIC500" && subtotal >= 3000) {
       setAppliedCoupon("MAGIC500");
-      setDiscountAmount(500);
       showToast("Coupon MAGIC500 applied: ₹500 discount!");
       return { success: true, message: "₹500 discount applied successfully!" };
     }
@@ -208,7 +204,6 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
   const removeCoupon = () => {
     setAppliedCoupon(null);
-    setDiscountAmount(0);
     showToast("Coupon removed", "info");
   };
 

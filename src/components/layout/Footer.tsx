@@ -2,7 +2,7 @@
 
 import React, { useState } from "react";
 import Link from "next/link";
-import { Check, ArrowRight } from "lucide-react";
+import { Check } from "lucide-react";
 import { InstagramIcon } from "@/components/icons/BrandIcons";
 import { InfoModal, InfoModalTab } from "@/components/layout/InfoModal";
 

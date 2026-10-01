@@ -105,7 +105,6 @@ function MobileNavLinksList({ onLinkClick }: { onLinkClick?: () => void }) {
 }
 
 export const Navbar: React.FC = () => {
-  const pathname = usePathname();
   const [isScrolled, setIsScrolled] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const { cartCount, wishlistCount, setIsCartOpen, setIsSearchOpen } = useStore();

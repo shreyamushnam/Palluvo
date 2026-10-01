@@ -1,7 +1,6 @@
 "use client";
 
-import React from "react";
-import { Sparkles, ShieldCheck } from "lucide-react";
+import { Sparkles } from "lucide-react";
 
 /**
  * ReviewsSection: Retained as a placeholder pending verification of customer quotes and approved counts.

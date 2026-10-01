@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { X, Mail, Phone, MapPin, Truck, RotateCcw, HelpCircle, BookOpen, Sparkles, CheckCircle2, ChevronDown, ChevronUp } from "lucide-react";
+import { X, Mail, Phone, Truck, RotateCcw, HelpCircle, BookOpen, Sparkles, CheckCircle2, ChevronDown, ChevronUp } from "lucide-react";
 
 export type InfoModalTab = "contact" | "shipping" | "returns" | "faqs" | "story" | "craftsmanship";
 
@@ -17,15 +17,18 @@ export const InfoModal: React.FC<InfoModalProps> = ({
   onClose,
 }) => {
   const [activeTab, setActiveTab] = useState<InfoModalTab>(initialTab);
+  const [prevInitialTab, setPrevInitialTab] = useState(initialTab);
+
+  if (prevInitialTab !== initialTab) {
+    setPrevInitialTab(initialTab);
+    setActiveTab(initialTab);
+  }
+
   const [openFaqIndex, setOpenFaqIndex] = useState<number | null>(0);
   const [contactFormSubmitted, setContactFormSubmitted] = useState(false);
   const [contactName, setContactName] = useState("");
   const [contactEmail, setContactEmail] = useState("");
   const [contactMessage, setContactMessage] = useState("");
-
-  useEffect(() => {
-    setActiveTab(initialTab);
-  }, [initialTab]);
 
   useEffect(() => {
     if (isOpen) {

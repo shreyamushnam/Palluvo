@@ -6,10 +6,16 @@ import Link from "next/link";
 import { X, Star, Heart, ShoppingBag, ShieldCheck, Truck, RotateCcw, Check } from "lucide-react";
 import { useStore } from "@/context/StoreContext";
 
-export const QuickViewModal: React.FC = () => {
+interface QuickViewModalContentProps {
+  product: NonNullable<ReturnType<typeof useStore>["quickViewProduct"]>;
+  onClose: () => void;
+}
+
+const QuickViewModalContent: React.FC<QuickViewModalContentProps> = ({
+  product,
+  onClose,
+}) => {
   const {
-    quickViewProduct,
-    setQuickViewProduct,
     addToCart,
     toggleWishlist,
     isInWishlist,
@@ -18,32 +24,15 @@ export const QuickViewModal: React.FC = () => {
   } = useStore();
 
   const [activeImageIdx, setActiveImageIdx] = useState(0);
-  const [selectedColor, setSelectedColor] = useState<string>("");
-  const [blouseOption, setBlouseOption] = useState<string>("");
+  const [selectedColor, setSelectedColor] = useState<string>(product.colors[0]?.name || "");
+  const [blouseOption, setBlouseOption] = useState<string>(product.blouseOptions?.[0] || "Unstitched (Included)");
   const [quantity, setQuantity] = useState(1);
 
-  useEffect(() => {
-    if (quickViewProduct) {
-      setActiveImageIdx(0);
-      setSelectedColor(quickViewProduct.colors[0]?.name || "");
-      setBlouseOption(quickViewProduct.blouseOptions?.[0] || "Unstitched (Included)");
-      setQuantity(1);
-      document.body.style.overflow = "hidden";
-    } else {
-      document.body.style.overflow = "unset";
-    }
-    return () => {
-      document.body.style.overflow = "unset";
-    };
-  }, [quickViewProduct]);
-
-  if (!quickViewProduct) return null;
-
-  const isFav = isInWishlist(quickViewProduct.id);
+  const isFav = isInWishlist(product.id);
 
   const handleAddToCart = () => {
-    addToCart(quickViewProduct, quantity, selectedColor, blouseOption);
-    setQuickViewProduct(null);
+    addToCart(product, quantity, selectedColor, blouseOption);
+    onClose();
     setIsCartOpen(true);
   };
 
@@ -52,14 +41,14 @@ export const QuickViewModal: React.FC = () => {
       {/* Backdrop */}
       <div
         className="fixed inset-0 bg-black/70 backdrop-blur-xs transition-opacity"
-        onClick={() => setQuickViewProduct(null)}
+        onClick={onClose}
       />
 
       <div className="min-h-screen flex items-center justify-center p-4 sm:p-6 md:p-8">
         <div className="relative w-full max-w-4xl bg-[#FAF7F2] rounded-md shadow-2xl overflow-hidden border border-[#E5DFD5] animate-in fade-in zoom-in-95 duration-200">
           {/* Close button */}
           <button
-            onClick={() => setQuickViewProduct(null)}
+            onClick={onClose}
             className="absolute top-4 right-4 z-10 p-2 bg-white/80 hover:bg-white text-neutral-600 hover:text-black rounded-full shadow-sm transition-colors"
             aria-label="Close modal"
           >
@@ -71,24 +60,24 @@ export const QuickViewModal: React.FC = () => {
             <div className="p-6 bg-[#F4EFE6] flex flex-col items-center justify-center border-b md:border-b-0 md:border-r border-[#E8E2D9]">
               <div className="relative w-full max-w-sm aspect-[3/4] rounded-sm overflow-hidden bg-neutral-200 shadow-sm">
                 <Image
-                  src={quickViewProduct.images[activeImageIdx] || quickViewProduct.images[0]}
-                  alt={quickViewProduct.name}
+                  src={product.images[activeImageIdx] || product.images[0]}
+                  alt={product.name}
                   fill
                   sizes="(max-width: 768px) 100vw, 400px"
                   className="object-cover object-top"
                   priority
                 />
-                {quickViewProduct.discountPercent && (
+                {product.discountPercent && (
                   <span className="absolute top-3 left-3 bg-[#15803D] text-white text-[11px] font-bold px-2 py-0.5 rounded-xs uppercase tracking-wider">
-                    {quickViewProduct.discountPercent}% OFF
+                    {product.discountPercent}% OFF
                   </span>
                 )}
               </div>
 
               {/* Thumbnails */}
-              {quickViewProduct.images.length > 1 && (
+              {product.images.length > 1 && (
                 <div className="flex gap-2.5 mt-4 overflow-x-auto max-w-full pb-1">
-                  {quickViewProduct.images.map((img, idx) => (
+                  {product.images.map((img, idx) => (
                     <button
                       key={idx}
                       onClick={() => setActiveImageIdx(idx)}
@@ -115,24 +104,24 @@ export const QuickViewModal: React.FC = () => {
                 <div>
                   <div className="flex items-center gap-2">
                     <span className="text-xs uppercase tracking-widest text-[#541920] font-semibold">
-                      {quickViewProduct.category}
+                      {product.category}
                     </span>
                     <span className="text-neutral-300">•</span>
-                    <span className="text-xs text-neutral-500">{quickViewProduct.fabric}</span>
+                    <span className="text-xs text-neutral-500">{product.fabric}</span>
                   </div>
 
                   <h3 className="text-xl sm:text-2xl font-serif font-medium text-neutral-900 mt-1">
-                    {quickViewProduct.name}
+                    {product.name}
                   </h3>
 
                   {/* Rating */}
                   <div className="flex items-center gap-2 mt-2">
                     <div className="flex items-center gap-1 bg-[#15803D] text-white px-1.5 py-0.5 rounded-xs text-xs font-bold">
-                      <span>{quickViewProduct.rating}</span>
+                      <span>{product.rating}</span>
                       <Star className="w-3 h-3 fill-current" />
                     </div>
                     <span className="text-xs text-neutral-500">
-                      ({quickViewProduct.reviewsCount || quickViewProduct.reviewCount || 120} verified reviews)
+                      ({product.reviewsCount || product.reviewCount || 120} verified reviews)
                     </span>
                   </div>
                 </div>
@@ -140,32 +129,32 @@ export const QuickViewModal: React.FC = () => {
                 {/* Price */}
                 <div className="flex items-baseline gap-3 pt-1 border-t border-[#E8E2D9]">
                   <span className="text-2xl font-serif font-bold text-[#541920]">
-                    {formatPrice(quickViewProduct.price)}
+                    {formatPrice(product.price)}
                   </span>
-                  {quickViewProduct.originalPrice && (
+                  {product.originalPrice && (
                     <span className="text-sm text-neutral-600 line-through">
-                      {formatPrice(quickViewProduct.originalPrice)}
+                      {formatPrice(product.originalPrice)}
                     </span>
                   )}
-                  {quickViewProduct.discountPercent && (
+                  {product.discountPercent && (
                     <span className="text-xs font-bold text-[#15803D]">
-                      Save {formatPrice(quickViewProduct.originalPrice! - quickViewProduct.price)}
+                      Save {formatPrice(product.originalPrice! - product.price)}
                     </span>
                   )}
                 </div>
 
                 <p className="text-xs text-neutral-600 leading-relaxed font-sans line-clamp-3">
-                  {quickViewProduct.description}
+                  {product.description}
                 </p>
 
                 {/* Color Selection */}
-                {quickViewProduct.colors && quickViewProduct.colors.length > 0 && (
+                {product.colors && product.colors.length > 0 && (
                   <div>
                     <label className="block text-xs font-semibold uppercase tracking-wider text-neutral-700 mb-2">
                       Color: <span className="font-normal text-neutral-900">{selectedColor}</span>
                     </label>
                     <div className="flex flex-wrap gap-2">
-                      {quickViewProduct.colors.map((color) => (
+                      {product.colors.map((color) => (
                         <button
                           key={color.name}
                           type="button"
@@ -189,7 +178,7 @@ export const QuickViewModal: React.FC = () => {
                     Blouse Option:
                   </label>
                   <div className="grid grid-cols-2 gap-2">
-                    {(quickViewProduct.blouseOptions || ["Unstitched (Included)", "Custom Stitched (+₹1,499)"]).map((opt: string) => (
+                    {(product.blouseOptions || ["Unstitched (Included)", "Custom Stitched (+₹1,499)"]).map((opt: string) => (
                       <button
                         key={opt}
                         type="button"
@@ -247,7 +236,7 @@ export const QuickViewModal: React.FC = () => {
 
                   <button
                     type="button"
-                    onClick={() => toggleWishlist(quickViewProduct.id)}
+                    onClick={() => toggleWishlist(product.id)}
                     className={`w-11 h-11 min-w-[44px] min-h-[44px] border rounded-xs transition-colors flex items-center justify-center cursor-pointer focus-visible:ring-2 focus-visible:ring-[#541920] focus-visible:outline-none ${
                       isFav
                         ? "border-[#541920] bg-[#541920]/10 text-[#541920]"
@@ -261,8 +250,8 @@ export const QuickViewModal: React.FC = () => {
                 </div>
 
                 <Link
-                  href={`/product/${quickViewProduct.id}`}
-                  onClick={() => setQuickViewProduct(null)}
+                  href={`/product/${product.id}`}
+                  onClick={onClose}
                   className="block text-center text-xs font-medium text-neutral-600 hover:text-[#541920] underline tracking-wider uppercase"
                 >
                   View Full Product Details & Saree Specs →
@@ -291,3 +280,29 @@ export const QuickViewModal: React.FC = () => {
     </div>
   );
 };
+
+export const QuickViewModal: React.FC = () => {
+  const { quickViewProduct, setQuickViewProduct } = useStore();
+
+  useEffect(() => {
+    if (quickViewProduct) {
+      document.body.style.overflow = "hidden";
+    } else {
+      document.body.style.overflow = "unset";
+    }
+    return () => {
+      document.body.style.overflow = "unset";
+    };
+  }, [quickViewProduct]);
+
+  if (!quickViewProduct) return null;
+
+  return (
+    <QuickViewModalContent
+      key={quickViewProduct.id}
+      product={quickViewProduct}
+      onClose={() => setQuickViewProduct(null)}
+    />
+  );
+};
+

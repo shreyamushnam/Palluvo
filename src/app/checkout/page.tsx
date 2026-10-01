@@ -3,7 +3,7 @@
 import React, { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { CheckCircle2, ShieldCheck, Truck, CreditCard, ArrowLeft, ArrowRight, Lock, Check } from "lucide-react";
+import { CheckCircle2, ShieldCheck, ArrowLeft, Lock } from "lucide-react";
 import { useStore } from "@/context/StoreContext";
 import { OrderRecord } from "@/data/mockOrders";
 
@@ -11,7 +11,6 @@ export default function CheckoutPage() {
   const {
     cart,
     subtotal,
-    shippingFee,
     discountAmount,
     finalTotal,
     formatPrice,

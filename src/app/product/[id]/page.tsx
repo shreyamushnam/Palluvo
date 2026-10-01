@@ -8,12 +8,11 @@ import {
   Star,
   Heart,
   ShoppingBag,
-  ShieldCheck,
   ChevronDown,
   ChevronUp,
   Share2,
 } from "lucide-react";
-import { PRODUCTS, Product } from "@/data/products";
+import { PRODUCTS } from "@/data/products";
 import { useStore } from "@/context/StoreContext";
 import { ProductCard } from "@/components/ecommerce/ProductCard";
 
