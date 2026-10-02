@@ -481,7 +481,7 @@ export default function AccountPage() {
                         value={profile.preferredDrape}
                         onChange={(e) => setProfile({ ...profile, preferredDrape: e.target.value })}
                         placeholder="e.g. Nivi Style, Bengali, Nauvari"
-                        className="w-full min-h-[44px] px-3.5 py-2.5 border border-[#DCD5C9] rounded-xs focus:outline-none focus:border-[#541920]"
+                        className="w-full min-h-[44px] px-3.5 py-2.5 border border-[#DCD5C9] rounded-xs focus:outline-none focus:border-[#541920] placeholder:text-neutral-500"
                       />
                     </div>
                   </div>
@@ -591,7 +591,7 @@ export default function AccountPage() {
                   value={addressForm.addressLine}
                   onChange={(e) => setAddressForm({ ...addressForm, addressLine: e.target.value })}
                   placeholder="e.g. Flat 402, Lotus Towers, 12th Main Road"
-                  className="w-full min-h-[44px] px-3.5 py-2.5 bg-white border border-[#DCD5C9] rounded-xs focus:outline-none focus:border-[#541920]"
+                  className="w-full min-h-[44px] px-3.5 py-2.5 bg-white border border-[#DCD5C9] rounded-xs focus:outline-none focus:border-[#541920] placeholder:text-neutral-500"
                 />
               </div>
 
@@ -632,6 +632,8 @@ export default function AccountPage() {
                     id="addr-pincode"
                     name="pincode"
                     type="text"
+                    inputMode="numeric"
+                    pattern="[0-9]*"
                     required
                     maxLength={6}
                     value={addressForm.pincode}
