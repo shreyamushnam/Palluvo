@@ -98,7 +98,7 @@ export default function ProductDetailPage({
       {/* Breadcrumb Navigation */}
       <div className="hidden sm:block bg-[#F4EFE6] border-b border-[#E8E2D9] py-0.5 sm:py-3.5">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <nav className="text-[11px] sm:text-xs text-neutral-600 flex items-center gap-1.5 font-sans overflow-x-auto whitespace-nowrap">
+          <nav aria-label="Breadcrumb" className="text-[11px] sm:text-xs text-neutral-600 flex items-center gap-1.5 font-sans overflow-x-auto whitespace-nowrap">
             <Link href="/" className="hover:text-black transition-colors">Home</Link>
             <span>/</span>
             <Link href="/shop" className="hover:text-black">Shop</Link>

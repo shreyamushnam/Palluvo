@@ -17,7 +17,7 @@ export default function WishlistPage() {
       {/* Header */}
       <div className="bg-[#F4EFE6] border-b border-[#E8E2D9] py-8">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <nav className="text-xs text-neutral-600 mb-2 flex items-center gap-1.5 font-sans">
+          <nav aria-label="Breadcrumb" className="text-xs text-neutral-600 mb-2 flex items-center gap-1.5 font-sans">
             <Link href="/" className="hover:text-black transition-colors">Home</Link>
             <span>/</span>
             <span className="text-neutral-900 font-medium">My Wishlist</span>

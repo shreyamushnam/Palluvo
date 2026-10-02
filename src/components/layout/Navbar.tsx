@@ -150,7 +150,7 @@ export const Navbar: React.FC = () => {
           </div>
 
           {/* Center: E-Commerce Category Links */}
-          <nav className="hidden xl:flex items-center space-x-5 2xl:space-x-8 text-[11px] 2xl:text-[12px] uppercase tracking-[0.14em] 2xl:tracking-[0.16em] font-medium shrink-0">
+          <nav aria-label="Main Navigation" className="hidden xl:flex items-center space-x-5 2xl:space-x-8 text-[11px] 2xl:text-[12px] uppercase tracking-[0.14em] 2xl:tracking-[0.16em] font-medium shrink-0">
             <React.Suspense fallback={<div className="h-4 w-48" />}>
               <NavLinksList />
             </React.Suspense>

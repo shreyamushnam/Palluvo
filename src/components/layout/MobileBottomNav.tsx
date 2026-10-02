@@ -19,7 +19,7 @@ export const MobileBottomNav: React.FC = () => {
   ];
 
   return (
-    <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-[#FAF7F2]/95 backdrop-blur-md border-t border-[#1C1A18]/10 py-1 sm:py-2 px-3 flex items-center justify-around shadow-[0_-4px_12px_rgba(0,0,0,0.03)]">
+    <nav aria-label="Mobile Navigation" className="lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-[#FAF7F2]/95 backdrop-blur-md border-t border-[#1C1A18]/10 py-1 sm:py-2 px-3 flex items-center justify-around shadow-[0_-4px_12px_rgba(0,0,0,0.03)]">
       {items.map((item) => {
         const isActive = pathname === item.href;
         const Icon = item.icon;

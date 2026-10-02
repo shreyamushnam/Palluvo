@@ -62,7 +62,7 @@ export default function CollectionsPage() {
       {/* Header */}
       <div className="bg-[#F4EFE6] border-b border-[#E8E2D9] py-10 sm:py-14">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center sm:text-left">
-          <nav className="text-xs text-neutral-600 mb-2 flex items-center justify-center sm:justify-start gap-1.5 font-sans">
+          <nav aria-label="Breadcrumb" className="text-xs text-neutral-600 mb-2 flex items-center justify-center sm:justify-start gap-1.5 font-sans">
             <Link href="/" className="hover:text-black transition-colors">
               Home
             </Link>
@@ -122,7 +122,7 @@ export default function CollectionsPage() {
                 <div className="pt-4 border-t border-[#E8E2D9]">
                   <Link
                     href={col.href}
-                    className="inline-flex items-center gap-2 px-6 py-3 bg-[#541920] hover:bg-[#3D1217] text-white text-xs uppercase tracking-widest font-semibold rounded-xs shadow-xs transition-colors"
+                    className="min-h-[44px] inline-flex items-center justify-center gap-2 px-6 py-3 bg-[#541920] hover:bg-[#3D1217] text-white text-xs uppercase tracking-widest font-semibold rounded-xs shadow-xs transition-colors cursor-pointer"
                   >
                     <span>Explore Collection</span>
                     <ArrowRight className="w-3.5 h-3.5" />
