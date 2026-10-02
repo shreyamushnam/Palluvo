@@ -80,7 +80,7 @@ export default function CartPage() {
             </div>
             <Link
               href="/shop"
-              className="inline-block px-8 py-3 bg-[#541920] hover:bg-[#3D1217] text-white text-xs uppercase tracking-widest font-semibold rounded-xs transition-colors shadow-xs"
+              className="min-h-[44px] inline-flex items-center justify-center px-8 py-3 bg-[#541920] hover:bg-[#3D1217] text-white text-xs uppercase tracking-widest font-semibold rounded-xs transition-colors shadow-xs cursor-pointer"
             >
               Explore Products
             </Link>

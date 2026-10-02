@@ -134,10 +134,10 @@ export const SearchOverlay: React.FC = () => {
                 </div>
 
                 <div>
-                  <h4 className="text-xs font-semibold tracking-wider uppercase text-neutral-500 mb-3">
+                  <h4 className="text-xs font-semibold tracking-wider uppercase text-neutral-600 mb-3">
                     Trending Sarees Right Now
                   </h4>
-                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                     {PRODUCTS.slice(0, 3).map((product) => (
                       <Link
                         key={product.id}
@@ -155,10 +155,10 @@ export const SearchOverlay: React.FC = () => {
                           />
                         </div>
                         <div className="min-w-0 flex flex-col justify-center">
-                          <p className="text-xs font-serif font-medium text-neutral-900 line-clamp-1 group-hover:text-[#541920]">
+                          <p className="text-xs sm:text-sm font-serif font-medium text-neutral-900 line-clamp-1 group-hover:text-[#541920]">
                             {product.name}
                           </p>
-                          <p className="text-[11px] text-neutral-500 mt-0.5">{product.fabric}</p>
+                          <p className="text-[11px] text-neutral-600 mt-0.5">{product.fabric}</p>
                           <p className="text-xs font-semibold text-[#541920] mt-1">
                             {formatPrice(product.price)}
                           </p>
@@ -200,7 +200,7 @@ export const SearchOverlay: React.FC = () => {
                       <Link
                         href="/shop"
                         onClick={() => setIsSearchOpen(false)}
-                        className="inline-block px-5 py-2 bg-[#541920] text-white text-xs uppercase tracking-widest font-medium rounded-sm"
+                        className="min-h-[44px] inline-flex items-center justify-center px-5 py-2.5 bg-[#541920] hover:bg-[#3D1217] text-white text-xs uppercase tracking-widest font-medium rounded-xs cursor-pointer"
                       >
                         Explore Entire Catalogue
                       </Link>
@@ -232,7 +232,7 @@ export const SearchOverlay: React.FC = () => {
                             <p className="text-xs font-serif font-medium text-neutral-900 line-clamp-1 group-hover:text-[#541920]">
                               {product.name}
                             </p>
-                            <p className="text-[11px] text-neutral-500 mt-0.5">
+                            <p className="text-[11px] text-neutral-600 mt-0.5">
                               {product.fabric} • {product.occasion}
                             </p>
                           </div>
