@@ -143,7 +143,7 @@ export const Navbar: React.FC = () => {
               <span className="font-serif-display text-xl sm:text-2xl lg:text-3xl font-medium tracking-[0.16em] sm:tracking-[0.2em] text-[#1C1A18] uppercase group-hover:text-[#541920] transition-colors truncate">
                 PALLUVO
               </span>
-              <span className="text-[8px] sm:text-[9px] tracking-[0.28em] text-[#8A857E] uppercase font-light -mt-1 hidden sm:block">
+              <span className="text-[8px] sm:text-[9px] tracking-[0.28em] text-neutral-600 uppercase font-light -mt-1 hidden sm:block">
                 Every drape, a little magic
               </span>
             </Link>
@@ -235,7 +235,7 @@ export const Navbar: React.FC = () => {
 
           <div className="flex-1 overflow-y-auto px-6 py-8 flex flex-col justify-between">
             <div className="flex flex-col space-y-4">
-              <span className="text-[10px] uppercase tracking-[0.25em] text-[#8A857E] font-semibold mb-2">
+              <span className="text-[10px] uppercase tracking-[0.25em] text-neutral-600 font-semibold mb-2">
                 Saree Categories
               </span>
               <React.Suspense fallback={<div className="h-20" />}>

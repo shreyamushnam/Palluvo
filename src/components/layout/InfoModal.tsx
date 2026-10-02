@@ -94,7 +94,7 @@ export const InfoModal: React.FC<InfoModalProps> = ({
               <span className="font-serif-display text-xl font-medium tracking-[0.16em] uppercase text-[#541920]">
                 PALLUVO
               </span>
-              <span className="text-xs text-neutral-400">|</span>
+              <span className="text-xs text-neutral-500">|</span>
               <span className="text-xs uppercase tracking-wider text-neutral-600 font-medium">
                 Customer Concierge & Heritage
               </span>
@@ -159,7 +159,7 @@ export const InfoModal: React.FC<InfoModalProps> = ({
                         <a href="mailto:contact@palluvo.com" className="text-[#541920] hover:underline font-medium">
                           contact@palluvo.com
                         </a>
-                        <p className="text-[11px] text-neutral-400 mt-0.5">Response within 4 hours</p>
+                        <p className="text-[11px] text-neutral-600 mt-0.5">Response within 4 hours</p>
                       </div>
                     </div>
 
@@ -175,7 +175,7 @@ export const InfoModal: React.FC<InfoModalProps> = ({
                             +91 81067 89789
                           </a>
                         </div>
-                        <p className="text-[11px] text-neutral-400 mt-0.5">Mon–Sat, 10 AM – 7 PM IST</p>
+                        <p className="text-[11px] text-neutral-600 mt-0.5">Mon–Sat, 10 AM – 7 PM IST</p>
                       </div>
                     </div>
                   </div>
@@ -353,7 +353,7 @@ export const InfoModal: React.FC<InfoModalProps> = ({
                           {openFaqIndex === idx ? (
                             <ChevronUp className="w-4 h-4 text-[#541920] shrink-0" />
                           ) : (
-                            <ChevronDown className="w-4 h-4 text-neutral-400 shrink-0" />
+                            <ChevronDown className="w-4 h-4 text-neutral-500 shrink-0" />
                           )}
                         </button>
                         {openFaqIndex === idx && (
