@@ -263,9 +263,9 @@ export default function AccountPage() {
                                   />
                                 </div>
                                 <div className="flex-1 min-w-0">
-                                  <h4 className="text-sm font-serif font-medium text-neutral-900 leading-snug break-words">
+                                  <h3 className="text-sm font-serif font-medium text-neutral-900 leading-snug break-words">
                                     {item.name}
-                                  </h4>
+                                  </h3>
                                   <p className="text-xs text-neutral-500 mt-0.5">
                                     Qty: {item.quantity} {item.color && `• Color: ${item.color}`}
                                   </p>
@@ -365,9 +365,9 @@ export default function AccountPage() {
                           <span className="text-[10px] uppercase font-semibold text-neutral-600 tracking-wider block">
                             Recipient
                           </span>
-                          <h4 className="font-serif text-sm font-semibold text-neutral-900">
+                          <h3 className="font-serif text-sm font-semibold text-neutral-900">
                             {addr.name}
-                          </h4>
+                          </h3>
                         </div>
                         <p className="text-xs text-neutral-600 font-sans leading-relaxed">
                           {addr.addressLine} <br />
