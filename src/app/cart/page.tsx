@@ -227,9 +227,9 @@ export default function CartPage() {
             {/* Right Column: Order Summary */}
             <div className="lg:col-span-4 space-y-4">
               <div className="bg-white p-6 rounded-sm border border-[#E8E2D9] space-y-4">
-                <h3 className="font-serif text-lg font-medium text-neutral-900 border-b border-[#E8E2D9] pb-3">
+                <h2 className="font-serif text-lg font-medium text-neutral-900 border-b border-[#E8E2D9] pb-3">
                   Order Summary
-                </h3>
+                </h2>
 
                 {/* Promo Code Form */}
                 {appliedCoupon ? (

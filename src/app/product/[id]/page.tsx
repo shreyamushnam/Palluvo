@@ -366,9 +366,9 @@ export default function ProductDetailPage({
 
             {/* Product Details Table */}
             <div className="pt-4 border-t border-[#E8E2D9] space-y-2">
-              <h3 className="font-serif text-sm font-semibold text-neutral-900">
+              <h2 className="font-serif text-sm font-semibold text-neutral-900">
                 Product Details
-              </h3>
+              </h2>
               <div className="grid grid-cols-2 gap-y-1.5 text-xs text-neutral-600 font-sans">
                 <div>Fabric: <strong className="text-neutral-900 font-medium">{product.fabric}</strong></div>
                 <div>Length: <strong className="text-neutral-900 font-medium">{product.details.length}</strong></div>
