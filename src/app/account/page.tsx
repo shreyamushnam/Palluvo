@@ -524,7 +524,7 @@ export default function AccountPage() {
               <button
                 type="button"
                 onClick={() => setIsAddressModalOpen(false)}
-                className="p-1 text-neutral-500 hover:text-black rounded-full"
+                className="w-11 h-11 min-w-[44px] min-h-[44px] inline-flex items-center justify-center -mr-2 text-neutral-500 hover:text-black rounded-full cursor-pointer transition-colors"
                 aria-label="Close address modal"
               >
                 <X className="w-5 h-5" />
@@ -642,14 +642,17 @@ export default function AccountPage() {
               </div>
 
               <div className="pt-2">
-                <label htmlFor="addr-default" className="flex items-center gap-2 cursor-pointer text-neutral-800">
+                <label
+                  htmlFor="addr-default"
+                  className="min-h-[44px] py-1.5 flex items-center gap-2.5 cursor-pointer text-neutral-800"
+                >
                   <input
                     id="addr-default"
                     name="isDefault"
                     type="checkbox"
                     checked={addressForm.isDefault}
                     onChange={(e) => setAddressForm({ ...addressForm, isDefault: e.target.checked })}
-                    className="rounded-xs text-[#541920] focus:ring-[#541920]"
+                    className="w-4 h-4 rounded-xs text-[#541920] focus:ring-[#541920] shrink-0"
                   />
                   <span>Make this my default delivery address</span>
                 </label>
