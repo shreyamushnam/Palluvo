@@ -62,8 +62,8 @@ export default function CollectionsPage() {
       {/* Header */}
       <div className="bg-[#F4EFE6] border-b border-[#E8E2D9] py-10 sm:py-14">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center sm:text-left">
-          <nav className="text-xs text-neutral-500 mb-2 flex items-center justify-center sm:justify-start gap-1.5 font-sans">
-            <Link href="/" className="hover:text-black">
+          <nav className="text-xs text-neutral-600 mb-2 flex items-center justify-center sm:justify-start gap-1.5 font-sans">
+            <Link href="/" className="hover:text-black transition-colors">
               Home
             </Link>
             <span>/</span>

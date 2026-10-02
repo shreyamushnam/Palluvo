@@ -590,7 +590,7 @@ export default function AccountPage() {
                   required
                   value={addressForm.addressLine}
                   onChange={(e) => setAddressForm({ ...addressForm, addressLine: e.target.value })}
-                  placeholder="e.g. Flat 402, Lotus Towers, 12th Main Road"
+                  placeholder="e.g. Flat 402, Lotus Towers"
                   className="w-full min-h-[44px] px-3.5 py-2.5 bg-white border border-[#DCD5C9] rounded-xs focus:outline-none focus:border-[#541920] placeholder:text-neutral-500"
                 />
               </div>

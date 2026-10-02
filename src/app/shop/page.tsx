@@ -231,8 +231,8 @@ function ShopContent() {
       {/* Breadcrumb & Header */}
       <div className="bg-[#F4EFE6] border-b border-[#E8E2D9] py-8">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <nav className="text-xs text-neutral-500 mb-2 flex items-center gap-1.5 font-sans">
-            <Link href="/" className="hover:text-black">Home</Link>
+          <nav className="text-xs text-neutral-600 mb-2 flex items-center gap-1.5 font-sans">
+            <Link href="/" className="hover:text-black transition-colors">Home</Link>
             <span>/</span>
             <span className="text-neutral-900 font-medium">{selectedCategory ? "Shop" : "All Products"}</span>
             {selectedCategory && (
@@ -281,7 +281,7 @@ function ShopContent() {
 
           {/* Sort By Dropdown */}
           <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
-            <label htmlFor="sort" className="text-xs text-neutral-500 whitespace-nowrap">
+            <label htmlFor="sort" className="text-xs text-neutral-600 whitespace-nowrap font-medium">
               Sort by:
             </label>
             <select
@@ -311,7 +311,7 @@ function ShopContent() {
         {/* Active Filter Pills */}
         {activeFiltersCount > 0 && (
           <div className="flex flex-wrap items-center gap-2 py-4 border-b border-[#E8E2D9]">
-            <span className="text-xs text-neutral-500 font-medium">Active Filters:</span>
+            <span className="text-xs text-neutral-600 font-medium">Active Filters:</span>
             {selectedCategory && (
               <span className="inline-flex items-center pl-3 pr-1 py-0.5 bg-white border border-[#DCD5C9] rounded-full text-xs text-neutral-800">
                 <span>Category: {selectedCategory}</span>
