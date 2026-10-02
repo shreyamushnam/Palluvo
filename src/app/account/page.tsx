@@ -315,7 +315,7 @@ export default function AccountPage() {
                   <button
                     type="button"
                     onClick={handleOpenAddAddress}
-                    className="self-start sm:self-auto inline-flex items-center gap-1.5 px-4 py-2 bg-[#541920] hover:bg-[#3D1217] text-white text-xs uppercase tracking-wider font-semibold rounded-xs shadow-xs transition-colors cursor-pointer whitespace-nowrap shrink-0"
+                    className="self-start sm:self-auto min-h-[44px] inline-flex items-center justify-center gap-1.5 px-4 py-2.5 bg-[#541920] hover:bg-[#3D1217] text-white text-xs uppercase tracking-wider font-semibold rounded-xs shadow-xs transition-colors cursor-pointer whitespace-nowrap shrink-0"
                   >
                     <Plus className="w-3.5 h-3.5" />
                     <span>Add New Address</span>
@@ -328,7 +328,7 @@ export default function AccountPage() {
                     <button
                       type="button"
                       onClick={handleOpenAddAddress}
-                      className="px-5 py-2 bg-[#541920] text-white text-xs uppercase tracking-wider font-semibold rounded-xs"
+                      className="min-h-[44px] inline-flex items-center justify-center px-5 py-2.5 bg-[#541920] text-white text-xs uppercase tracking-wider font-semibold rounded-xs"
                     >
                       + Add Your First Address
                     </button>
@@ -437,7 +437,7 @@ export default function AccountPage() {
                         required
                         value={profile.fullName}
                         onChange={(e) => setProfile({ ...profile, fullName: e.target.value })}
-                        className="w-full px-3 py-2 border border-[#DCD5C9] rounded-xs focus:outline-none focus:border-[#541920]"
+                        className="w-full min-h-[44px] px-3.5 py-2.5 border border-[#DCD5C9] rounded-xs focus:outline-none focus:border-[#541920]"
                       />
                     </div>
                     <div>
@@ -452,7 +452,7 @@ export default function AccountPage() {
                         required
                         value={profile.email}
                         onChange={(e) => setProfile({ ...profile, email: e.target.value })}
-                        className="w-full px-3 py-2 border border-[#DCD5C9] rounded-xs focus:outline-none focus:border-[#541920]"
+                        className="w-full min-h-[44px] px-3.5 py-2.5 border border-[#DCD5C9] rounded-xs focus:outline-none focus:border-[#541920]"
                       />
                     </div>
                     <div>
@@ -467,7 +467,7 @@ export default function AccountPage() {
                         required
                         value={profile.mobile}
                         onChange={(e) => setProfile({ ...profile, mobile: e.target.value })}
-                        className="w-full px-3 py-2 border border-[#DCD5C9] rounded-xs focus:outline-none focus:border-[#541920]"
+                        className="w-full min-h-[44px] px-3.5 py-2.5 border border-[#DCD5C9] rounded-xs focus:outline-none focus:border-[#541920]"
                       />
                     </div>
                     <div>
@@ -481,7 +481,7 @@ export default function AccountPage() {
                         value={profile.preferredDrape}
                         onChange={(e) => setProfile({ ...profile, preferredDrape: e.target.value })}
                         placeholder="e.g. Nivi Style, Bengali, Nauvari"
-                        className="w-full px-3 py-2 border border-[#DCD5C9] rounded-xs focus:outline-none focus:border-[#541920]"
+                        className="w-full min-h-[44px] px-3.5 py-2.5 border border-[#DCD5C9] rounded-xs focus:outline-none focus:border-[#541920]"
                       />
                     </div>
                   </div>
@@ -489,7 +489,7 @@ export default function AccountPage() {
                   <div className="pt-2 flex items-center gap-3">
                     <button
                       type="submit"
-                      className="px-6 py-2.5 bg-[#541920] hover:bg-[#3D1217] text-white text-xs uppercase tracking-widest font-semibold rounded-xs shadow-xs transition-colors cursor-pointer"
+                      className="min-h-[44px] inline-flex items-center justify-center px-6 py-2.5 bg-[#541920] hover:bg-[#3D1217] text-white text-xs uppercase tracking-widest font-semibold rounded-xs shadow-xs transition-colors cursor-pointer"
                     >
                       Save Changes
                     </button>
@@ -544,7 +544,7 @@ export default function AccountPage() {
                     required
                     value={addressForm.name}
                     onChange={(e) => setAddressForm({ ...addressForm, name: e.target.value })}
-                    className="w-full px-3 py-2 bg-white border border-[#DCD5C9] rounded-xs focus:outline-none focus:border-[#541920]"
+                    className="w-full min-h-[44px] px-3.5 py-2.5 bg-white border border-[#DCD5C9] rounded-xs focus:outline-none focus:border-[#541920]"
                   />
                 </div>
                 <div>
@@ -558,7 +558,7 @@ export default function AccountPage() {
                     required
                     value={addressForm.phone}
                     onChange={(e) => setAddressForm({ ...addressForm, phone: e.target.value })}
-                    className="w-full px-3 py-2 bg-white border border-[#DCD5C9] rounded-xs focus:outline-none focus:border-[#541920]"
+                    className="w-full min-h-[44px] px-3.5 py-2.5 bg-white border border-[#DCD5C9] rounded-xs focus:outline-none focus:border-[#541920]"
                   />
                 </div>
               </div>
@@ -572,7 +572,7 @@ export default function AccountPage() {
                   name="type"
                   value={addressForm.type}
                   onChange={(e) => setAddressForm({ ...addressForm, type: e.target.value as "Home" | "Office" })}
-                  className="w-full px-3 py-2 bg-white border border-[#DCD5C9] rounded-xs focus:outline-none focus:border-[#541920]"
+                  className="w-full min-h-[44px] px-3.5 py-2.5 bg-white border border-[#DCD5C9] rounded-xs focus:outline-none focus:border-[#541920]"
                 >
                   <option value="Home">Home (All-day delivery)</option>
                   <option value="Office">Office (9 AM - 6 PM)</option>
@@ -591,7 +591,7 @@ export default function AccountPage() {
                   value={addressForm.addressLine}
                   onChange={(e) => setAddressForm({ ...addressForm, addressLine: e.target.value })}
                   placeholder="e.g. Flat 402, Lotus Towers, 12th Main Road"
-                  className="w-full px-3 py-2 bg-white border border-[#DCD5C9] rounded-xs focus:outline-none focus:border-[#541920]"
+                  className="w-full min-h-[44px] px-3.5 py-2.5 bg-white border border-[#DCD5C9] rounded-xs focus:outline-none focus:border-[#541920]"
                 />
               </div>
 
@@ -607,7 +607,7 @@ export default function AccountPage() {
                     required
                     value={addressForm.city}
                     onChange={(e) => setAddressForm({ ...addressForm, city: e.target.value })}
-                    className="w-full px-3 py-2 bg-white border border-[#DCD5C9] rounded-xs focus:outline-none focus:border-[#541920]"
+                    className="w-full min-h-[44px] px-3.5 py-2.5 bg-white border border-[#DCD5C9] rounded-xs focus:outline-none focus:border-[#541920]"
                   />
                 </div>
                 <div>
@@ -621,7 +621,7 @@ export default function AccountPage() {
                     required
                     value={addressForm.state}
                     onChange={(e) => setAddressForm({ ...addressForm, state: e.target.value })}
-                    className="w-full px-3 py-2 bg-white border border-[#DCD5C9] rounded-xs focus:outline-none focus:border-[#541920]"
+                    className="w-full min-h-[44px] px-3.5 py-2.5 bg-white border border-[#DCD5C9] rounded-xs focus:outline-none focus:border-[#541920]"
                   />
                 </div>
                 <div>
@@ -636,7 +636,7 @@ export default function AccountPage() {
                     maxLength={6}
                     value={addressForm.pincode}
                     onChange={(e) => setAddressForm({ ...addressForm, pincode: e.target.value })}
-                    className="w-full px-3 py-2 bg-white border border-[#DCD5C9] rounded-xs focus:outline-none focus:border-[#541920]"
+                    className="w-full min-h-[44px] px-3.5 py-2.5 bg-white border border-[#DCD5C9] rounded-xs focus:outline-none focus:border-[#541920]"
                   />
                 </div>
               </div>
@@ -659,13 +659,13 @@ export default function AccountPage() {
                 <button
                   type="button"
                   onClick={() => setIsAddressModalOpen(false)}
-                  className="px-4 py-2 border border-[#DCD5C9] bg-white text-neutral-700 text-xs font-semibold rounded-xs hover:bg-[#F4EFE6]"
+                  className="min-h-[44px] px-4 py-2.5 border border-[#DCD5C9] bg-white text-neutral-700 text-xs font-semibold rounded-xs hover:bg-[#F4EFE6] cursor-pointer"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="px-5 py-2 bg-[#541920] hover:bg-[#3D1217] text-white text-xs uppercase tracking-wider font-semibold rounded-xs shadow-xs"
+                  className="min-h-[44px] px-5 py-2.5 bg-[#541920] hover:bg-[#3D1217] text-white text-xs uppercase tracking-wider font-semibold rounded-xs shadow-xs cursor-pointer"
                 >
                   {editingAddressId ? "Save Changes" : "Save Address"}
                 </button>
