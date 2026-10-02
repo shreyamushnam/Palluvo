@@ -101,8 +101,8 @@ export const HeroBanner: React.FC = () => {
             <div className="pt-0.5 sm:pt-2 md:pt-4 flex items-center justify-center lg:justify-start gap-2.5 sm:gap-4 text-xs font-mono text-neutral-600">
               <div className="flex items-center gap-1 font-semibold text-neutral-900">
                 <span>0{currentSlideIdx + 1}</span>
-                <span className="text-neutral-400">/</span>
-                <span className="text-neutral-400">0{totalSlides}</span>
+                <span className="text-neutral-600">/</span>
+                <span className="text-neutral-600">0{totalSlides}</span>
               </div>
               <div className="flex items-center gap-1.5 sm:gap-2">
                 <button

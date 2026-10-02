@@ -36,7 +36,7 @@ export const CategoryGrid: React.FC = () => {
               <div className="relative aspect-[3/4] w-full rounded-sm overflow-hidden bg-neutral-100 shadow-xs group-hover:shadow-md transition-all duration-300 border border-[#E8E2D9]">
                 <Image
                   src={cat.image}
-                  alt={cat.name}
+                  alt=""
                   fill
                   sizes="(max-width: 640px) 25vw, (max-width: 1024px) 15vw, 120px"
                   className="object-cover object-top group-hover:scale-105 transition-transform duration-500"
