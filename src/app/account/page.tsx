@@ -202,7 +202,7 @@ export default function AccountPage() {
               <div className="space-y-6">
                 <div className="flex items-center justify-between">
                   <h2 className="font-serif text-xl text-neutral-900">Order History</h2>
-                  <span className="text-xs text-neutral-500 font-sans">{orders.length} Total orders</span>
+                  <span className="text-xs text-neutral-600 font-sans">{orders.length} Total orders</span>
                 </div>
 
                 {orders.length === 0 ? (

@@ -107,7 +107,7 @@ const QuickViewModalContent: React.FC<QuickViewModalContentProps> = ({
                       {product.category}
                     </span>
                     <span className="text-neutral-300">•</span>
-                    <span className="text-xs text-neutral-500">{product.fabric}</span>
+                    <span className="text-xs text-neutral-600">{product.fabric}</span>
                   </div>
 
                   <h3 className="text-xl sm:text-2xl font-serif font-medium text-neutral-900 mt-1">
@@ -120,7 +120,7 @@ const QuickViewModalContent: React.FC<QuickViewModalContentProps> = ({
                       <span>{product.rating}</span>
                       <Star className="w-3 h-3 fill-current" />
                     </div>
-                    <span className="text-xs text-neutral-500">
+                    <span className="text-xs text-neutral-600">
                       ({product.reviewsCount || product.reviewCount || 120} verified reviews)
                     </span>
                   </div>

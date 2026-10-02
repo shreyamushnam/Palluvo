@@ -116,7 +116,7 @@ export const SearchOverlay: React.FC = () => {
             {!query.trim() && (
               <div className="space-y-6">
                 <div>
-                  <div className="flex items-center gap-1.5 text-xs font-semibold tracking-wider uppercase text-neutral-500 mb-3">
+                  <div className="flex items-center gap-1.5 text-xs font-semibold tracking-wider uppercase text-neutral-600 mb-3">
                     <Sparkles className="w-3.5 h-3.5 text-[#C5A575]" />
                     <span>Popular Searches</span>
                   </div>
@@ -125,7 +125,7 @@ export const SearchOverlay: React.FC = () => {
                       <button
                         key={tag}
                         onClick={() => setQuery(tag)}
-                        className="px-3 py-1.5 text-xs bg-[#F4EFE6] hover:bg-[#541920] hover:text-white text-neutral-800 rounded-full transition-colors border border-[#E8E2D9]"
+                        className="min-h-[44px] px-3.5 py-2 inline-flex items-center justify-center text-xs bg-[#F4EFE6] hover:bg-[#541920] hover:text-white text-neutral-800 rounded-full transition-colors border border-[#E8E2D9] cursor-pointer"
                       >
                         {tag}
                       </button>
