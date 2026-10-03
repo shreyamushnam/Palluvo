@@ -174,15 +174,15 @@ export default function CheckoutPage() {
 
             {/* Stepper */}
             <div className="flex items-center gap-2 sm:gap-4 text-xs font-sans">
-              <span className={`font-semibold ${step >= 1 ? "text-[#541920]" : "text-neutral-400"}`}>
+              <span className={`font-semibold ${step >= 1 ? "text-[#541920]" : "text-neutral-600"}`}>
                 1. Address
               </span>
-              <span className="text-neutral-300">→</span>
-              <span className={`font-semibold ${step >= 2 ? "text-[#541920]" : "text-neutral-400"}`}>
+              <span className="text-neutral-400" aria-hidden="true">→</span>
+              <span className={`font-semibold ${step >= 2 ? "text-[#541920]" : "text-neutral-600"}`}>
                 2. Delivery
               </span>
-              <span className="text-neutral-300">→</span>
-              <span className={`font-semibold ${step >= 3 ? "text-[#541920]" : "text-neutral-400"}`}>
+              <span className="text-neutral-400" aria-hidden="true">→</span>
+              <span className={`font-semibold ${step >= 3 ? "text-[#541920]" : "text-neutral-600"}`}>
                 3. Payment
               </span>
             </div>

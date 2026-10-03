@@ -97,7 +97,7 @@ export const SearchOverlay: React.FC = () => {
               </button>
             )}
             <div className="flex items-center gap-2">
-              <span className="hidden sm:inline-block text-[10px] uppercase tracking-wider text-neutral-400 bg-neutral-100 px-2 py-1 rounded-xs border border-neutral-200 font-mono">
+              <span className="hidden sm:inline-block text-[10px] uppercase tracking-wider text-neutral-600 bg-neutral-100 px-2 py-1 rounded-xs border border-neutral-200 font-mono">
                 Press ESC to close
               </span>
               <button
@@ -256,8 +256,8 @@ export const SearchOverlay: React.FC = () => {
           </div>
 
           {/* Quick Footer */}
-          <div className="p-3 bg-[#F4EFE6] border-t border-[#E8E2D9] text-center text-xs text-neutral-500">
-            Press <kbd className="px-1.5 py-0.5 bg-white border border-[#DCD5C9] rounded-xs text-[10px] font-mono">ESC</kbd> to close
+          <div className="p-3 bg-[#F4EFE6] border-t border-[#E8E2D9] text-center text-xs text-neutral-600">
+            Press <kbd className="px-1.5 py-0.5 bg-white border border-[#DCD5C9] rounded-xs text-[10px] font-mono text-neutral-700">ESC</kbd> to close
           </div>
         </div>
       </div>
