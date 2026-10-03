@@ -310,7 +310,7 @@ export default function AccountPage() {
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
                   <div>
                     <h2 className="font-serif text-xl text-neutral-900">Saved Delivery Addresses</h2>
-                    <p className="text-xs text-neutral-500 mt-0.5">Manage your shipping destinations for faster checkout.</p>
+                    <p className="text-xs text-neutral-600 mt-0.5">Manage your shipping destinations for faster checkout.</p>
                   </div>
                   <button
                     type="button"

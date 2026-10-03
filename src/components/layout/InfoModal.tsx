@@ -445,7 +445,7 @@ export const InfoModal: React.FC<InfoModalProps> = ({
           </div>
 
           {/* Modal Footer */}
-          <div className="px-6 py-3 bg-[#F4EFE6] border-t border-[#E8E2D9] flex items-center justify-between text-xs text-neutral-500">
+          <div className="px-6 py-3 bg-[#F4EFE6] border-t border-[#E8E2D9] flex items-center justify-between text-xs text-neutral-600">
             <span>PALLUVO Client Concierge • Available 7 Days a Week</span>
             <button
               onClick={onClose}
