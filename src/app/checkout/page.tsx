@@ -164,31 +164,41 @@ export default function CheckoutPage() {
   return (
     <div className="min-h-screen bg-[#FAF7F2] pb-16">
       {/* Top Checkout Header */}
-      <div className="bg-[#F4EFE6] border-b border-[#E8E2D9] py-6">
+      <div className="bg-[#F4EFE6] border-b border-[#E8E2D9] py-3 sm:py-6">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between">
-            <Link href="/cart" className="flex items-center gap-1.5 text-xs text-neutral-600 hover:text-black">
-              <ArrowLeft className="w-4 h-4" />
-              <span>Back to Bag</span>
-            </Link>
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 sm:gap-4">
+            <div className="flex items-center justify-between sm:justify-start gap-4">
+              <Link
+                href="/cart"
+                className="min-h-[44px] inline-flex items-center gap-1.5 text-xs text-neutral-600 hover:text-black whitespace-nowrap font-medium focus-visible:ring-2 focus-visible:ring-[#541920] focus-visible:outline-none rounded-xs"
+              >
+                <ArrowLeft className="w-4 h-4 shrink-0" />
+                <span>Back to Bag</span>
+              </Link>
+
+              <div className="sm:hidden flex items-center gap-1 text-[11px] text-[#15803D] font-medium shrink-0">
+                <Lock className="w-3.5 h-3.5 shrink-0" />
+                <span>256-bit Secure</span>
+              </div>
+            </div>
 
             {/* Stepper */}
-            <div className="flex items-center gap-2 sm:gap-4 text-xs font-sans">
-              <span className={`font-semibold ${step >= 1 ? "text-[#541920]" : "text-neutral-600"}`}>
+            <div className="flex items-center justify-center gap-2 sm:gap-4 text-xs font-sans overflow-x-auto py-1 sm:py-0">
+              <span className={`whitespace-nowrap font-semibold ${step >= 1 ? "text-[#541920]" : "text-neutral-600"}`}>
                 1. Address
               </span>
-              <span className="text-neutral-400" aria-hidden="true">→</span>
-              <span className={`font-semibold ${step >= 2 ? "text-[#541920]" : "text-neutral-600"}`}>
+              <span className="text-neutral-400 shrink-0" aria-hidden="true">→</span>
+              <span className={`whitespace-nowrap font-semibold ${step >= 2 ? "text-[#541920]" : "text-neutral-600"}`}>
                 2. Delivery
               </span>
-              <span className="text-neutral-400" aria-hidden="true">→</span>
-              <span className={`font-semibold ${step >= 3 ? "text-[#541920]" : "text-neutral-600"}`}>
+              <span className="text-neutral-400 shrink-0" aria-hidden="true">→</span>
+              <span className={`whitespace-nowrap font-semibold ${step >= 3 ? "text-[#541920]" : "text-neutral-600"}`}>
                 3. Payment
               </span>
             </div>
 
-            <div className="flex items-center gap-1.5 text-xs text-[#15803D] font-medium">
-              <Lock className="w-3.5 h-3.5" />
+            <div className="hidden sm:flex items-center gap-1.5 text-xs text-[#15803D] font-medium shrink-0">
+              <Lock className="w-3.5 h-3.5 shrink-0" />
               <span>256-bit Secure</span>
             </div>
           </div>

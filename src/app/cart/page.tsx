@@ -178,31 +178,31 @@ export default function CartPage() {
                       </div>
 
                       {/* Controls */}
-                      <div className="flex items-center justify-between pt-4 mt-2 border-t border-[#F4EFE6]">
+                      <div className="flex flex-wrap items-center justify-between gap-3 pt-4 mt-2 border-t border-[#F4EFE6]">
                         {/* Stepper */}
                         <div className="flex items-center border border-[#DCD5C9] rounded-xs bg-white">
                           <button
                             onClick={() => updateQuantity(item.product.id, item.quantity - 1, item.selectedColor)}
-                            className="px-2.5 py-1 text-neutral-600 hover:bg-neutral-100"
+                            className="w-11 h-11 min-w-[44px] min-h-[44px] flex items-center justify-center text-neutral-600 hover:text-black hover:bg-neutral-100 transition-colors cursor-pointer focus-visible:ring-2 focus-visible:ring-[#541920] focus-visible:outline-none"
                             aria-label="Decrease quantity"
                           >
-                            <Minus className="w-3 h-3" />
+                            <Minus className="w-3.5 h-3.5" />
                           </button>
-                          <span className="px-3 text-xs font-semibold" aria-label={`Quantity: ${item.quantity}`}>{item.quantity}</span>
+                          <span className="min-w-[28px] px-2 text-center text-xs font-semibold" aria-label={`Quantity: ${item.quantity}`}>{item.quantity}</span>
                           <button
                             onClick={() => updateQuantity(item.product.id, item.quantity + 1, item.selectedColor)}
-                            className="px-2.5 py-1 text-neutral-600 hover:bg-neutral-100"
+                            className="w-11 h-11 min-w-[44px] min-h-[44px] flex items-center justify-center text-neutral-600 hover:text-black hover:bg-neutral-100 transition-colors cursor-pointer focus-visible:ring-2 focus-visible:ring-[#541920] focus-visible:outline-none"
                             aria-label="Increase quantity"
                           >
-                            <Plus className="w-3 h-3" />
+                            <Plus className="w-3.5 h-3.5" />
                           </button>
                         </div>
 
                         {/* Action buttons */}
-                        <div className="flex items-center gap-4 text-xs font-medium">
+                        <div className="flex items-center gap-3 sm:gap-4 text-xs font-medium">
                           <button
                             onClick={() => handleMoveToWishlist(item.product.id, item.selectedColor)}
-                            className="text-neutral-600 hover:text-[#541920] flex items-center gap-1"
+                            className="min-h-[44px] py-2 px-1 text-neutral-600 hover:text-[#541920] inline-flex items-center justify-center gap-1.5 transition-colors cursor-pointer focus-visible:ring-2 focus-visible:ring-[#541920] focus-visible:outline-none"
                             aria-label={`Save ${item.product.name} to Wishlist`}
                           >
                             <Heart className="w-3.5 h-3.5" />
@@ -210,7 +210,7 @@ export default function CartPage() {
                           </button>
                           <button
                             onClick={() => removeFromCart(item.product.id, item.selectedColor)}
-                            className="text-neutral-600 hover:text-red-600 flex items-center gap-1"
+                            className="min-h-[44px] py-2 px-1 text-neutral-600 hover:text-red-600 inline-flex items-center justify-center gap-1.5 transition-colors cursor-pointer focus-visible:ring-2 focus-visible:ring-[#541920] focus-visible:outline-none"
                             aria-label={`Remove ${item.product.name} from cart`}
                           >
                             <Trash2 className="w-3.5 h-3.5" />
