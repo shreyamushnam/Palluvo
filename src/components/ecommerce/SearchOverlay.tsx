@@ -61,7 +61,13 @@ export const SearchOverlay: React.FC = () => {
     : [];
 
   return (
-    <div className="fixed inset-0 z-50 overflow-y-auto" role="dialog" aria-modal="true">
+    <div
+      className="fixed inset-0 z-50 overflow-y-auto"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="search-dialog-title"
+      aria-label="Search products"
+    >
       {/* Backdrop */}
       <div
         className="fixed inset-0 bg-black/60 backdrop-blur-xs transition-opacity"
@@ -71,9 +77,31 @@ export const SearchOverlay: React.FC = () => {
       <div className="relative min-h-screen flex items-start justify-center p-4 sm:p-6 md:p-12">
         <div className="relative w-full max-w-3xl bg-[#FAF7F2] rounded-md shadow-2xl overflow-hidden border border-[#E5DFD5] animate-in fade-in zoom-in-95 duration-200">
           
+          {/* Dialog Header */}
+          <div className="px-4 sm:px-6 py-3 bg-[#F4EFE6] border-b border-[#E8E2D9] flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Search className="w-4 h-4 text-[#541920]" aria-hidden="true" />
+              <h2 id="search-dialog-title" className="text-xs uppercase tracking-wider text-neutral-700 font-semibold">
+                Search Products
+              </h2>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="hidden sm:inline-block text-[10px] uppercase tracking-wider text-neutral-600 bg-white px-2 py-0.5 rounded-xs border border-[#E8E2D9] font-mono">
+                Press ESC to close
+              </span>
+              <button
+                onClick={() => setIsSearchOpen(false)}
+                className="w-11 h-11 min-w-[44px] min-h-[44px] inline-flex items-center justify-center text-neutral-500 hover:text-black hover:bg-neutral-200/60 rounded-full transition-colors shrink-0"
+                aria-label="Close search"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
+
           {/* Search Header Input */}
           <div className="p-4 sm:p-6 border-b border-[#E8E2D9] flex items-center gap-3 bg-white">
-            <Search className="w-5 h-5 text-neutral-400 shrink-0" />
+            <Search className="w-5 h-5 text-neutral-400 shrink-0" aria-hidden="true" />
             <input
               ref={inputRef}
               type="text"
@@ -87,22 +115,20 @@ export const SearchOverlay: React.FC = () => {
               }}
               placeholder="Search sarees by fabric, weave, color, or occasion..."
               className="flex-1 text-base sm:text-lg bg-transparent border-none outline-none text-[#1C1A18] placeholder-neutral-400 font-sans"
+              aria-label="Search sarees by fabric, weave, color, or occasion"
             />
             {query && (
               <button
                 onClick={() => setQuery("")}
-                className="text-xs text-neutral-400 hover:text-black uppercase px-2 py-1"
+                className="text-xs text-neutral-500 hover:text-black uppercase px-2 py-1 font-medium"
               >
                 Clear
               </button>
             )}
-            <div className="flex items-center gap-2">
-              <span className="hidden sm:inline-block text-[10px] uppercase tracking-wider text-neutral-600 bg-neutral-100 px-2 py-1 rounded-xs border border-neutral-200 font-mono">
-                Press ESC to close
-              </span>
+            <div className="flex items-center gap-2 sm:hidden">
               <button
                 onClick={() => setIsSearchOpen(false)}
-                className="p-1.5 text-neutral-500 hover:text-black hover:bg-neutral-100 rounded-full transition-colors shrink-0"
+                className="w-11 h-11 min-w-[44px] min-h-[44px] inline-flex items-center justify-center text-neutral-500 hover:text-black hover:bg-neutral-100 rounded-full transition-colors shrink-0"
                 aria-label="Close search"
               >
                 <X className="w-5 h-5" />
@@ -116,10 +142,10 @@ export const SearchOverlay: React.FC = () => {
             {!query.trim() && (
               <div className="space-y-6">
                 <div>
-                  <div className="flex items-center gap-1.5 text-xs font-semibold tracking-wider uppercase text-neutral-600 mb-3">
+                  <h3 className="flex items-center gap-1.5 text-xs font-semibold tracking-wider uppercase text-neutral-600 mb-3">
                     <Sparkles className="w-3.5 h-3.5 text-[#C5A575]" />
                     <span>Popular Searches</span>
-                  </div>
+                  </h3>
                   <div className="flex flex-wrap gap-2">
                     {POPULAR_SEARCHES.map((tag) => (
                       <button
@@ -134,9 +160,9 @@ export const SearchOverlay: React.FC = () => {
                 </div>
 
                 <div>
-                  <h4 className="text-xs font-semibold tracking-wider uppercase text-neutral-600 mb-3">
+                  <h3 className="text-xs font-semibold tracking-wider uppercase text-neutral-600 mb-3">
                     Trending Sarees Right Now
-                  </h4>
+                  </h3>
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                     {PRODUCTS.slice(0, 3).map((product) => (
                       <Link
@@ -173,7 +199,7 @@ export const SearchOverlay: React.FC = () => {
             {/* Results when searching */}
             {query.trim() && (
               <div className="space-y-4">
-                <div className="flex items-center justify-between text-xs text-neutral-500 border-b border-[#E8E2D9] pb-2">
+                <div className="flex items-center justify-between text-xs text-neutral-600 border-b border-[#E8E2D9] pb-2">
                   <span>
                     Found <strong className="text-neutral-900">{filteredProducts.length}</strong> matching sarees for &ldquo;{query}&rdquo;
                   </span>
@@ -193,7 +219,7 @@ export const SearchOverlay: React.FC = () => {
                     <p className="font-serif text-base text-neutral-800">
                       No sarees found matching &ldquo;{query}&rdquo;
                     </p>
-                    <p className="text-xs text-neutral-500 max-w-sm mx-auto">
+                    <p className="text-xs text-neutral-600 max-w-sm mx-auto">
                       Try searching for broader terms like &quot;Silk&quot;, &quot;Zari&quot;, &quot;Bridal&quot;, or check our popular suggestions above.
                     </p>
                     <div className="pt-2">

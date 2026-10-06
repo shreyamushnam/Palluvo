@@ -59,13 +59,13 @@ export const CartDrawer: React.FC = () => {
           <div className="px-6 py-4 border-b border-[#E8E2D9] flex items-center justify-between bg-[#F4EFE6]">
             <div className="flex items-center gap-2">
               <ShoppingBag className="w-5 h-5 text-[#541920]" />
-              <h2 className="text-lg font-serif tracking-wide font-medium">
+              <h2 id="slide-over-title" className="text-lg font-serif tracking-wide font-medium">
                 Shopping Bag ({cart.reduce((sum, item) => sum + item.quantity, 0)})
               </h2>
             </div>
             <button
               onClick={() => setIsCartOpen(false)}
-              className="p-1.5 text-neutral-500 hover:text-black hover:bg-neutral-200/60 rounded-full transition-colors"
+              className="w-11 h-11 min-w-[44px] min-h-[44px] inline-flex items-center justify-center text-neutral-500 hover:text-black hover:bg-neutral-200/60 rounded-full transition-colors"
               aria-label="Close cart"
             >
               <X className="w-5 h-5" />
@@ -104,7 +104,7 @@ export const CartDrawer: React.FC = () => {
                 </div>
                 <div>
                   <h3 className="font-serif text-lg text-neutral-800">Your bag is empty</h3>
-                  <p className="text-xs text-neutral-500 mt-1 max-w-xs mx-auto">
+                  <p className="text-xs text-neutral-600 mt-1 max-w-xs mx-auto">
                     Explore our handpicked collection of royal weaves and artisanal creations.
                   </p>
                 </div>
@@ -147,7 +147,7 @@ export const CartDrawer: React.FC = () => {
                         </Link>
                         <button
                           onClick={() => removeFromCart(item.product.id, item.selectedColor)}
-                          className="text-neutral-400 hover:text-red-600 transition-colors p-0.5"
+                          className="w-11 h-11 min-w-[44px] min-h-[44px] -mr-2 -mt-2 inline-flex items-center justify-center text-neutral-600 hover:text-red-600 transition-colors shrink-0"
                           title="Remove item"
                           aria-label={`Remove ${item.product.name} from cart`}
                         >
@@ -219,7 +219,7 @@ export const CartDrawer: React.FC = () => {
                   </div>
                   <button
                     onClick={removeCoupon}
-                    className="text-neutral-500 hover:text-black font-semibold text-[11px]"
+                    className="min-h-[44px] px-2 text-neutral-600 hover:text-black font-semibold text-[11px] inline-flex items-center"
                   >
                     Remove
                   </button>
