@@ -7,6 +7,7 @@ import { Filter, X, SlidersHorizontal, Check } from "lucide-react";
 import { PRODUCTS, type Product } from "@/data/products";
 import { CATEGORIES } from "@/data/categories";
 import { ProductCard } from "@/components/ecommerce/ProductCard";
+import { useFocusTrap } from "@/hooks/useFocusTrap";
 
 const FABRICS = [
   "Pure Silk",
@@ -132,6 +133,22 @@ function ShopContent() {
   const [selectedPriceRange, setSelectedPriceRange] = useState<number | null>(null);
   const [sortBy, setSortBy] = useState<string>(searchParams.get("sort") || "featured");
   const [isMobileFilterOpen, setIsMobileFilterOpen] = useState(false);
+
+  const mobileFilterRef = useFocusTrap<HTMLDivElement>({
+    isOpen: isMobileFilterOpen,
+    onClose: () => setIsMobileFilterOpen(false),
+  });
+
+  React.useEffect(() => {
+    if (isMobileFilterOpen) {
+      document.body.style.overflow = "hidden";
+    } else {
+      document.body.style.overflow = "unset";
+    }
+    return () => {
+      document.body.style.overflow = "unset";
+    };
+  }, [isMobileFilterOpen]);
 
   // Products matching all filters except fabric
   const productsForFabricCounts = useMemo(() => {
@@ -571,7 +588,9 @@ function ShopContent() {
       {/* Mobile Filters Slide-over Sheet */}
       {isMobileFilterOpen && (
         <div
-          className="fixed inset-0 z-50 overflow-hidden lg:hidden"
+          ref={mobileFilterRef}
+          tabIndex={-1}
+          className="fixed inset-0 z-50 overflow-hidden lg:hidden outline-none"
           role="dialog"
           aria-modal="true"
           aria-labelledby="mobile-filters-title"

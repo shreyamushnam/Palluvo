@@ -5,6 +5,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { X, Star, Heart, ShoppingBag, ShieldCheck, Truck, RotateCcw, Check } from "lucide-react";
 import { useStore } from "@/context/StoreContext";
+import { useFocusTrap } from "@/hooks/useFocusTrap";
 
 interface QuickViewModalContentProps {
   product: NonNullable<ReturnType<typeof useStore>["quickViewProduct"]>;
@@ -23,6 +24,11 @@ const QuickViewModalContent: React.FC<QuickViewModalContentProps> = ({
     setIsCartOpen,
   } = useStore();
 
+  const modalRef = useFocusTrap<HTMLDivElement>({
+    isOpen: true,
+    onClose,
+  });
+
   const [activeImageIdx, setActiveImageIdx] = useState(0);
   const [selectedColor, setSelectedColor] = useState<string>(product.colors[0]?.name || "");
   const [blouseOption, setBlouseOption] = useState<string>(
@@ -40,7 +46,9 @@ const QuickViewModalContent: React.FC<QuickViewModalContentProps> = ({
 
   return (
     <div
-      className="fixed inset-0 z-50 overflow-y-auto"
+      ref={modalRef}
+      tabIndex={-1}
+      className="fixed inset-0 z-50 overflow-y-auto outline-none"
       role="dialog"
       aria-modal="true"
       aria-labelledby="quickview-title"

@@ -6,6 +6,7 @@ import Link from "next/link";
 import { Package, MapPin, User, Truck, CheckCircle2, ShieldCheck, Plus, X, Edit2, Trash2, Check } from "lucide-react";
 import { useStore } from "@/context/StoreContext";
 import { SavedAddress } from "@/data/mockOrders";
+import { useFocusTrap } from "@/hooks/useFocusTrap";
 
 export default function AccountPage() {
   const {
@@ -23,6 +24,11 @@ export default function AccountPage() {
   // Saved Addresses modal and form state
   const [isAddressModalOpen, setIsAddressModalOpen] = useState(false);
   const [editingAddressId, setEditingAddressId] = useState<string | null>(null);
+
+  const addressModalRef = useFocusTrap<HTMLDivElement>({
+    isOpen: isAddressModalOpen,
+    onClose: () => setIsAddressModalOpen(false),
+  });
   const [addressForm, setAddressForm] = useState<Omit<SavedAddress, "id">>({
     name: "",
     phone: "",
@@ -491,10 +497,12 @@ export default function AccountPage() {
       {/* Address Create / Edit Dialog Modal */}
       {isAddressModalOpen && (
         <div
+          ref={addressModalRef}
+          tabIndex={-1}
           role="dialog"
           aria-modal="true"
           aria-labelledby="address-modal-title"
-          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-200"
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-200 outline-none"
         >
           <div className="bg-[#FAF7F2] w-full max-w-lg rounded-sm border border-[#E8E2D9] shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
             <div className="p-4 sm:p-5 bg-[#F4EFE6] border-b border-[#E8E2D9] flex items-center justify-between">

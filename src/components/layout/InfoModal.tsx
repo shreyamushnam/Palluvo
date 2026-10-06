@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import { X, Mail, Phone, Truck, RotateCcw, HelpCircle, BookOpen, Sparkles, CheckCircle2, ChevronDown, ChevronUp } from "lucide-react";
+import { useFocusTrap } from "@/hooks/useFocusTrap";
 
 export type InfoModalTab = "contact" | "shipping" | "returns" | "faqs" | "story" | "craftsmanship";
 
@@ -18,6 +19,11 @@ export const InfoModal: React.FC<InfoModalProps> = ({
 }) => {
   const [activeTab, setActiveTab] = useState<InfoModalTab>(initialTab);
   const [prevInitialTab, setPrevInitialTab] = useState(initialTab);
+
+  const modalRef = useFocusTrap<HTMLDivElement>({
+    isOpen,
+    onClose,
+  });
 
   if (prevInitialTab !== initialTab) {
     setPrevInitialTab(initialTab);
@@ -79,7 +85,9 @@ export const InfoModal: React.FC<InfoModalProps> = ({
 
   return (
     <div
-      className="fixed inset-0 z-50 overflow-y-auto"
+      ref={modalRef}
+      tabIndex={-1}
+      className="fixed inset-0 z-50 overflow-y-auto outline-none"
       role="dialog"
       aria-modal="true"
       aria-labelledby="concierge-modal-title"

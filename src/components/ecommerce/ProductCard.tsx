@@ -102,12 +102,12 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
           <Heart size={16} className={isSaved ? "fill-current" : ""} />
         </button>
 
-        {/* Quick View Button (Desktop Hover) */}
-        <div className="absolute inset-x-2 bottom-2 z-10 hidden sm:flex items-center gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+        {/* Quick View Button (Desktop Hover & Keyboard Focus) */}
+        <div className="absolute inset-x-2 bottom-2 z-10 hidden sm:flex items-center gap-1.5 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition-opacity duration-300">
           <button
             type="button"
             onClick={handleQuickView}
-            className="flex-1 py-2.5 bg-[#FAF7F2]/95 hover:bg-white text-[#1C1A18] text-[11px] uppercase tracking-wider font-semibold shadow-sm flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
+            className="flex-1 py-2.5 min-h-[44px] bg-[#FAF7F2]/95 hover:bg-white text-[#1C1A18] text-[11px] uppercase tracking-wider font-semibold shadow-sm flex items-center justify-center gap-1.5 transition-colors cursor-pointer focus-visible:ring-2 focus-visible:ring-[#541920] focus-visible:outline-none"
             aria-label={`Quick view ${product.name}`}
           >
             <Eye size={13} /> Quick View

@@ -5,6 +5,7 @@ import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
 import { Search, User, Heart, ShoppingBag, Menu, X } from "lucide-react";
 import { useStore } from "@/context/StoreContext";
+import { useFocusTrap } from "@/hooks/useFocusTrap";
 
 interface NavLinkItem {
   label: string;
@@ -108,6 +109,22 @@ export const Navbar: React.FC = () => {
   const [isScrolled, setIsScrolled] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const { cartCount, wishlistCount, setIsCartOpen, setIsSearchOpen } = useStore();
+
+  const mobileDrawerRef = useFocusTrap<HTMLDivElement>({
+    isOpen: mobileMenuOpen,
+    onClose: () => setMobileMenuOpen(false),
+  });
+
+  useEffect(() => {
+    if (mobileMenuOpen) {
+      document.body.style.overflow = "hidden";
+    } else {
+      document.body.style.overflow = "unset";
+    }
+    return () => {
+      document.body.style.overflow = "unset";
+    };
+  }, [mobileMenuOpen]);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -220,7 +237,9 @@ export const Navbar: React.FC = () => {
       {/* Mobile Drawer Navigation */}
       {mobileMenuOpen && (
         <div
-          className="fixed inset-0 z-50 flex flex-col bg-[#FAF7F2] text-[#1C1A18] animate-in fade-in duration-200"
+          ref={mobileDrawerRef}
+          tabIndex={-1}
+          className="fixed inset-0 z-50 flex flex-col bg-[#FAF7F2] text-[#1C1A18] animate-in fade-in duration-200 outline-none"
           role="dialog"
           aria-modal="true"
           aria-label="Mobile Navigation Menu"
