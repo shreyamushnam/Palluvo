@@ -336,7 +336,7 @@ export default function ProductDetailPage({
             >
               <button
                 onClick={handleAddToCart}
-                className="flex-1 min-h-[44px] py-2.5 sm:py-3 bg-[#541920] hover:bg-[#3D1217] text-white text-xs uppercase tracking-wider sm:tracking-widest font-semibold rounded-xs shadow-md transition-all flex items-center justify-center gap-1.5 cursor-pointer"
+                className="flex-1 min-h-[44px] py-2.5 sm:py-3 bg-[#541920] hover:bg-[#3D1217] text-white text-xs uppercase tracking-wider sm:tracking-widest font-semibold rounded-xs shadow-md transition-all flex items-center justify-center gap-1.5 cursor-pointer focus-visible:ring-2 focus-visible:ring-[#541920] focus-visible:outline-none"
               >
                 <ShoppingBag className="w-4 h-4 shrink-0" />
                 <span>Add to Bag</span>
@@ -344,7 +344,7 @@ export default function ProductDetailPage({
 
               <button
                 onClick={handleBuyNow}
-                className="flex-1 min-h-[44px] py-2.5 sm:py-3 bg-white border border-[#541920] hover:bg-[#FAF7F2] text-[#541920] text-xs uppercase tracking-wider sm:tracking-widest font-semibold rounded-xs transition-colors text-center cursor-pointer"
+                className="flex-1 min-h-[44px] py-2.5 sm:py-3 bg-white border border-[#541920] hover:bg-[#FAF7F2] text-[#541920] text-xs uppercase tracking-wider sm:tracking-widest font-semibold rounded-xs transition-colors text-center cursor-pointer focus-visible:ring-2 focus-visible:ring-[#541920] focus-visible:outline-none"
               >
                 Buy Now
               </button>

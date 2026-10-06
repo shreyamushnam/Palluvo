@@ -532,7 +532,7 @@ export default function AccountPage() {
                     required
                     value={addressForm.name}
                     onChange={(e) => setAddressForm({ ...addressForm, name: e.target.value })}
-                    className="w-full min-h-[44px] px-3.5 py-2.5 bg-white border border-[#DCD5C9] rounded-xs focus:outline-none focus:border-[#541920]"
+                    className="w-full min-h-[44px] px-3.5 py-2.5 bg-white border border-[#DCD5C9] rounded-xs focus:outline-none focus:border-[#541920] focus-visible:ring-2 focus-visible:ring-[#541920]"
                   />
                 </div>
                 <div>
@@ -552,7 +552,7 @@ export default function AccountPage() {
                       const digitsOnly = e.target.value.replace(/\D/g, "").slice(0, 10);
                       setAddressForm({ ...addressForm, phone: digitsOnly });
                     }}
-                    className="w-full min-h-[44px] px-3.5 py-2.5 bg-white border border-[#DCD5C9] rounded-xs focus:outline-none focus:border-[#541920]"
+                    className="w-full min-h-[44px] px-3.5 py-2.5 bg-white border border-[#DCD5C9] rounded-xs focus:outline-none focus:border-[#541920] focus-visible:ring-2 focus-visible:ring-[#541920]"
                   />
                 </div>
               </div>
@@ -566,7 +566,7 @@ export default function AccountPage() {
                   name="type"
                   value={addressForm.type}
                   onChange={(e) => setAddressForm({ ...addressForm, type: e.target.value as "Home" | "Office" })}
-                  className="w-full min-h-[44px] px-3.5 py-2.5 bg-white border border-[#DCD5C9] rounded-xs focus:outline-none focus:border-[#541920]"
+                  className="w-full min-h-[44px] px-3.5 py-2.5 bg-white border border-[#DCD5C9] rounded-xs focus:outline-none focus:border-[#541920] focus-visible:ring-2 focus-visible:ring-[#541920]"
                 >
                   <option value="Home">Home (All-day delivery)</option>
                   <option value="Office">Office (9 AM - 6 PM)</option>
@@ -585,7 +585,7 @@ export default function AccountPage() {
                   value={addressForm.addressLine}
                   onChange={(e) => setAddressForm({ ...addressForm, addressLine: e.target.value })}
                   placeholder="e.g. Flat 402, Lotus Towers"
-                  className="w-full min-h-[44px] px-3.5 py-2.5 bg-white border border-[#DCD5C9] rounded-xs focus:outline-none focus:border-[#541920] placeholder:text-neutral-500"
+                  className="w-full min-h-[44px] px-3.5 py-2.5 bg-white border border-[#DCD5C9] rounded-xs focus:outline-none focus:border-[#541920] focus-visible:ring-2 focus-visible:ring-[#541920] placeholder:text-neutral-500"
                 />
               </div>
 
@@ -601,7 +601,7 @@ export default function AccountPage() {
                     required
                     value={addressForm.city}
                     onChange={(e) => setAddressForm({ ...addressForm, city: e.target.value })}
-                    className="w-full min-h-[44px] px-3.5 py-2.5 bg-white border border-[#DCD5C9] rounded-xs focus:outline-none focus:border-[#541920]"
+                    className="w-full min-h-[44px] px-3.5 py-2.5 bg-white border border-[#DCD5C9] rounded-xs focus:outline-none focus:border-[#541920] focus-visible:ring-2 focus-visible:ring-[#541920]"
                   />
                 </div>
                 <div>
@@ -615,7 +615,7 @@ export default function AccountPage() {
                     required
                     value={addressForm.state}
                     onChange={(e) => setAddressForm({ ...addressForm, state: e.target.value })}
-                    className="w-full min-h-[44px] px-3.5 py-2.5 bg-white border border-[#DCD5C9] rounded-xs focus:outline-none focus:border-[#541920]"
+                    className="w-full min-h-[44px] px-3.5 py-2.5 bg-white border border-[#DCD5C9] rounded-xs focus:outline-none focus:border-[#541920] focus-visible:ring-2 focus-visible:ring-[#541920]"
                   />
                 </div>
                 <div>
@@ -635,7 +635,7 @@ export default function AccountPage() {
                       const digitsOnly = e.target.value.replace(/\D/g, "").slice(0, 6);
                       setAddressForm({ ...addressForm, pincode: digitsOnly });
                     }}
-                    className="w-full min-h-[44px] px-3.5 py-2.5 bg-white border border-[#DCD5C9] rounded-xs focus:outline-none focus:border-[#541920]"
+                    className="w-full min-h-[44px] px-3.5 py-2.5 bg-white border border-[#DCD5C9] rounded-xs focus:outline-none focus:border-[#541920] focus-visible:ring-2 focus-visible:ring-[#541920]"
                   />
                 </div>
               </div>

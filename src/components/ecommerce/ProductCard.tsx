@@ -48,7 +48,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
       <div className="relative aspect-[3/4] w-full overflow-hidden bg-[#F5EFEB]">
         <Link
           href={`/product/${product.id}`}
-          className="relative block w-full h-full"
+          className="relative block w-full h-full rounded-xs focus-visible:ring-2 focus-visible:ring-[#541920] focus-visible:outline-none"
           aria-label={`View ${product.name}`}
         >
           {/* Primary Image */}
@@ -128,7 +128,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
           </div>
 
           {/* Product Name */}
-          <Link href={`/product/${product.id}`} className="group-hover:text-[#541920] transition-colors" title={product.name}>
+          <Link href={`/product/${product.id}`} className="group-hover:text-[#541920] transition-colors rounded-xs focus-visible:ring-2 focus-visible:ring-[#541920] focus-visible:outline-none" title={product.name}>
             <h3 className="font-serif-display text-sm sm:text-base font-medium text-[#1C1A18] leading-snug line-clamp-3" title={product.name}>
               {product.name}
             </h3>

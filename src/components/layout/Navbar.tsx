@@ -64,7 +64,7 @@ function NavLinksList({ onLinkClick }: { onLinkClick?: () => void }) {
             key={link.label}
             href={link.href}
             onClick={onLinkClick}
-            className={`relative py-1 hover:text-[#541920] transition-colors ${
+            className={`relative py-1 px-1.5 rounded-xs hover:text-[#541920] transition-colors focus-visible:ring-2 focus-visible:ring-[#541920] focus-visible:outline-none ${
               isActive ? "text-[#541920] font-bold" : "text-[#1C1A18]"
             }`}
           >
@@ -156,7 +156,7 @@ export const Navbar: React.FC = () => {
             </button>
 
             {/* Brand Logo */}
-            <Link href="/" className="flex flex-col items-start group min-w-0">
+            <Link href="/" className="flex flex-col items-start group min-w-0 rounded-xs focus-visible:ring-2 focus-visible:ring-[#541920] focus-visible:outline-none p-0.5">
               <span className="font-serif-display text-xl sm:text-2xl lg:text-3xl font-medium tracking-[0.16em] sm:tracking-[0.2em] text-[#1C1A18] uppercase group-hover:text-[#541920] transition-colors truncate">
                 PALLUVO
               </span>

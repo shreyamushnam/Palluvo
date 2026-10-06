@@ -442,7 +442,7 @@ export default function CheckoutPage() {
                         required
                         value={shippingAddress.fullName}
                         onChange={(e) => setShippingAddress({ ...shippingAddress, fullName: e.target.value })}
-                        className="w-full min-h-[44px] px-3 py-2.5 border border-[#DCD5C9] rounded-xs focus:outline-none focus:border-[#541920]"
+                        className="w-full min-h-[44px] px-3 py-2.5 border border-[#DCD5C9] rounded-xs focus:outline-none focus:border-[#541920] focus-visible:ring-2 focus-visible:ring-[#541920]"
                       />
                     </div>
                     <div>
@@ -463,7 +463,7 @@ export default function CheckoutPage() {
                           const digitsOnly = e.target.value.replace(/\D/g, "").slice(0, 10);
                           setShippingAddress({ ...shippingAddress, phone: digitsOnly });
                         }}
-                        className="w-full min-h-[44px] px-3 py-2.5 border border-[#DCD5C9] rounded-xs focus:outline-none focus:border-[#541920]"
+                        className="w-full min-h-[44px] px-3 py-2.5 border border-[#DCD5C9] rounded-xs focus:outline-none focus:border-[#541920] focus-visible:ring-2 focus-visible:ring-[#541920]"
                       />
                     </div>
                   </div>
@@ -480,7 +480,7 @@ export default function CheckoutPage() {
                       required
                       value={shippingAddress.email}
                       onChange={(e) => setShippingAddress({ ...shippingAddress, email: e.target.value })}
-                      className="w-full min-h-[44px] px-3 py-2.5 border border-[#DCD5C9] rounded-xs focus:outline-none focus:border-[#541920]"
+                      className="w-full min-h-[44px] px-3 py-2.5 border border-[#DCD5C9] rounded-xs focus:outline-none focus:border-[#541920] focus-visible:ring-2 focus-visible:ring-[#541920]"
                     />
                   </div>
 
@@ -496,7 +496,7 @@ export default function CheckoutPage() {
                       required
                       value={shippingAddress.addressLine1}
                       onChange={(e) => setShippingAddress({ ...shippingAddress, addressLine1: e.target.value })}
-                      className="w-full min-h-[44px] px-3 py-2.5 border border-[#DCD5C9] rounded-xs focus:outline-none focus:border-[#541920]"
+                      className="w-full min-h-[44px] px-3 py-2.5 border border-[#DCD5C9] rounded-xs focus:outline-none focus:border-[#541920] focus-visible:ring-2 focus-visible:ring-[#541920]"
                     />
                   </div>
 
@@ -511,7 +511,7 @@ export default function CheckoutPage() {
                       placeholder="e.g. Near Lotus Temple Road"
                       value={shippingAddress.landmark}
                       onChange={(e) => setShippingAddress({ ...shippingAddress, landmark: e.target.value })}
-                      className="w-full min-h-[44px] px-3 py-2.5 border border-[#DCD5C9] rounded-xs focus:outline-none focus:border-[#541920]"
+                      className="w-full min-h-[44px] px-3 py-2.5 border border-[#DCD5C9] rounded-xs focus:outline-none focus:border-[#541920] focus-visible:ring-2 focus-visible:ring-[#541920]"
                     />
                   </div>
 
@@ -528,7 +528,7 @@ export default function CheckoutPage() {
                         required
                         value={shippingAddress.city}
                         onChange={(e) => setShippingAddress({ ...shippingAddress, city: e.target.value })}
-                        className="w-full min-h-[44px] px-3 py-2.5 border border-[#DCD5C9] rounded-xs focus:outline-none focus:border-[#541920]"
+                        className="w-full min-h-[44px] px-3 py-2.5 border border-[#DCD5C9] rounded-xs focus:outline-none focus:border-[#541920] focus-visible:ring-2 focus-visible:ring-[#541920]"
                       />
                     </div>
                     <div>
@@ -543,7 +543,7 @@ export default function CheckoutPage() {
                         required
                         value={shippingAddress.state}
                         onChange={(e) => setShippingAddress({ ...shippingAddress, state: e.target.value })}
-                        className="w-full min-h-[44px] px-3 py-2.5 border border-[#DCD5C9] rounded-xs focus:outline-none focus:border-[#541920]"
+                        className="w-full min-h-[44px] px-3 py-2.5 border border-[#DCD5C9] rounded-xs focus:outline-none focus:border-[#541920] focus-visible:ring-2 focus-visible:ring-[#541920]"
                       />
                     </div>
                     <div>
@@ -564,7 +564,7 @@ export default function CheckoutPage() {
                           const digitsOnly = e.target.value.replace(/\D/g, "").slice(0, 6);
                           setShippingAddress({ ...shippingAddress, pincode: digitsOnly });
                         }}
-                        className="w-full min-h-[44px] px-3 py-2.5 border border-[#DCD5C9] rounded-xs focus:outline-none focus:border-[#541920]"
+                        className="w-full min-h-[44px] px-3 py-2.5 border border-[#DCD5C9] rounded-xs focus:outline-none focus:border-[#541920] focus-visible:ring-2 focus-visible:ring-[#541920]"
                       />
                     </div>
                   </div>
@@ -739,8 +739,8 @@ export default function CheckoutPage() {
                             }}
                             className={`w-full min-h-[44px] px-3 py-2.5 bg-white border rounded-xs focus:outline-none transition-colors ${
                               upiError
-                                ? "border-red-600 focus:border-red-600 ring-1 ring-red-600"
-                                : "border-[#DCD5C9] focus:border-[#541920]"
+                                ? "border-red-600 focus:border-red-600 ring-1 ring-red-600 focus-visible:ring-2 focus-visible:ring-red-600"
+                                : "border-[#DCD5C9] focus:border-[#541920] focus-visible:ring-2 focus-visible:ring-[#541920]"
                             }`}
                             aria-invalid={!!upiError}
                             aria-describedby={upiError ? "upi-error-msg" : undefined}
@@ -796,8 +796,8 @@ export default function CheckoutPage() {
                               }}
                               className={`w-full min-h-[44px] px-3 py-2.5 bg-white border rounded-xs focus:outline-none transition-colors ${
                                 cardErrors.cardholderName
-                                  ? "border-red-600 focus:border-red-600 ring-1 ring-red-600"
-                                  : "border-[#DCD5C9] focus:border-[#541920]"
+                                  ? "border-red-600 focus:border-red-600 ring-1 ring-red-600 focus-visible:ring-2 focus-visible:ring-red-600"
+                                  : "border-[#DCD5C9] focus:border-[#541920] focus-visible:ring-2 focus-visible:ring-[#541920]"
                               }`}
                               aria-invalid={!!cardErrors.cardholderName}
                               aria-describedby={cardErrors.cardholderName ? "cardholder-error" : undefined}
@@ -833,8 +833,8 @@ export default function CheckoutPage() {
                               }}
                               className={`w-full min-h-[44px] px-3 py-2.5 bg-white border rounded-xs focus:outline-none transition-colors ${
                                 cardErrors.cardNumber
-                                  ? "border-red-600 focus:border-red-600 ring-1 ring-red-600"
-                                  : "border-[#DCD5C9] focus:border-[#541920]"
+                                  ? "border-red-600 focus:border-red-600 ring-1 ring-red-600 focus-visible:ring-2 focus-visible:ring-red-600"
+                                  : "border-[#DCD5C9] focus:border-[#541920] focus-visible:ring-2 focus-visible:ring-[#541920]"
                               }`}
                               aria-invalid={!!cardErrors.cardNumber}
                               aria-describedby={cardErrors.cardNumber ? "cardnumber-error" : undefined}
@@ -871,8 +871,8 @@ export default function CheckoutPage() {
                                 }}
                                 className={`w-full min-h-[44px] px-3 py-2.5 bg-white border rounded-xs focus:outline-none transition-colors ${
                                   cardErrors.expiry
-                                    ? "border-red-600 focus:border-red-600 ring-1 ring-red-600"
-                                    : "border-[#DCD5C9] focus:border-[#541920]"
+                                    ? "border-red-600 focus:border-red-600 ring-1 ring-red-600 focus-visible:ring-2 focus-visible:ring-red-600"
+                                    : "border-[#DCD5C9] focus:border-[#541920] focus-visible:ring-2 focus-visible:ring-[#541920]"
                                 }`}
                                 aria-invalid={!!cardErrors.expiry}
                                 aria-describedby={cardErrors.expiry ? "expiry-error" : undefined}
@@ -906,8 +906,8 @@ export default function CheckoutPage() {
                                 }}
                                 className={`w-full min-h-[44px] px-3 py-2.5 bg-white border rounded-xs focus:outline-none transition-colors ${
                                   cardErrors.cvv
-                                    ? "border-red-600 focus:border-red-600 ring-1 ring-red-600"
-                                    : "border-[#DCD5C9] focus:border-[#541920]"
+                                    ? "border-red-600 focus:border-red-600 ring-1 ring-red-600 focus-visible:ring-2 focus-visible:ring-red-600"
+                                    : "border-[#DCD5C9] focus:border-[#541920] focus-visible:ring-2 focus-visible:ring-[#541920]"
                                 }`}
                                 aria-invalid={!!cardErrors.cvv}
                                 aria-describedby={cardErrors.cvv ? "cvv-error" : undefined}
@@ -963,7 +963,7 @@ export default function CheckoutPage() {
                                     key={b.id}
                                     type="button"
                                     onClick={() => setSelectedBank(b.id)}
-                                    className={`min-h-[44px] px-3 py-2 text-xs rounded-xs border text-center transition-colors cursor-pointer ${
+                                    className={`min-h-[44px] px-3 py-2 text-xs rounded-xs border text-center transition-colors cursor-pointer focus-visible:ring-2 focus-visible:ring-[#541920] focus-visible:outline-none ${
                                       isSelected
                                         ? "bg-[#541920] text-white border-[#541920] font-semibold"
                                         : "bg-white text-neutral-800 border-[#DCD5C9] hover:border-[#541920]"
@@ -985,7 +985,7 @@ export default function CheckoutPage() {
                               name="otherBank"
                               value={selectedBank}
                               onChange={(e) => setSelectedBank(e.target.value)}
-                              className="w-full min-h-[44px] px-3 py-2.5 bg-white border border-[#DCD5C9] rounded-xs text-xs text-neutral-800 focus:outline-none focus:border-[#541920]"
+                              className="w-full min-h-[44px] px-3 py-2.5 bg-white border border-[#DCD5C9] rounded-xs text-xs text-neutral-800 focus:outline-none focus:border-[#541920] focus-visible:ring-2 focus-visible:ring-[#541920]"
                             >
                               <optgroup label="Popular Banks">
                                 {POPULAR_BANKS.map((b) => (

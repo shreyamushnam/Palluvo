@@ -412,7 +412,7 @@ function ShopContent() {
                 {activeFiltersCount > 0 && (
                   <button
                     onClick={clearAllFilters}
-                    className="text-xs text-[#541920] hover:underline font-medium cursor-pointer"
+                    className="min-h-[44px] px-2.5 inline-flex items-center text-xs text-[#541920] hover:underline font-semibold cursor-pointer rounded-xs focus-visible:ring-2 focus-visible:ring-[#541920] focus-visible:outline-none"
                   >
                     Reset
                   </button>
@@ -443,12 +443,12 @@ function ShopContent() {
                         disabled={isDisabled}
                         aria-disabled={isDisabled}
                         onClick={() => !isDisabled && handleCategoryToggle(cat.name)}
-                        className={`w-full flex items-center justify-between py-1 text-xs text-left transition-colors ${
+                        className={`w-full min-h-[44px] px-2.5 py-2 flex items-center justify-between text-xs text-left rounded-xs transition-colors focus-visible:ring-2 focus-visible:ring-[#541920] focus-visible:outline-none ${
                           isDisabled
                             ? "cursor-not-allowed text-neutral-600"
                             : isSelected
-                            ? "text-[#541920] font-bold cursor-pointer"
-                            : "text-neutral-800 hover:text-black cursor-pointer"
+                            ? "text-[#541920] font-bold bg-[#541920]/5 cursor-pointer"
+                            : "text-neutral-800 hover:text-black hover:bg-[#FAF7F2] cursor-pointer"
                         }`}
                       >
                         <span>{cat.name}</span>
@@ -468,7 +468,7 @@ function ShopContent() {
                   {PRICE_RANGES.map((range, idx) => (
                     <label
                       key={idx}
-                      className="flex items-center gap-2 text-xs text-neutral-600 hover:text-black cursor-pointer"
+                      className="flex items-center gap-2.5 text-xs min-h-[44px] px-2.5 rounded-xs text-neutral-700 hover:text-black hover:bg-[#FAF7F2] transition-colors cursor-pointer"
                     >
                       <input
                         type="radio"
@@ -480,7 +480,7 @@ function ShopContent() {
                             setSelectedPriceRange(null);
                           }
                         }}
-                        className="text-[#541920] focus:ring-[#541920]"
+                        className="text-[#541920] focus:ring-[#541920] w-4 h-4"
                       />
                       <span>{range.label}</span>
                     </label>
@@ -504,12 +504,12 @@ function ShopContent() {
                         disabled={isDisabled}
                         aria-disabled={isDisabled}
                         onClick={() => !isDisabled && setSelectedFabric(selectedFabric === fabric ? "" : fabric)}
-                        className={`w-full flex items-center justify-between text-xs py-1 transition-colors ${
+                        className={`w-full min-h-[44px] px-2.5 py-2 flex items-center justify-between text-xs text-left rounded-xs transition-colors focus-visible:ring-2 focus-visible:ring-[#541920] focus-visible:outline-none ${
                           isDisabled
                             ? "cursor-not-allowed text-neutral-600"
                             : selectedFabric === fabric
-                            ? "text-[#541920] font-bold cursor-pointer"
-                            : "text-neutral-800 hover:text-black cursor-pointer"
+                            ? "text-[#541920] font-bold bg-[#541920]/5 cursor-pointer"
+                            : "text-neutral-800 hover:text-black hover:bg-[#FAF7F2] cursor-pointer"
                         }`}
                       >
                         <span>{fabric}</span>
@@ -536,12 +536,12 @@ function ShopContent() {
                         disabled={isDisabled}
                         aria-disabled={isDisabled}
                         onClick={() => !isDisabled && setSelectedOccasion(selectedOccasion === occ ? "" : occ)}
-                        className={`w-full flex items-center justify-between text-xs py-1 transition-colors ${
+                        className={`w-full min-h-[44px] px-2.5 py-2 flex items-center justify-between text-xs text-left rounded-xs transition-colors focus-visible:ring-2 focus-visible:ring-[#541920] focus-visible:outline-none ${
                           isDisabled
                             ? "cursor-not-allowed text-neutral-600"
                             : selectedOccasion === occ
-                            ? "text-[#541920] font-bold cursor-pointer"
-                            : "text-neutral-800 hover:text-black cursor-pointer"
+                            ? "text-[#541920] font-bold bg-[#541920]/5 cursor-pointer"
+                            : "text-neutral-800 hover:text-black hover:bg-[#FAF7F2] cursor-pointer"
                         }`}
                       >
                         <span>{occ}</span>
