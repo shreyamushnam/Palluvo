@@ -1,6 +1,6 @@
 "use client";
 
-import React, { createContext, useContext, useState, useEffect } from "react";
+import React, { createContext, useContext, useState, useEffect, useRef } from "react";
 import { Product, PRODUCTS } from "@/data/products";
 import { OrderRecord, MOCK_ORDERS } from "@/data/mockOrders";
 
@@ -18,6 +18,7 @@ interface ToastInfo {
 }
 
 interface StoreContextType {
+  isHydrated: boolean;
   cart: CartItem[];
   wishlist: string[];
   orders: OrderRecord[];
@@ -53,6 +54,8 @@ interface StoreContextType {
 const StoreContext = createContext<StoreContextType | undefined>(undefined);
 
 export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const isHydratedRef = useRef(false);
+  const [isHydrated, setIsHydrated] = useState(false);
   const [cart, setCart] = useState<CartItem[]>([]);
   const [wishlist, setWishlist] = useState<string[]>(["pal-001", "pal-004"]);
   const [orders, setOrders] = useState<OrderRecord[]>(MOCK_ORDERS);
@@ -83,27 +86,33 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       }
     } catch {
       // LocalStorage fallback
+    } finally {
+      isHydratedRef.current = true;
+      setIsHydrated(true);
     }
   }, []);
 
-  // Save changes
+  // Save changes — guarded against initial hydration race/overwrite
   useEffect(() => {
+    if (!isHydratedRef.current) return;
     try {
       localStorage.setItem("palluvo_ecommerce_cart", JSON.stringify(cart));
     } catch {}
-  }, [cart]);
+  }, [cart, isHydrated]);
 
   useEffect(() => {
+    if (!isHydratedRef.current) return;
     try {
       localStorage.setItem("palluvo_ecommerce_wishlist", JSON.stringify(wishlist));
     } catch {}
-  }, [wishlist]);
+  }, [wishlist, isHydrated]);
 
   useEffect(() => {
+    if (!isHydratedRef.current) return;
     try {
       localStorage.setItem("palluvo_ecommerce_orders", JSON.stringify(orders));
     } catch {}
-  }, [orders]);
+  }, [orders, isHydrated]);
 
   const showToast = (message: string, type: "success" | "info" = "success") => {
     const id = Date.now();
@@ -181,11 +190,20 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const freeShippingThreshold = 1999;
   const shippingFee = subtotal >= freeShippingThreshold || subtotal === 0 ? 0 : 149;
 
+  // Auto-revoke MAGIC500 coupon if subtotal drops below ₹3,000 threshold
+  useEffect(() => {
+    if (!isHydratedRef.current) return;
+    if (appliedCoupon === "MAGIC500" && subtotal < 3000) {
+      setAppliedCoupon(null);
+      showToast("Coupon MAGIC500 removed: Requires a minimum subtotal of ₹3,000.", "info");
+    }
+  }, [appliedCoupon, subtotal, isHydrated]);
+
   // Calculate coupon discount directly from subtotal and applied coupon
   const discountAmount = appliedCoupon === "PALLUVO10"
     ? Math.round(subtotal * 0.1)
-    : appliedCoupon === "MAGIC500"
-    ? (subtotal >= 3000 ? 500 : 0)
+    : appliedCoupon === "MAGIC500" && subtotal >= 3000
+    ? 500
     : 0;
 
   const applyCoupon = (code: string) => {
@@ -194,10 +212,13 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       setAppliedCoupon("PALLUVO10");
       showToast("Coupon PALLUVO10 applied: 10% discount!");
       return { success: true, message: "10% discount applied successfully!" };
-    } else if (formatted === "MAGIC500" && subtotal >= 3000) {
-      setAppliedCoupon("MAGIC500");
-      showToast("Coupon MAGIC500 applied: ₹500 discount!");
-      return { success: true, message: "₹500 discount applied successfully!" };
+    } else if (formatted === "MAGIC500") {
+      if (subtotal >= 3000) {
+        setAppliedCoupon("MAGIC500");
+        showToast("Coupon MAGIC500 applied: ₹500 discount!");
+        return { success: true, message: "₹500 discount applied successfully!" };
+      }
+      return { success: false, message: "Coupon MAGIC500 requires a minimum subtotal of ₹3,000." };
     }
     return { success: false, message: "Invalid or expired coupon code. Try 'PALLUVO10'" };
   };
@@ -235,6 +256,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   return (
     <StoreContext.Provider
       value={{
+        isHydrated,
         cart,
         wishlist,
         orders,
