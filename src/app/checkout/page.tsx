@@ -17,6 +17,7 @@ export default function CheckoutPage() {
     formatPrice,
     placeOrder,
     showToast,
+    addresses,
   } = useStore();
 
   const [step, setStep] = useState<1 | 2 | 3>(1);
@@ -41,17 +42,41 @@ export default function CheckoutPage() {
     return () => clearTimeout(timer);
   }, [step]);
 
+  const defaultAddr = addresses.find((a) => a.isDefault) || addresses[0];
+  const [selectedAddressId, setSelectedAddressId] = useState<string>(defaultAddr ? defaultAddr.id : "");
+
   // Address Form State
   const [shippingAddress, setShippingAddress] = useState({
-    fullName: "Radhika Sharma",
-    phone: "9876543210",
+    fullName: defaultAddr ? defaultAddr.name : "Radhika Sharma",
+    phone: defaultAddr ? defaultAddr.phone.replace("+91 ", "").replace(/\s/g, "") : "9876543210",
     email: "radhika.sharma@example.com",
-    addressLine1: "Flat 402, Royal Palms Residency",
+    addressLine1: defaultAddr ? defaultAddr.addressLine : "Flat 402, Royal Palms Residency",
     landmark: "Near Lotus Temple Road",
-    city: "New Delhi",
-    state: "Delhi",
-    pincode: "110019",
+    city: defaultAddr ? defaultAddr.city : "New Delhi",
+    state: defaultAddr ? defaultAddr.state : "Delhi",
+    pincode: defaultAddr ? defaultAddr.pincode : "110019",
   });
+
+  // Keep form synchronized with StoreContext saved addresses
+  useEffect(() => {
+    if (addresses.length > 0) {
+      const active = addresses.find((a) => a.id === selectedAddressId) || addresses.find((a) => a.isDefault) || addresses[0];
+      if (active) {
+        if (selectedAddressId !== active.id) {
+          setSelectedAddressId(active.id);
+        }
+        setShippingAddress((prev) => ({
+          ...prev,
+          fullName: active.name,
+          phone: active.phone.replace("+91 ", "").replace(/\s/g, ""),
+          addressLine1: active.addressLine,
+          city: active.city,
+          state: active.state,
+          pincode: active.pincode,
+        }));
+      }
+    }
+  }, [addresses, selectedAddressId]);
 
   // Delivery & Payment selection
   const [deliveryMethod, setDeliveryMethod] = useState<"standard" | "express">("standard");
@@ -270,6 +295,69 @@ export default function CheckoutPage() {
 
               {step === 1 ? (
                 <form onSubmit={handleAddressSubmit} className="p-6 space-y-4 text-xs">
+                  {/* Saved addresses selector */}
+                  {addresses && addresses.length > 0 && (
+                    <div className="space-y-2 pb-3 border-b border-[#E8E2D9]">
+                      <div className="flex items-center justify-between">
+                        <span className="font-semibold text-neutral-800 text-xs">
+                          Deliver to Saved Address:
+                        </span>
+                        <Link
+                          href="/account"
+                          className="text-[11px] text-[#541920] font-semibold hover:underline"
+                        >
+                          Manage Addresses →
+                        </Link>
+                      </div>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                        {addresses.map((addr) => {
+                          const isSelected = selectedAddressId === addr.id;
+                          return (
+                            <button
+                              key={addr.id}
+                              type="button"
+                              onClick={() => {
+                                setSelectedAddressId(addr.id);
+                                setShippingAddress((prev) => ({
+                                  ...prev,
+                                  fullName: addr.name,
+                                  phone: addr.phone.replace("+91 ", "").replace(/\s/g, ""),
+                                  addressLine1: addr.addressLine,
+                                  city: addr.city,
+                                  state: addr.state,
+                                  pincode: addr.pincode,
+                                }));
+                              }}
+                              className={`p-3 text-left rounded-xs border transition-colors cursor-pointer text-xs focus-visible:ring-2 focus-visible:ring-[#541920] focus-visible:outline-none ${
+                                isSelected
+                                  ? "border-[#541920] bg-[#FAF7F2] ring-1 ring-[#541920]"
+                                  : "border-[#DCD5C9] bg-white hover:border-neutral-400"
+                              }`}
+                            >
+                              <div className="flex items-center justify-between mb-1">
+                                <span className="font-semibold text-neutral-900 flex items-center gap-1.5">
+                                  {addr.name}
+                                  <span className="text-[10px] px-1.5 py-0.5 bg-neutral-100 rounded text-neutral-600 font-normal">
+                                    {addr.type}
+                                  </span>
+                                </span>
+                                {addr.isDefault && (
+                                  <span className="text-[10px] text-[#541920] font-semibold">
+                                    Default
+                                  </span>
+                                )}
+                              </div>
+                              <p className="text-neutral-600 line-clamp-1">{addr.addressLine}</p>
+                              <p className="text-neutral-500 text-[11px] mt-0.5">
+                                {addr.city}, {addr.state} - {addr.pincode}
+                              </p>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
                       <label htmlFor="fullName" className="block text-neutral-700 font-medium mb-1">

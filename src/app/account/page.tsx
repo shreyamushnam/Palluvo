@@ -5,14 +5,22 @@ import Image from "next/image";
 import Link from "next/link";
 import { Package, MapPin, User, Truck, CheckCircle2, ShieldCheck, Plus, X, Edit2, Trash2, Check } from "lucide-react";
 import { useStore } from "@/context/StoreContext";
-import { MOCK_ADDRESSES, SavedAddress } from "@/data/mockOrders";
+import { SavedAddress } from "@/data/mockOrders";
 
 export default function AccountPage() {
-  const { orders, formatPrice, showToast } = useStore();
+  const {
+    orders,
+    formatPrice,
+    showToast,
+    addresses,
+    addAddress,
+    updateAddress,
+    deleteAddress,
+    setDefaultAddress,
+  } = useStore();
   const [activeTab, setActiveTab] = useState<"orders" | "addresses" | "profile">("orders");
 
-  // Saved Addresses state
-  const [addresses, setAddresses] = useState<SavedAddress[]>(MOCK_ADDRESSES);
+  // Saved Addresses modal and form state
   const [isAddressModalOpen, setIsAddressModalOpen] = useState(false);
   const [editingAddressId, setEditingAddressId] = useState<string | null>(null);
   const [addressForm, setAddressForm] = useState<Omit<SavedAddress, "id">>({
@@ -66,48 +74,20 @@ export default function AccountPage() {
     setIsAddressModalOpen(true);
   };
 
-  const handleDeleteAddress = (id: string, name: string) => {
-    setAddresses((prev) => prev.filter((a) => a.id !== id));
-    showToast(`Address for ${name} deleted`, "info");
+  const handleDeleteAddress = (id: string, name?: string) => {
+    deleteAddress(id);
   };
 
   const handleSetDefaultAddress = (id: string) => {
-    setAddresses((prev) =>
-      prev.map((a) => ({
-        ...a,
-        isDefault: a.id === id,
-      }))
-    );
-    showToast("Default address updated");
+    setDefaultAddress(id);
   };
 
   const handleSaveAddress = (e: React.FormEvent) => {
     e.preventDefault();
     if (editingAddressId) {
-      setAddresses((prev) =>
-        prev.map((a) => {
-          if (a.id === editingAddressId) {
-            return { id: editingAddressId, ...addressForm };
-          }
-          if (addressForm.isDefault) {
-            return { ...a, isDefault: false };
-          }
-          return a;
-        })
-      );
-      showToast("Address updated successfully!");
+      updateAddress(editingAddressId, addressForm);
     } else {
-      const newAddress: SavedAddress = {
-        id: `addr-${Date.now()}`,
-        ...addressForm,
-      };
-      setAddresses((prev) => {
-        if (addressForm.isDefault) {
-          return [...prev.map((a) => ({ ...a, isDefault: false })), newAddress];
-        }
-        return [...prev, newAddress];
-      });
-      showToast("New address added successfully!");
+      addAddress(addressForm);
     }
     setIsAddressModalOpen(false);
   };

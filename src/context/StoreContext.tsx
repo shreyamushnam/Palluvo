@@ -2,7 +2,7 @@
 
 import React, { createContext, useContext, useState, useEffect, useRef } from "react";
 import { Product, PRODUCTS } from "@/data/products";
-import { OrderRecord, MOCK_ORDERS } from "@/data/mockOrders";
+import { OrderRecord, MOCK_ORDERS, SavedAddress, MOCK_ADDRESSES } from "@/data/mockOrders";
 
 export interface CartItem {
   product: Product;
@@ -22,10 +22,10 @@ interface StoreContextType {
   cart: CartItem[];
   wishlist: string[];
   orders: OrderRecord[];
+  addresses: SavedAddress[];
   isCartOpen: boolean;
   isSearchOpen: boolean;
   quickViewProduct: Product | null;
-  couponCode: string;
   discountAmount: number;
   appliedCoupon: string | null;
   toast: ToastInfo | null;
@@ -44,6 +44,10 @@ interface StoreContextType {
   applyCoupon: (code: string) => { success: boolean; message: string };
   removeCoupon: () => void;
   placeOrder: (order: Omit<OrderRecord, "id" | "orderNumber" | "date" | "status" | "deliveryDate">) => OrderRecord;
+  addAddress: (address: Omit<SavedAddress, "id">) => SavedAddress;
+  updateAddress: (id: string, address: Partial<SavedAddress>) => void;
+  deleteAddress: (id: string) => void;
+  setDefaultAddress: (id: string) => void;
   setIsCartOpen: (open: boolean) => void;
   setIsSearchOpen: (open: boolean) => void;
   setQuickViewProduct: (product: Product | null) => void;
@@ -59,10 +63,10 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const [cart, setCart] = useState<CartItem[]>([]);
   const [wishlist, setWishlist] = useState<string[]>(["pal-001", "pal-004"]);
   const [orders, setOrders] = useState<OrderRecord[]>(MOCK_ORDERS);
+  const [addresses, setAddresses] = useState<SavedAddress[]>(MOCK_ADDRESSES);
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [quickViewProduct, setQuickViewProduct] = useState<Product | null>(null);
-  const [couponCode] = useState("");
   const [appliedCoupon, setAppliedCoupon] = useState<string | null>(null);
   const [toast, setToast] = useState<ToastInfo | null>(null);
 
@@ -83,6 +87,10 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       const savedOrders = localStorage.getItem("palluvo_ecommerce_orders");
       if (savedOrders) {
         setOrders(JSON.parse(savedOrders));
+      }
+      const savedAddresses = localStorage.getItem("palluvo_ecommerce_addresses");
+      if (savedAddresses) {
+        setAddresses(JSON.parse(savedAddresses));
       }
     } catch {
       // LocalStorage fallback
@@ -113,6 +121,13 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       localStorage.setItem("palluvo_ecommerce_orders", JSON.stringify(orders));
     } catch {}
   }, [orders, isHydrated]);
+
+  useEffect(() => {
+    if (!isHydratedRef.current) return;
+    try {
+      localStorage.setItem("palluvo_ecommerce_addresses", JSON.stringify(addresses));
+    } catch {}
+  }, [addresses, isHydrated]);
 
   const showToast = (message: string, type: "success" | "info" = "success") => {
     const id = Date.now();
@@ -249,6 +264,51 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     return newOrder;
   };
 
+  const addAddress = (newAddrData: Omit<SavedAddress, "id">): SavedAddress => {
+    const newAddress: SavedAddress = {
+      id: `addr-${Date.now()}`,
+      ...newAddrData,
+    };
+    setAddresses((prev) => {
+      if (newAddrData.isDefault) {
+        return [...prev.map((a) => ({ ...a, isDefault: false })), newAddress];
+      }
+      return [...prev, newAddress];
+    });
+    showToast("New address added successfully!");
+    return newAddress;
+  };
+
+  const updateAddress = (id: string, updatedData: Partial<SavedAddress>) => {
+    setAddresses((prev) =>
+      prev.map((a) => {
+        if (a.id === id) {
+          return { ...a, ...updatedData };
+        }
+        if (updatedData.isDefault) {
+          return { ...a, isDefault: false };
+        }
+        return a;
+      })
+    );
+    showToast("Address updated successfully!");
+  };
+
+  const deleteAddress = (id: string) => {
+    setAddresses((prev) => prev.filter((a) => a.id !== id));
+    showToast("Address deleted", "info");
+  };
+
+  const setDefaultAddress = (id: string) => {
+    setAddresses((prev) =>
+      prev.map((a) => ({
+        ...a,
+        isDefault: a.id === id,
+      }))
+    );
+    showToast("Default address updated");
+  };
+
   const formatPrice = (amount: number): string => {
     return `₹${amount.toLocaleString("en-IN")}`;
   };
@@ -260,10 +320,10 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         cart,
         wishlist,
         orders,
+        addresses,
         isCartOpen,
         isSearchOpen,
         quickViewProduct,
-        couponCode,
         discountAmount,
         appliedCoupon,
         toast,
@@ -282,6 +342,10 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         applyCoupon,
         removeCoupon,
         placeOrder,
+        addAddress,
+        updateAddress,
+        deleteAddress,
+        setDefaultAddress,
         setIsCartOpen,
         setIsSearchOpen,
         setQuickViewProduct,
