@@ -145,7 +145,7 @@ export default function CartPage() {
                             >
                               {item.product.name}
                             </Link>
-                            <p className="text-xs text-neutral-500 mt-0.5">
+                            <p className="text-xs text-neutral-600 mt-0.5">
                               Fabric: {item.product.fabric}
                             </p>
                           </div>

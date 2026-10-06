@@ -141,7 +141,7 @@ export const CartDrawer: React.FC = () => {
                         <Link
                           href={`/product/${item.product.id}`}
                           onClick={() => setIsCartOpen(false)}
-                          className="text-xs font-serif font-medium text-neutral-900 line-clamp-1 hover:text-[#541920]"
+                          className="text-xs font-serif font-medium text-neutral-900 line-clamp-2 leading-snug hover:text-[#541920]"
                         >
                           {item.product.name}
                         </Link>
@@ -155,12 +155,12 @@ export const CartDrawer: React.FC = () => {
                         </button>
                       </div>
 
-                      <div className="text-[11px] text-neutral-500 mt-0.5 space-x-2">
+                      <div className="text-[11px] text-neutral-600 mt-0.5 space-x-2">
                         {item.selectedColor && (
-                          <span>Color: <strong className="text-neutral-700">{item.selectedColor}</strong></span>
+                          <span>Color: <strong className="text-neutral-800">{item.selectedColor}</strong></span>
                         )}
                         {item.blouseOption && (
-                          <span>• Blouse: <strong className="text-neutral-700">{item.blouseOption.split(" ")[0]}</strong></span>
+                          <span>• Blouse: <strong className="text-neutral-800">{item.blouseOption.split(" ")[0]}</strong></span>
                         )}
                       </div>
 
