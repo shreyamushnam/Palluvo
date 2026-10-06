@@ -466,7 +466,11 @@ export default function CheckoutPage() {
                         <p className="text-[11px] text-neutral-600">Tamper-proof rigid box with Silk Mark Certificate</p>
                       </div>
                     </div>
-                    <span className="font-bold text-[#15803D]">FREE</span>
+                    {shippingFee === 0 ? (
+                      <span className="font-bold text-[#15803D]">FREE</span>
+                    ) : (
+                      <span className="font-bold text-neutral-900">{formatPrice(shippingFee)}</span>
+                    )}
                   </label>
 
                   <label
