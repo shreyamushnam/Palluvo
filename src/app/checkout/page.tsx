@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { CheckCircle2, ShieldCheck, ArrowLeft, Lock } from "lucide-react";
@@ -19,6 +19,25 @@ export default function CheckoutPage() {
 
   const [step, setStep] = useState<1 | 2 | 3>(1);
   const [completedOrder, setCompletedOrder] = useState<OrderRecord | null>(null);
+
+  const step1Ref = useRef<HTMLDivElement>(null);
+  const step2Ref = useRef<HTMLDivElement>(null);
+  const step3Ref = useRef<HTMLDivElement>(null);
+  const isFirstRender = useRef(true);
+
+  useEffect(() => {
+    if (isFirstRender.current) {
+      isFirstRender.current = false;
+      return;
+    }
+    const timer = setTimeout(() => {
+      const targetRef = step === 1 ? step1Ref : step === 2 ? step2Ref : step3Ref;
+      if (targetRef.current) {
+        targetRef.current.scrollIntoView({ behavior: "smooth", block: "start" });
+      }
+    }, 60);
+    return () => clearTimeout(timer);
+  }, [step]);
 
   // Address Form State
   const [shippingAddress, setShippingAddress] = useState({
@@ -212,7 +231,7 @@ export default function CheckoutPage() {
           <div className="lg:col-span-7 space-y-6">
             
             {/* Step 1: Address */}
-            <div className="bg-white rounded-sm border border-[#E8E2D9] overflow-hidden">
+            <div ref={step1Ref} className="bg-white rounded-sm border border-[#E8E2D9] overflow-hidden scroll-mt-4 sm:scroll-mt-6">
               <div className="p-4 sm:p-5 border-b border-[#E8E2D9] bg-[#F4EFE6] flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <span className="w-6 h-6 rounded-full bg-[#541920] text-white text-xs flex items-center justify-center font-bold">
@@ -366,7 +385,7 @@ export default function CheckoutPage() {
             </div>
 
             {/* Step 2: Delivery Method */}
-            <div className="bg-white rounded-sm border border-[#E8E2D9] overflow-hidden">
+            <div ref={step2Ref} className="bg-white rounded-sm border border-[#E8E2D9] overflow-hidden scroll-mt-4 sm:scroll-mt-6">
               <div className="p-4 sm:p-5 border-b border-[#E8E2D9] bg-[#F4EFE6] flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <span className={`w-6 h-6 rounded-full text-white text-xs flex items-center justify-center font-bold ${
@@ -455,7 +474,7 @@ export default function CheckoutPage() {
             </div>
 
             {/* Step 3: Payment Method */}
-            <div className="bg-white rounded-sm border border-[#E8E2D9] overflow-hidden">
+            <div ref={step3Ref} className="bg-white rounded-sm border border-[#E8E2D9] overflow-hidden scroll-mt-4 sm:scroll-mt-6">
               <div className="p-4 sm:p-5 border-b border-[#E8E2D9] bg-[#F4EFE6] flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <span className={`w-6 h-6 rounded-full text-white text-xs flex items-center justify-center font-bold ${
@@ -614,7 +633,7 @@ export default function CheckoutPage() {
                       />
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="text-xs font-serif font-medium text-neutral-900 truncate">
+                      <p className="text-xs font-serif font-medium text-neutral-900 line-clamp-2 leading-snug break-words">
                         {item.product.name}
                       </p>
                       <p className="text-[11px] text-neutral-500">
