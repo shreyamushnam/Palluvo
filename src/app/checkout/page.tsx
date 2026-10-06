@@ -12,6 +12,7 @@ export default function CheckoutPage() {
     cart,
     subtotal,
     discountAmount,
+    shippingFee,
     finalTotal,
     formatPrice,
     placeOrder,
@@ -77,7 +78,7 @@ export default function CheckoutPage() {
         color: i.selectedColor || "Standard",
       })),
       totalAmount: finalTotal + (deliveryMethod === "express" ? 299 : 0),
-      shippingAddress: `${shippingAddress.fullName}, ${shippingAddress.addressLine1}, ${shippingAddress.landmark}, ${shippingAddress.city}, ${shippingAddress.state} - ${shippingAddress.pincode} (Ph: ${shippingAddress.phone})`,
+      shippingAddress: `${shippingAddress.fullName}, ${shippingAddress.addressLine1}${shippingAddress.landmark ? `, ${shippingAddress.landmark}` : ""}, ${shippingAddress.city}, ${shippingAddress.state} - ${shippingAddress.pincode} (Ph: ${shippingAddress.phone})`,
       paymentMethod:
         paymentMethod === "upi"
           ? "UPI (Google Pay / PhonePe)"
@@ -178,6 +179,7 @@ export default function CheckoutPage() {
     );
   }
 
+  const totalShippingFee = shippingFee + (deliveryMethod === "express" ? 299 : 0);
   const effectiveTotal = finalTotal + (deliveryMethod === "express" ? 299 : 0);
 
   return (
@@ -243,8 +245,10 @@ export default function CheckoutPage() {
                 </div>
                 {step > 1 && (
                   <button
+                    type="button"
                     onClick={() => setStep(1)}
-                    className="text-xs text-[#541920] font-semibold hover:underline"
+                    className="min-h-[44px] px-2 -mr-2 text-xs text-[#541920] font-semibold hover:underline inline-flex items-center justify-center cursor-pointer focus-visible:ring-2 focus-visible:ring-[#541920] focus-visible:outline-none rounded-xs"
+                    aria-label="Edit shipping address"
                   >
                     Edit Address
                   </button>
@@ -318,6 +322,21 @@ export default function CheckoutPage() {
                     />
                   </div>
 
+                  <div>
+                    <label htmlFor="landmark" className="block text-neutral-700 font-medium mb-1">
+                      Landmark (Optional)
+                    </label>
+                    <input
+                      id="landmark"
+                      name="landmark"
+                      type="text"
+                      placeholder="e.g. Near Lotus Temple Road"
+                      value={shippingAddress.landmark}
+                      onChange={(e) => setShippingAddress({ ...shippingAddress, landmark: e.target.value })}
+                      className="w-full min-h-[44px] px-3 py-2.5 border border-[#DCD5C9] rounded-xs focus:outline-none focus:border-[#541920]"
+                    />
+                  </div>
+
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                     <div>
                       <label htmlFor="city" className="block text-neutral-700 font-medium mb-1">
@@ -379,7 +398,7 @@ export default function CheckoutPage() {
               ) : (
                 <div className="p-4 text-xs text-neutral-600">
                   <p className="font-semibold text-neutral-900">{shippingAddress.fullName} ({shippingAddress.phone})</p>
-                  <p>{shippingAddress.addressLine1}, {shippingAddress.city}, {shippingAddress.state} - {shippingAddress.pincode}</p>
+                  <p>{shippingAddress.addressLine1}{shippingAddress.landmark ? `, ${shippingAddress.landmark}` : ""}, {shippingAddress.city}, {shippingAddress.state} - {shippingAddress.pincode}</p>
                 </div>
               )}
             </div>
@@ -399,8 +418,10 @@ export default function CheckoutPage() {
                 </div>
                 {step > 2 && (
                   <button
+                    type="button"
                     onClick={() => setStep(2)}
-                    className="text-xs text-[#541920] font-semibold hover:underline"
+                    className="min-h-[44px] px-2 -mr-2 text-xs text-[#541920] font-semibold hover:underline inline-flex items-center justify-center cursor-pointer focus-visible:ring-2 focus-visible:ring-[#541920] focus-visible:outline-none rounded-xs"
+                    aria-label="Change delivery method"
                   >
                     Change Delivery
                   </button>
@@ -492,13 +513,12 @@ export default function CheckoutPage() {
                 <div className="p-6 space-y-4 text-xs">
                   <div className="space-y-2.5">
                     {/* UPI */}
-                    <label
-                      htmlFor="payment-upi"
-                      className={`flex flex-col p-3.5 min-h-[44px] border rounded-xs cursor-pointer ${
+                    <div
+                      className={`flex flex-col p-3.5 min-h-[44px] border rounded-xs transition-colors ${
                         paymentMethod === "upi" ? "border-[#541920] bg-[#FAF7F2] ring-1 ring-[#541920]" : "border-[#E8E2D9]"
                       }`}
                     >
-                      <div className="flex items-center justify-between">
+                      <label htmlFor="payment-upi" className="flex items-center justify-between cursor-pointer">
                         <div className="flex items-center gap-2">
                           <input
                             id="payment-upi"
@@ -512,7 +532,7 @@ export default function CheckoutPage() {
                           <span className="font-semibold text-neutral-900">Instant UPI (GPay, PhonePe, Paytm, QR)</span>
                         </div>
                         <span className="text-[10px] text-[#15803D] font-bold">Fastest</span>
-                      </div>
+                      </label>
                       {paymentMethod === "upi" && (
                         <div className="mt-3 pt-3 border-t border-[#E8E2D9] space-y-2">
                           <label htmlFor="upiId" className="block text-neutral-700 font-medium mb-1">
@@ -529,7 +549,7 @@ export default function CheckoutPage() {
                           />
                         </div>
                       )}
-                    </label>
+                    </div>
 
                     {/* Card */}
                     <label
@@ -662,7 +682,11 @@ export default function CheckoutPage() {
                 <div className="flex justify-between">
                   <span>Shipping Fee</span>
                   <span className="font-medium text-neutral-900">
-                    {deliveryMethod === "express" ? "₹299" : "FREE"}
+                    {totalShippingFee === 0 ? (
+                      <span className="font-bold text-[#15803D]">FREE</span>
+                    ) : (
+                      formatPrice(totalShippingFee)
+                    )}
                   </span>
                 </div>
                 <div className="flex justify-between text-base font-serif font-bold text-neutral-900 pt-2 border-t border-[#E8E2D9]">
