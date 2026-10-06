@@ -160,7 +160,7 @@ export const CartDrawer: React.FC = () => {
                           <span>Color: <strong className="text-neutral-800">{item.selectedColor}</strong></span>
                         )}
                         {item.blouseOption && (
-                          <span>• Blouse: <strong className="text-neutral-800">{item.blouseOption.split(" ")[0]}</strong></span>
+                          <span>• Blouse: <strong className="text-neutral-800">{item.blouseOption}</strong></span>
                         )}
                       </div>
 

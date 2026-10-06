@@ -239,33 +239,40 @@ export default function CartPage() {
                       <span>Code <strong>{appliedCoupon}</strong> (-{formatPrice(discountAmount)})</span>
                     </div>
                     <button
+                      type="button"
                       onClick={removeCoupon}
-                      className="text-neutral-500 hover:text-black font-semibold text-xs"
+                      className="min-h-[44px] px-2 -mr-2 text-neutral-600 hover:text-black font-semibold text-xs inline-flex items-center justify-center cursor-pointer focus-visible:ring-2 focus-visible:ring-[#541920] focus-visible:outline-none rounded-xs"
+                      aria-label="Remove applied coupon"
                     >
                       Remove
                     </button>
                   </div>
                 ) : (
                   <form onSubmit={handleApplyCoupon} className="space-y-1.5">
-                    <div className="flex gap-2">
-                      <input
-                        type="text"
-                        placeholder="Coupon Code"
-                        value={couponInput}
-                        onChange={(e) => setCouponInput(e.target.value.toUpperCase())}
-                        className="flex-1 px-3 py-2 text-xs bg-white border border-[#DCD5C9] rounded-xs focus:outline-none focus:border-[#541920]"
-                      />
-                      <button
-                        type="submit"
-                        className="px-4 py-2 bg-neutral-900 text-white text-xs uppercase font-semibold rounded-xs hover:bg-black"
-                      >
-                        Apply
-                      </button>
+                    <div>
+                      <label htmlFor="cart-page-coupon" className="block text-xs font-semibold text-neutral-800 mb-1">
+                        Coupon Code <span className="text-[11px] font-normal text-neutral-600">(use PALLUVO10 for 10% off)</span>
+                      </label>
+                      <div className="flex gap-2">
+                        <input
+                          id="cart-page-coupon"
+                          name="couponCode"
+                          type="text"
+                          placeholder="e.g. PALLUVO10"
+                          value={couponInput}
+                          onChange={(e) => setCouponInput(e.target.value.toUpperCase())}
+                          className="flex-1 min-h-[44px] px-3 py-2 text-xs bg-white border border-[#DCD5C9] rounded-xs focus:outline-none focus:border-[#541920] placeholder:text-neutral-500 font-mono uppercase"
+                          aria-label="Coupon code"
+                        />
+                        <button
+                          type="submit"
+                          className="min-h-[44px] px-4 py-2 bg-neutral-900 text-white text-xs uppercase tracking-wider font-semibold rounded-xs hover:bg-black shrink-0 cursor-pointer focus-visible:ring-2 focus-visible:ring-[#541920] focus-visible:outline-none"
+                        >
+                          Apply
+                        </button>
+                      </div>
                     </div>
-                    <p className="text-[11px] text-neutral-500">
-                      Use code <strong className="text-[#541920]">PALLUVO10</strong> for 10% instant discount
-                    </p>
-                    {couponError && <p className="text-xs text-red-600">{couponError}</p>}
+                    {couponError && <p className="text-xs text-red-600 mt-1">{couponError}</p>}
                   </form>
                 )}
 

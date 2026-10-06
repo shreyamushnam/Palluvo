@@ -458,6 +458,11 @@ function ShopContent() {
                         name="desktop-price"
                         checked={selectedPriceRange === idx}
                         onChange={() => setSelectedPriceRange(selectedPriceRange === idx ? null : idx)}
+                        onClick={() => {
+                          if (selectedPriceRange === idx) {
+                            setSelectedPriceRange(null);
+                          }
+                        }}
                         className="text-[#541920] focus:ring-[#541920]"
                       />
                       <span>{range.label}</span>
@@ -661,7 +666,12 @@ function ShopContent() {
                           type="radio"
                           name="mobile-price"
                           checked={selectedPriceRange === idx}
-                          onChange={() => setSelectedPriceRange(idx)}
+                          onChange={() => setSelectedPriceRange(selectedPriceRange === idx ? null : idx)}
+                          onClick={() => {
+                            if (selectedPriceRange === idx) {
+                              setSelectedPriceRange(null);
+                            }
+                          }}
                           className="w-4 h-4 text-[#541920] accent-[#541920]"
                         />
                         <span>{range.label}</span>
