@@ -111,7 +111,7 @@ export const CartDrawer: React.FC = () => {
                 <Link
                   href="/shop"
                   onClick={() => setIsCartOpen(false)}
-                  className="inline-block px-6 py-2.5 bg-[#541920] text-white text-xs uppercase tracking-widest font-medium hover:bg-[#3D1217] transition-colors rounded-sm"
+                  className="min-h-[44px] inline-flex items-center justify-center px-6 py-2.5 bg-[#541920] text-white text-xs uppercase tracking-widest font-medium hover:bg-[#3D1217] transition-colors rounded-sm"
                 >
                   Explore Products
                 </Link>

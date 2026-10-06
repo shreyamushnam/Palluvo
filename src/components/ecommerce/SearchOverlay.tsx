@@ -101,7 +101,7 @@ export const SearchOverlay: React.FC = () => {
 
           {/* Search Header Input */}
           <div className="p-4 sm:p-6 border-b border-[#E8E2D9] flex items-center gap-3 bg-white">
-            <Search className="w-5 h-5 text-neutral-400 shrink-0" aria-hidden="true" />
+            <Search className="w-5 h-5 text-neutral-500 shrink-0" aria-hidden="true" />
             <input
               ref={inputRef}
               type="text"
@@ -114,7 +114,7 @@ export const SearchOverlay: React.FC = () => {
                 }
               }}
               placeholder="Search sarees by fabric, weave, color, or occasion..."
-              className="flex-1 text-base sm:text-lg bg-transparent border-none outline-none text-[#1C1A18] placeholder-neutral-400 font-sans"
+              className="flex-1 text-base sm:text-lg bg-transparent border-none outline-none text-[#1C1A18] placeholder:text-neutral-600 placeholder-neutral-600 font-sans"
               aria-label="Search sarees by fabric, weave, color, or occasion"
             />
             {query && (
