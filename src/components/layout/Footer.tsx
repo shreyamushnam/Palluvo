@@ -57,8 +57,15 @@ export const Footer: React.FC = () => {
                   </div>
                 ) : (
                   <form onSubmit={handleSubscribe} className="flex max-w-sm gap-2">
+                    <label htmlFor="newsletter-email" className="sr-only">
+                      Email address for newsletter subscription
+                    </label>
                     <input
+                      id="newsletter-email"
+                      name="email"
                       type="email"
+                      autoComplete="email"
+                      aria-label="Email address for newsletter subscription"
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
                       placeholder="Enter your email address"

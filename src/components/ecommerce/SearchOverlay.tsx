@@ -201,7 +201,10 @@ export const SearchOverlay: React.FC = () => {
             {/* Results when searching */}
             {query.trim() && (
               <div className="space-y-4">
-                <div className="flex items-center justify-between text-xs text-neutral-600 border-b border-[#E8E2D9] pb-2">
+                <div
+                  aria-live="polite"
+                  className="flex items-center justify-between text-xs text-neutral-600 border-b border-[#E8E2D9] pb-2"
+                >
                   <span>
                     Found <strong className="text-neutral-900">{filteredProducts.length}</strong> matching sarees for &ldquo;{query}&rdquo;
                   </span>
