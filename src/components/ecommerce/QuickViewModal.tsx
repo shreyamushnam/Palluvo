@@ -143,17 +143,17 @@ const QuickViewModalContent: React.FC<QuickViewModalContentProps> = ({
                 </div>
 
                 {/* Price */}
-                <div className="flex items-baseline gap-3 pt-1 border-t border-[#E8E2D9]">
-                  <span className="text-2xl font-serif font-bold text-[#541920]">
+                <div className="flex items-baseline gap-3 pt-1 border-t border-[#E8E2D9] tabular-nums">
+                  <span className="text-2xl font-serif font-bold text-[#541920] tabular-nums">
                     {formatPrice(product.price)}
                   </span>
                   {product.originalPrice && (
-                    <span className="text-sm text-neutral-600 line-through">
+                    <span className="text-sm text-neutral-600 line-through tabular-nums">
                       {formatPrice(product.originalPrice)}
                     </span>
                   )}
                   {product.discountPercent && (
-                    <span className="text-xs font-bold text-[#15803D]">
+                    <span className="text-xs font-bold text-[#15803D] tabular-nums">
                       Save {formatPrice(product.originalPrice! - product.price)}
                     </span>
                   )}
@@ -228,7 +228,7 @@ const QuickViewModalContent: React.FC<QuickViewModalContentProps> = ({
                     >
                       -
                     </button>
-                    <span className="min-w-[36px] px-2 text-center text-xs font-semibold select-none">{quantity}</span>
+                    <span className="min-w-[36px] px-2 text-center text-xs font-semibold select-none tabular-nums">{quantity}</span>
                     <button
                       type="button"
                       onClick={() => setQuantity((q) => q + 1)}

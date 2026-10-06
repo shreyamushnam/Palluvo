@@ -150,12 +150,12 @@ export default function CartPage() {
                             </p>
                           </div>
 
-                          <div className="text-right">
-                            <span className="text-base font-serif font-bold text-[#541920]">
+                          <div className="text-right tabular-nums">
+                            <span className="text-base font-serif font-bold text-[#541920] tabular-nums">
                               {formatPrice(item.product.price * item.quantity)}
                             </span>
                             {item.product.originalPrice && (
-                              <p className="text-xs text-neutral-600 line-through">
+                              <p className="text-xs text-neutral-600 line-through tabular-nums">
                                 {formatPrice(item.product.originalPrice * item.quantity)}
                               </p>
                             )}
@@ -188,7 +188,7 @@ export default function CartPage() {
                           >
                             <Minus className="w-3.5 h-3.5" />
                           </button>
-                          <span className="min-w-[28px] px-2 text-center text-xs font-semibold" aria-label={`Quantity: ${item.quantity}`}>{item.quantity}</span>
+                          <span className="min-w-[28px] px-2 text-center text-xs font-semibold tabular-nums" aria-label={`Quantity: ${item.quantity}`}>{item.quantity}</span>
                           <button
                             onClick={() => updateQuantity(item.product.id, item.quantity + 1, item.selectedColor)}
                             className="w-11 h-11 min-w-[44px] min-h-[44px] flex items-center justify-center text-neutral-600 hover:text-black hover:bg-neutral-100 transition-colors cursor-pointer focus-visible:ring-2 focus-visible:ring-[#541920] focus-visible:outline-none"
@@ -277,26 +277,26 @@ export default function CartPage() {
                 )}
 
                 {/* Subtotals */}
-                <div className="space-y-2 text-xs text-neutral-600 pt-2 border-t border-[#E8E2D9]">
+                <div className="space-y-2 text-xs text-neutral-600 pt-2 border-t border-[#E8E2D9] tabular-nums">
                   <div className="flex justify-between">
                     <span>Bag Subtotal</span>
-                    <span className="text-neutral-900 font-medium">{formatPrice(subtotal)}</span>
+                    <span className="text-neutral-900 font-medium tabular-nums">{formatPrice(subtotal)}</span>
                   </div>
                   {discountAmount > 0 && (
                     <div className="flex justify-between text-[#15803D]">
                       <span>Coupon Discount</span>
-                      <span>-{formatPrice(discountAmount)}</span>
+                      <span className="tabular-nums">-{formatPrice(discountAmount)}</span>
                     </div>
                   )}
                   <div className="flex justify-between">
                     <span>Shipping Charges</span>
-                    <span className="text-neutral-900 font-medium">
+                    <span className="text-neutral-900 font-medium tabular-nums">
                       {shippingFee === 0 ? <span className="text-[#15803D]">FREE</span> : formatPrice(shippingFee)}
                     </span>
                   </div>
                   <div className="flex justify-between text-base font-serif font-bold text-neutral-900 pt-3 border-t border-[#E8E2D9]">
                     <span>Total Payable</span>
-                    <span className="text-[#541920]">{formatPrice(finalTotal)}</span>
+                    <span className="text-[#541920] tabular-nums">{formatPrice(finalTotal)}</span>
                   </div>
                 </div>
 

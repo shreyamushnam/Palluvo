@@ -109,6 +109,23 @@
   animation: pulseSubtle 2.5s cubic-bezier(0.4, 0, 0.6, 1) infinite;
 }
 
+/* Reduced motion preference support (WCAG 2.3.3) */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+  .animate-slow-pan,
+  .animate-scroll-indicator {
+    animation: none !important;
+    transform: none !important;
+  }
+}
+
 /* Glassmorphism for sticky nav & modals */
 .glass-nav {
   background: rgba(250, 247, 242, 0.88);

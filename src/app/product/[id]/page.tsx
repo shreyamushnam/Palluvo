@@ -227,18 +227,18 @@ export default function ProductDetailPage({
             </div>
 
             {/* Price & Quantity Stepper */}
-            <div className="pt-0.5 sm:pt-1.5 border-t border-[#E8E2D9] flex items-center justify-between gap-1 sm:gap-2">
-              <div className="flex items-baseline gap-1 sm:gap-3 shrink-0">
-                <span className="text-xl sm:text-3xl font-serif font-bold text-[#541920]">
+            <div className="pt-0.5 sm:pt-1.5 border-t border-[#E8E2D9] flex items-center justify-between gap-1 sm:gap-2 tabular-nums">
+              <div className="flex items-baseline gap-1 sm:gap-3 shrink-0 tabular-nums">
+                <span className="text-xl sm:text-3xl font-serif font-bold text-[#541920] tabular-nums">
                   {formatPrice(product.price)}
                 </span>
                 {product.originalPrice > product.price && (
-                  <span className="text-xs sm:text-base text-neutral-600 line-through">
+                  <span className="text-xs sm:text-base text-neutral-600 line-through tabular-nums">
                     {formatPrice(product.originalPrice)}
                   </span>
                 )}
                 {product.discountPercent > 0 && (
-                  <span className="text-[11px] sm:text-xs font-bold text-[#15803D]">
+                  <span className="text-[11px] sm:text-xs font-bold text-[#15803D] tabular-nums">
                     {product.discountPercent}% OFF
                   </span>
                 )}
@@ -254,7 +254,7 @@ export default function ProductDetailPage({
                 >
                   -
                 </button>
-                <span className="min-w-[32px] px-1 text-center text-xs font-semibold text-neutral-900 select-none">
+                <span className="min-w-[32px] px-1 text-center text-xs font-semibold text-neutral-900 select-none tabular-nums">
                   {quantity}
                 </span>
                 <button

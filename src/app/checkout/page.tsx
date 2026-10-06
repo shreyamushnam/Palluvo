@@ -239,7 +239,7 @@ export default function CheckoutPage() {
                     ? "Total Amount to Pay on Delivery:"
                     : "Total Amount Paid:"}
                 </span>
-                <strong className="text-[#541920]">{formatPrice(completedOrder.totalAmount)}</strong>
+                <strong className="text-[#541920] tabular-nums">{formatPrice(completedOrder.totalAmount)}</strong>
               </div>
               <div className="pt-2 border-t border-[#E8E2D9] text-neutral-600">
                 <p className="font-semibold text-neutral-800 mb-0.5">Need help with your order?</p>
@@ -639,7 +639,7 @@ export default function CheckoutPage() {
                     {shippingFee === 0 ? (
                       <span className="font-bold text-[#15803D]">FREE</span>
                     ) : (
-                      <span className="font-bold text-neutral-900">{formatPrice(shippingFee)}</span>
+                      <span className="font-bold text-neutral-900 tabular-nums">{formatPrice(shippingFee)}</span>
                     )}
                   </label>
 
@@ -666,7 +666,7 @@ export default function CheckoutPage() {
                         <p className="text-[11px] text-neutral-600">Next-flight priority courier with real-time SMS tracking</p>
                       </div>
                     </div>
-                    <span className="font-bold text-neutral-900">₹299</span>
+                    <span className="font-bold text-neutral-900 tabular-nums">₹299</span>
                   </label>
 
                   <div className="pt-2">
@@ -1042,7 +1042,7 @@ export default function CheckoutPage() {
                   <div className="pt-4">
                     <button
                       onClick={handlePlaceOrder}
-                      className="w-full min-h-[44px] py-3.5 bg-[#541920] hover:bg-[#3D1217] text-white uppercase tracking-widest font-semibold rounded-xs shadow-md transition-all flex items-center justify-center gap-2 text-xs cursor-pointer focus-visible:ring-2 focus-visible:ring-[#541920] focus-visible:outline-none"
+                      className="w-full min-h-[44px] py-3.5 bg-[#541920] hover:bg-[#3D1217] text-white uppercase tracking-widest font-semibold rounded-xs shadow-md transition-all flex items-center justify-center gap-2 text-xs cursor-pointer focus-visible:ring-2 focus-visible:ring-[#541920] focus-visible:outline-none tabular-nums"
                     >
                       <ShieldCheck className="w-4 h-4 text-green-300" />
                       <span>Place Order ({formatPrice(effectiveTotal)})</span>
@@ -1057,7 +1057,7 @@ export default function CheckoutPage() {
           {/* Right Column: Order Summary In Checkout */}
           <div className="lg:col-span-5 space-y-4">
             <div className="bg-white p-6 rounded-sm border border-[#E8E2D9] space-y-4">
-              <h3 className="font-serif text-base font-semibold text-neutral-900 border-b border-[#E8E2D9] pb-3">
+              <h3 className="font-serif text-base font-semibold text-neutral-900 border-b border-[#E8E2D9] pb-3 tabular-nums">
                 Items in Order ({cart.reduce((s, i) => s + i.quantity, 0)})
               </h3>
 
@@ -1077,10 +1077,10 @@ export default function CheckoutPage() {
                       <p className="text-xs font-serif font-medium text-neutral-900 line-clamp-2 leading-snug break-words">
                         {item.product.name}
                       </p>
-                      <p className="text-[11px] text-neutral-500">
+                      <p className="text-[11px] text-neutral-500 tabular-nums">
                         Qty: {item.quantity} {item.selectedColor && `• ${item.selectedColor}`}
                       </p>
-                      <p className="text-xs font-bold text-[#541920] mt-1">
+                      <p className="text-xs font-bold text-[#541920] mt-1 tabular-nums">
                         {formatPrice(item.product.price * item.quantity)}
                       </p>
                     </div>
@@ -1089,20 +1089,20 @@ export default function CheckoutPage() {
               </div>
 
               {/* Price breakdown */}
-              <div className="space-y-1.5 text-xs text-neutral-600 pt-3 border-t border-[#E8E2D9]">
+              <div className="space-y-1.5 text-xs text-neutral-600 pt-3 border-t border-[#E8E2D9] tabular-nums">
                 <div className="flex justify-between">
                   <span>Bag Subtotal</span>
-                  <span className="font-medium text-neutral-900">{formatPrice(subtotal)}</span>
+                  <span className="font-medium text-neutral-900 tabular-nums">{formatPrice(subtotal)}</span>
                 </div>
                 {discountAmount > 0 && (
                   <div className="flex justify-between text-[#15803D]">
                     <span>Discount</span>
-                    <span>-{formatPrice(discountAmount)}</span>
+                    <span className="tabular-nums">-{formatPrice(discountAmount)}</span>
                   </div>
                 )}
                 <div className="flex justify-between">
                   <span>Shipping Fee</span>
-                  <span className="font-medium text-neutral-900">
+                  <span className="font-medium text-neutral-900 tabular-nums">
                     {totalShippingFee === 0 ? (
                       <span className="font-bold text-[#15803D]">FREE</span>
                     ) : (
@@ -1112,7 +1112,7 @@ export default function CheckoutPage() {
                 </div>
                 <div className="flex justify-between text-base font-serif font-bold text-neutral-900 pt-2 border-t border-[#E8E2D9]">
                   <span>Total Amount</span>
-                  <span className="text-[#541920]">{formatPrice(effectiveTotal)}</span>
+                  <span className="text-[#541920] tabular-nums">{formatPrice(effectiveTotal)}</span>
                 </div>
               </div>
 

@@ -142,12 +142,12 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
 
         {/* Pricing Block */}
         <div className="mt-2.5 pt-2 border-t border-[#1C1A18]/6 flex flex-col">
-          <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
-            <span className="font-serif-display text-lg font-semibold text-[#1C1A18]">
+          <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5 tabular-nums">
+            <span className="font-serif-display text-lg font-semibold text-[#1C1A18] tabular-nums">
               {formatPrice(product.price)}
             </span>
             {product.originalPrice > product.price && (
-              <span className="text-xs text-[#5E5A54] line-through font-normal">
+              <span className="text-xs text-[#5E5A54] line-through font-normal tabular-nums">
                 {formatPrice(product.originalPrice)}
               </span>
             )}

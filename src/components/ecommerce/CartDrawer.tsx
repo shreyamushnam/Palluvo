@@ -164,12 +164,12 @@ export const CartDrawer: React.FC = () => {
                         )}
                       </div>
 
-                      <div className="mt-1 flex items-baseline gap-2">
-                        <span className="text-xs font-semibold text-[#541920]">
+                      <div className="mt-1 flex items-baseline gap-2 tabular-nums">
+                        <span className="text-xs font-semibold text-[#541920] tabular-nums">
                           {formatPrice(item.product.price)}
                         </span>
                         {item.product.originalPrice && (
-                          <span className="text-[10px] text-neutral-600 line-through">
+                          <span className="text-[10px] text-neutral-600 line-through tabular-nums">
                             {formatPrice(item.product.originalPrice)}
                           </span>
                         )}
@@ -187,7 +187,7 @@ export const CartDrawer: React.FC = () => {
                         >
                           <Minus className="w-3.5 h-3.5" />
                         </button>
-                        <span className="min-w-[28px] px-1 text-center text-xs font-semibold text-neutral-900 select-none" aria-label={`Quantity: ${item.quantity}`}>
+                        <span className="min-w-[28px] px-1 text-center text-xs font-semibold text-neutral-900 select-none tabular-nums" aria-label={`Quantity: ${item.quantity}`}>
                           {item.quantity}
                         </span>
                         <button
@@ -199,7 +199,7 @@ export const CartDrawer: React.FC = () => {
                           <Plus className="w-3.5 h-3.5" />
                         </button>
                       </div>
-                      <span className="text-xs font-medium text-neutral-800">
+                      <span className="text-xs font-medium text-neutral-800 tabular-nums">
                         {formatPrice(item.product.price * item.quantity)}
                       </span>
                     </div>
@@ -255,26 +255,26 @@ export const CartDrawer: React.FC = () => {
               )}
 
               {/* Subtotals */}
-              <div className="space-y-1.5 text-xs text-neutral-600 pt-1">
+              <div className="space-y-1.5 text-xs text-neutral-600 pt-1 tabular-nums">
                 <div className="flex justify-between">
                   <span>Subtotal</span>
-                  <span className="text-neutral-900 font-medium">{formatPrice(subtotal)}</span>
+                  <span className="text-neutral-900 font-medium tabular-nums">{formatPrice(subtotal)}</span>
                 </div>
                 {discountAmount > 0 && (
                   <div className="flex justify-between text-[#15803D]">
                     <span>Discount</span>
-                    <span>-{formatPrice(discountAmount)}</span>
+                    <span className="tabular-nums">-{formatPrice(discountAmount)}</span>
                   </div>
                 )}
                 <div className="flex justify-between">
                   <span>Estimated Shipping</span>
-                  <span className="text-neutral-900 font-medium">
+                  <span className="text-neutral-900 font-medium tabular-nums">
                     {shippingFee === 0 ? <span className="text-[#15803D]">FREE</span> : formatPrice(shippingFee)}
                   </span>
                 </div>
                 <div className="flex justify-between text-sm font-semibold text-neutral-900 pt-2 border-t border-[#E8E2D9]">
                   <span>Total Amount</span>
-                  <span className="text-[#541920]">{formatPrice(finalTotal)}</span>
+                  <span className="text-[#541920] tabular-nums">{formatPrice(finalTotal)}</span>
                 </div>
               </div>
 
