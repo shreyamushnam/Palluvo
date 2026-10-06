@@ -3,9 +3,28 @@
 import React, { useState, useRef, useEffect } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { CheckCircle2, ShieldCheck, ArrowLeft, Lock } from "lucide-react";
+import { CheckCircle2, ShieldCheck, ArrowLeft, Lock, CreditCard, Building2 } from "lucide-react";
 import { useStore } from "@/context/StoreContext";
 import { OrderRecord } from "@/data/mockOrders";
+
+const POPULAR_BANKS = [
+  { id: "hdfc", name: "HDFC Bank" },
+  { id: "sbi", name: "State Bank of India" },
+  { id: "icici", name: "ICICI Bank" },
+  { id: "axis", name: "Axis Bank" },
+  { id: "kotak", name: "Kotak Mahindra Bank" },
+];
+
+const OTHER_BANKS = [
+  { id: "pnb", name: "Punjab National Bank" },
+  { id: "bob", name: "Bank of Baroda" },
+  { id: "canara", name: "Canara Bank" },
+  { id: "union", name: "Union Bank of India" },
+  { id: "idbi", name: "IDBI Bank" },
+  { id: "indusind", name: "IndusInd Bank" },
+  { id: "yes", name: "Yes Bank" },
+  { id: "federal", name: "Federal Bank" },
+];
 
 export default function CheckoutPage() {
   const {
@@ -84,6 +103,23 @@ export default function CheckoutPage() {
   const [upiId, setUpiId] = useState("radhika@okhdfcbank");
   const [upiError, setUpiError] = useState("");
 
+  // Card details state & validation
+  const [cardDetails, setCardDetails] = useState({
+    cardNumber: "",
+    cardholderName: "",
+    expiry: "",
+    cvv: "",
+  });
+  const [cardErrors, setCardErrors] = useState({
+    cardNumber: "",
+    cardholderName: "",
+    expiry: "",
+    cvv: "",
+  });
+
+  // Net Banking state
+  const [selectedBank, setSelectedBank] = useState("hdfc");
+
   const handleAddressSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setStep(2);
@@ -106,6 +142,36 @@ export default function CheckoutPage() {
     }
     setUpiError("");
 
+    if (paymentMethod === "card") {
+      const rawNum = cardDetails.cardNumber.replace(/\s/g, "");
+      const rawExp = cardDetails.expiry.replace(/\D/g, "");
+      const newErrors = {
+        cardNumber: rawNum.length < 15 ? "Please enter a valid 16-digit card number." : "",
+        cardholderName: !cardDetails.cardholderName.trim() ? "Please enter the cardholder name." : "",
+        expiry: rawExp.length < 4 ? "Please enter a valid expiry date (MM/YY)." : "",
+        cvv: cardDetails.cvv.length < 3 ? "Please enter a valid CVV." : "",
+      };
+
+      if (newErrors.cardNumber || newErrors.cardholderName || newErrors.expiry || newErrors.cvv) {
+        setCardErrors(newErrors);
+        showToast("Please complete the required card details.", "info");
+        const firstErrField = newErrors.cardholderName
+          ? "cardholderName"
+          : newErrors.cardNumber
+          ? "cardNumber"
+          : newErrors.expiry
+          ? "cardExpiry"
+          : "cardCvv";
+        const input = document.getElementById(firstErrField);
+        if (input) input.focus();
+        return;
+      }
+      setCardErrors({ cardNumber: "", cardholderName: "", expiry: "", cvv: "" });
+    }
+
+    const allBanks = [...POPULAR_BANKS, ...OTHER_BANKS];
+    const bankName = allBanks.find((b) => b.id === selectedBank)?.name || "Bank";
+
     const newOrder = placeOrder({
       items: cart.map((i) => ({
         id: i.product.id,
@@ -121,9 +187,9 @@ export default function CheckoutPage() {
         paymentMethod === "upi"
           ? "UPI (Google Pay / PhonePe)"
           : paymentMethod === "card"
-          ? "Credit / Debit Card"
+          ? `Credit / Debit Card (ending in ${cardDetails.cardNumber.replace(/\s/g, "").slice(-4) || "XXXX"})`
           : paymentMethod === "netbanking"
-          ? "Net Banking"
+          ? `Net Banking (${bankName})`
           : "Cash on Delivery",
       trackingNumber: `EXP${Math.floor(10000000 + Math.random() * 90000000)}`,
     });
@@ -689,46 +755,264 @@ export default function CheckoutPage() {
                     </div>
 
                     {/* Card */}
-                    <label
-                      htmlFor="payment-card"
-                      className={`flex flex-col p-3.5 min-h-[44px] justify-center border rounded-xs cursor-pointer ${
+                    <div
+                      className={`flex flex-col p-3.5 min-h-[44px] border rounded-xs transition-colors ${
                         paymentMethod === "card" ? "border-[#541920] bg-[#FAF7F2] ring-1 ring-[#541920]" : "border-[#E8E2D9]"
                       }`}
                     >
-                      <div className="flex items-center gap-2">
-                        <input
-                          id="payment-card"
-                          name="paymentMethod"
-                          value="card"
-                          type="radio"
-                          checked={paymentMethod === "card"}
-                          onChange={() => setPaymentMethod("card")}
-                          className="text-[#541920]"
-                        />
-                        <span className="font-semibold text-neutral-900">Credit / Debit Card (Visa, MasterCard, RuPay)</span>
-                      </div>
-                    </label>
+                      <label htmlFor="payment-card" className="flex items-center justify-between cursor-pointer">
+                        <div className="flex items-center gap-2">
+                          <input
+                            id="payment-card"
+                            name="paymentMethod"
+                            value="card"
+                            type="radio"
+                            checked={paymentMethod === "card"}
+                            onChange={() => setPaymentMethod("card")}
+                            className="text-[#541920]"
+                          />
+                          <span className="font-semibold text-neutral-900">Credit / Debit Card (Visa, MasterCard, RuPay)</span>
+                        </div>
+                        <CreditCard className="w-4 h-4 text-neutral-500" />
+                      </label>
+                      {paymentMethod === "card" && (
+                        <div className="mt-3 pt-3 border-t border-[#E8E2D9] space-y-3">
+                          <div>
+                            <label htmlFor="cardholderName" className="block text-neutral-700 font-medium mb-1">
+                              Cardholder Name *
+                            </label>
+                            <input
+                              id="cardholderName"
+                              name="cardholderName"
+                              type="text"
+                              autoComplete="cc-name"
+                              placeholder="e.g. Radhika Sharma"
+                              value={cardDetails.cardholderName}
+                              onChange={(e) => {
+                                setCardDetails({ ...cardDetails, cardholderName: e.target.value });
+                                if (cardErrors.cardholderName && e.target.value.trim()) {
+                                  setCardErrors((prev) => ({ ...prev, cardholderName: "" }));
+                                }
+                              }}
+                              className={`w-full min-h-[44px] px-3 py-2.5 bg-white border rounded-xs focus:outline-none transition-colors ${
+                                cardErrors.cardholderName
+                                  ? "border-red-600 focus:border-red-600 ring-1 ring-red-600"
+                                  : "border-[#DCD5C9] focus:border-[#541920]"
+                              }`}
+                              aria-invalid={!!cardErrors.cardholderName}
+                              aria-describedby={cardErrors.cardholderName ? "cardholder-error" : undefined}
+                            />
+                            {cardErrors.cardholderName && (
+                              <p id="cardholder-error" className="text-xs text-red-600 font-medium mt-1">
+                                {cardErrors.cardholderName}
+                              </p>
+                            )}
+                          </div>
+
+                          <div>
+                            <label htmlFor="cardNumber" className="block text-neutral-700 font-medium mb-1">
+                              Card Number *
+                            </label>
+                            <input
+                              id="cardNumber"
+                              name="cardNumber"
+                              type="text"
+                              inputMode="numeric"
+                              pattern="[0-9 ]*"
+                              autoComplete="cc-number"
+                              maxLength={19}
+                              placeholder="4123 4567 8901 2345"
+                              value={cardDetails.cardNumber}
+                              onChange={(e) => {
+                                const digits = e.target.value.replace(/\D/g, "").slice(0, 16);
+                                const formatted = digits.replace(/(\d{4})(?=\d)/g, "$1 ");
+                                setCardDetails({ ...cardDetails, cardNumber: formatted });
+                                if (cardErrors.cardNumber && digits.length >= 15) {
+                                  setCardErrors((prev) => ({ ...prev, cardNumber: "" }));
+                                }
+                              }}
+                              className={`w-full min-h-[44px] px-3 py-2.5 bg-white border rounded-xs focus:outline-none transition-colors ${
+                                cardErrors.cardNumber
+                                  ? "border-red-600 focus:border-red-600 ring-1 ring-red-600"
+                                  : "border-[#DCD5C9] focus:border-[#541920]"
+                              }`}
+                              aria-invalid={!!cardErrors.cardNumber}
+                              aria-describedby={cardErrors.cardNumber ? "cardnumber-error" : undefined}
+                            />
+                            {cardErrors.cardNumber && (
+                              <p id="cardnumber-error" className="text-xs text-red-600 font-medium mt-1">
+                                {cardErrors.cardNumber}
+                              </p>
+                            )}
+                          </div>
+
+                          <div className="grid grid-cols-2 gap-3">
+                            <div>
+                              <label htmlFor="cardExpiry" className="block text-neutral-700 font-medium mb-1">
+                                Expiry (MM/YY) *
+                              </label>
+                              <input
+                                id="cardExpiry"
+                                name="cardExpiry"
+                                type="text"
+                                inputMode="numeric"
+                                pattern="[0-9/]*"
+                                autoComplete="cc-exp"
+                                maxLength={5}
+                                placeholder="MM/YY"
+                                value={cardDetails.expiry}
+                                onChange={(e) => {
+                                  const digits = e.target.value.replace(/\D/g, "").slice(0, 4);
+                                  const formatted = digits.length > 2 ? `${digits.slice(0, 2)}/${digits.slice(2)}` : digits;
+                                  setCardDetails({ ...cardDetails, expiry: formatted });
+                                  if (cardErrors.expiry && digits.length === 4) {
+                                    setCardErrors((prev) => ({ ...prev, expiry: "" }));
+                                  }
+                                }}
+                                className={`w-full min-h-[44px] px-3 py-2.5 bg-white border rounded-xs focus:outline-none transition-colors ${
+                                  cardErrors.expiry
+                                    ? "border-red-600 focus:border-red-600 ring-1 ring-red-600"
+                                    : "border-[#DCD5C9] focus:border-[#541920]"
+                                }`}
+                                aria-invalid={!!cardErrors.expiry}
+                                aria-describedby={cardErrors.expiry ? "expiry-error" : undefined}
+                              />
+                              {cardErrors.expiry && (
+                                <p id="expiry-error" className="text-xs text-red-600 font-medium mt-1">
+                                  {cardErrors.expiry}
+                                </p>
+                              )}
+                            </div>
+                            <div>
+                              <label htmlFor="cardCvv" className="block text-neutral-700 font-medium mb-1">
+                                CVV *
+                              </label>
+                              <input
+                                id="cardCvv"
+                                name="cardCvv"
+                                type="password"
+                                inputMode="numeric"
+                                pattern="[0-9]*"
+                                autoComplete="cc-csc"
+                                maxLength={4}
+                                placeholder="•••"
+                                value={cardDetails.cvv}
+                                onChange={(e) => {
+                                  const digits = e.target.value.replace(/\D/g, "").slice(0, 4);
+                                  setCardDetails({ ...cardDetails, cvv: digits });
+                                  if (cardErrors.cvv && digits.length >= 3) {
+                                    setCardErrors((prev) => ({ ...prev, cvv: "" }));
+                                  }
+                                }}
+                                className={`w-full min-h-[44px] px-3 py-2.5 bg-white border rounded-xs focus:outline-none transition-colors ${
+                                  cardErrors.cvv
+                                    ? "border-red-600 focus:border-red-600 ring-1 ring-red-600"
+                                    : "border-[#DCD5C9] focus:border-[#541920]"
+                                }`}
+                                aria-invalid={!!cardErrors.cvv}
+                                aria-describedby={cardErrors.cvv ? "cvv-error" : undefined}
+                              />
+                              {cardErrors.cvv && (
+                                <p id="cvv-error" className="text-xs text-red-600 font-medium mt-1">
+                                  {cardErrors.cvv}
+                                </p>
+                              )}
+                            </div>
+                          </div>
+
+                          <div className="flex items-center gap-2 pt-1 text-[11px] text-neutral-600">
+                            <ShieldCheck className="w-4 h-4 text-[#15803D] shrink-0" />
+                            <span>128-bit SSL encrypted. Supports Visa, MasterCard, RuPay &amp; Maestro.</span>
+                          </div>
+                        </div>
+                      )}
+                    </div>
 
                     {/* Netbanking */}
-                    <label
-                      htmlFor="payment-netbanking"
-                      className={`flex flex-col p-3.5 min-h-[44px] justify-center border rounded-xs cursor-pointer ${
+                    <div
+                      className={`flex flex-col p-3.5 min-h-[44px] border rounded-xs transition-colors ${
                         paymentMethod === "netbanking" ? "border-[#541920] bg-[#FAF7F2] ring-1 ring-[#541920]" : "border-[#E8E2D9]"
                       }`}
                     >
-                      <div className="flex items-center gap-2">
-                        <input
-                          id="payment-netbanking"
-                          name="paymentMethod"
-                          value="netbanking"
-                          type="radio"
-                          checked={paymentMethod === "netbanking"}
-                          onChange={() => setPaymentMethod("netbanking")}
-                          className="text-[#541920]"
-                        />
-                        <span className="font-semibold text-neutral-900">Net Banking (HDFC, ICICI, SBI, Axis)</span>
-                      </div>
-                    </label>
+                      <label htmlFor="payment-netbanking" className="flex items-center justify-between cursor-pointer">
+                        <div className="flex items-center gap-2">
+                          <input
+                            id="payment-netbanking"
+                            name="paymentMethod"
+                            value="netbanking"
+                            type="radio"
+                            checked={paymentMethod === "netbanking"}
+                            onChange={() => setPaymentMethod("netbanking")}
+                            className="text-[#541920]"
+                          />
+                          <span className="font-semibold text-neutral-900">Net Banking (All Indian Banks)</span>
+                        </div>
+                        <Building2 className="w-4 h-4 text-neutral-500" />
+                      </label>
+                      {paymentMethod === "netbanking" && (
+                        <div className="mt-3 pt-3 border-t border-[#E8E2D9] space-y-3">
+                          <div>
+                            <span className="block text-neutral-700 font-medium mb-1.5">
+                              Popular Banks:
+                            </span>
+                            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                              {POPULAR_BANKS.map((b) => {
+                                const isSelected = selectedBank === b.id;
+                                return (
+                                  <button
+                                    key={b.id}
+                                    type="button"
+                                    onClick={() => setSelectedBank(b.id)}
+                                    className={`min-h-[44px] px-3 py-2 text-xs rounded-xs border text-center transition-colors cursor-pointer ${
+                                      isSelected
+                                        ? "bg-[#541920] text-white border-[#541920] font-semibold"
+                                        : "bg-white text-neutral-800 border-[#DCD5C9] hover:border-[#541920]"
+                                    }`}
+                                  >
+                                    {b.name}
+                                  </button>
+                                );
+                              })}
+                            </div>
+                          </div>
+
+                          <div>
+                            <label htmlFor="other-bank-select" className="block text-neutral-700 font-medium mb-1">
+                              Or Choose Other Bank:
+                            </label>
+                            <select
+                              id="other-bank-select"
+                              name="otherBank"
+                              value={selectedBank}
+                              onChange={(e) => setSelectedBank(e.target.value)}
+                              className="w-full min-h-[44px] px-3 py-2.5 bg-white border border-[#DCD5C9] rounded-xs text-xs text-neutral-800 focus:outline-none focus:border-[#541920]"
+                            >
+                              <optgroup label="Popular Banks">
+                                {POPULAR_BANKS.map((b) => (
+                                  <option key={b.id} value={b.id}>
+                                    {b.name}
+                                  </option>
+                                ))}
+                              </optgroup>
+                              <optgroup label="Other Banks">
+                                {OTHER_BANKS.map((b) => (
+                                  <option key={b.id} value={b.id}>
+                                    {b.name}
+                                  </option>
+                                ))}
+                              </optgroup>
+                            </select>
+                          </div>
+
+                          <div className="p-3 bg-white border border-[#E8E2D9] rounded-xs flex items-start gap-2.5 text-neutral-700">
+                            <Lock className="w-4 h-4 text-[#541920] shrink-0 mt-0.5" />
+                            <p className="text-[11px] leading-relaxed">
+                              <strong>Secure Gateway Redirect:</strong> Clicking &ldquo;Place Order&rdquo; will securely redirect you to your bank&rsquo;s official portal to authorize payment via NetBanking or OTP credentials.
+                            </p>
+                          </div>
+                        </div>
+                      )}
+                    </div>
 
                     {/* Cash on Delivery */}
                     <label

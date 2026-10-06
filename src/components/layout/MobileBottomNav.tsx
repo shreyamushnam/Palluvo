@@ -28,8 +28,16 @@ export const MobileBottomNav: React.FC = () => {
           return (
             <button
               key={item.label}
-              onClick={() => setIsCartOpen(true)}
-              className="min-w-[44px] min-h-[44px] flex flex-col items-center justify-center p-1 relative text-[#5E5A54] hover:text-[#541920]"
+              onClick={() => {
+                if (pathname === "/cart") {
+                  window.scrollTo({ top: 0, behavior: "smooth" });
+                } else {
+                  setIsCartOpen(true);
+                }
+              }}
+              className={`min-w-[44px] min-h-[44px] flex flex-col items-center justify-center p-1 relative transition-colors ${
+                isActive ? "text-[#541920] font-semibold" : "text-[#5E5A54] hover:text-[#541920]"
+              }`}
             >
               <div className="relative">
                 <Icon size={20} />
