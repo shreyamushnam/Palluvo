@@ -119,8 +119,10 @@ export const SearchOverlay: React.FC = () => {
             />
             {query && (
               <button
+                type="button"
                 onClick={() => setQuery("")}
-                className="text-xs text-neutral-500 hover:text-black uppercase px-2 py-1 font-medium"
+                className="min-h-[44px] px-3 inline-flex items-center justify-center text-xs text-neutral-600 hover:text-black uppercase font-semibold cursor-pointer rounded-xs transition-colors shrink-0 focus-visible:ring-2 focus-visible:ring-[#541920] focus-visible:outline-none"
+                aria-label="Clear search query"
               >
                 Clear
               </button>

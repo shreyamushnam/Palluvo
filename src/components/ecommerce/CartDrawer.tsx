@@ -283,7 +283,7 @@ export const CartDrawer: React.FC = () => {
                 <Link
                   href="/checkout"
                   onClick={() => setIsCartOpen(false)}
-                  className="w-full flex items-center justify-center gap-2 py-3 bg-[#541920] text-white text-xs uppercase tracking-widest font-medium hover:bg-[#3D1217] transition-all rounded-sm shadow-sm"
+                  className="w-full min-h-[44px] flex items-center justify-center gap-2 py-3 bg-[#541920] text-white text-xs uppercase tracking-widest font-semibold hover:bg-[#3D1217] transition-all rounded-sm shadow-sm cursor-pointer"
                 >
                   <span>Proceed to Checkout</span>
                   <ArrowRight className="w-4 h-4" />
@@ -292,13 +292,13 @@ export const CartDrawer: React.FC = () => {
                 <Link
                   href="/cart"
                   onClick={() => setIsCartOpen(false)}
-                  className="w-full block text-center py-2 text-xs text-neutral-600 hover:text-black uppercase tracking-wider underline font-sans"
+                  className="w-full min-h-[44px] flex items-center justify-center text-center py-2 text-xs text-neutral-600 hover:text-black uppercase tracking-wider underline font-sans"
                 >
                   View Full Cart Details
                 </Link>
               </div>
 
-              <div className="flex items-center justify-center gap-1.5 text-[11px] text-neutral-500 pt-1">
+              <div className="flex items-center justify-center gap-1.5 text-[11px] text-neutral-700 font-medium pt-1">
                 <ShieldCheck className="w-3.5 h-3.5 text-[#15803D]" />
                 <span>100% Authentic Handcrafted Sarees • Easy 7-Day Returns</span>
               </div>
