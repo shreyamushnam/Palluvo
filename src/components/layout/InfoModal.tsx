@@ -78,7 +78,13 @@ export const InfoModal: React.FC<InfoModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 overflow-y-auto" role="dialog" aria-modal="true">
+    <div
+      className="fixed inset-0 z-50 overflow-y-auto"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="concierge-modal-title"
+      aria-label="Customer Concierge and Heritage"
+    >
       {/* Backdrop */}
       <div
         className="fixed inset-0 bg-black/70 backdrop-blur-xs transition-opacity"
@@ -94,14 +100,14 @@ export const InfoModal: React.FC<InfoModalProps> = ({
               <span className="font-serif-display text-xl font-medium tracking-[0.16em] uppercase text-[#541920]">
                 PALLUVO
               </span>
-              <span className="text-xs text-neutral-500">|</span>
-              <span className="text-xs uppercase tracking-wider text-neutral-600 font-medium">
+              <span className="text-xs text-neutral-600">|</span>
+              <h2 id="concierge-modal-title" className="text-xs uppercase tracking-wider text-neutral-600 font-medium">
                 Customer Concierge & Heritage
-              </span>
+              </h2>
             </div>
             <button
               onClick={onClose}
-              className="p-1.5 text-neutral-500 hover:text-black hover:bg-neutral-200/60 rounded-full transition-colors"
+              className="w-11 h-11 min-w-[44px] min-h-[44px] inline-flex items-center justify-center text-neutral-500 hover:text-black hover:bg-neutral-200/60 rounded-full transition-colors cursor-pointer"
               aria-label="Close modal"
             >
               <X className="w-5 h-5" />
@@ -125,7 +131,7 @@ export const InfoModal: React.FC<InfoModalProps> = ({
                   <button
                     key={tab.id}
                     onClick={() => setActiveTab(tab.id as InfoModalTab)}
-                    className={`w-full flex items-center gap-3 px-3.5 py-3 text-xs font-semibold rounded-xs transition-colors text-left ${
+                    className={`w-full flex items-center gap-3 px-3.5 py-3 min-h-[44px] text-xs font-semibold rounded-xs transition-colors text-left cursor-pointer ${
                       isActive
                         ? "bg-[#541920] text-white shadow-xs"
                         : "text-neutral-700 hover:bg-[#FAF7F2]"

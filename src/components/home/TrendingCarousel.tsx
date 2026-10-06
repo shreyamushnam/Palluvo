@@ -29,14 +29,14 @@ export const TrendingCarousel: React.FC = () => {
           <div className="flex items-center gap-2">
             <button
               onClick={() => scroll("left")}
-              className="p-2 rounded-full border border-[#DCD5C9] bg-white hover:bg-[#F4EFE6] text-neutral-800 transition-colors shadow-2xs"
+              className="w-11 h-11 min-w-[44px] min-h-[44px] inline-flex items-center justify-center rounded-full border border-[#DCD5C9] bg-white hover:bg-[#F4EFE6] text-neutral-800 transition-colors shadow-2xs cursor-pointer focus-visible:ring-2 focus-visible:ring-[#541920] focus-visible:outline-none"
               aria-label="Scroll left"
             >
               <ChevronLeft className="w-4 h-4" />
             </button>
             <button
               onClick={() => scroll("right")}
-              className="p-2 rounded-full border border-[#DCD5C9] bg-white hover:bg-[#F4EFE6] text-neutral-800 transition-colors shadow-2xs"
+              className="w-11 h-11 min-w-[44px] min-h-[44px] inline-flex items-center justify-center rounded-full border border-[#DCD5C9] bg-white hover:bg-[#F4EFE6] text-neutral-800 transition-colors shadow-2xs cursor-pointer focus-visible:ring-2 focus-visible:ring-[#541920] focus-visible:outline-none"
               aria-label="Scroll right"
             >
               <ChevronRight className="w-4 h-4" />

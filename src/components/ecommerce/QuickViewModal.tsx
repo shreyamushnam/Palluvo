@@ -37,7 +37,13 @@ const QuickViewModalContent: React.FC<QuickViewModalContentProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 overflow-y-auto" role="dialog" aria-modal="true">
+    <div
+      className="fixed inset-0 z-50 overflow-y-auto"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="quickview-title"
+      aria-label={`Quick view ${product.name}`}
+    >
       {/* Backdrop */}
       <div
         className="fixed inset-0 bg-black/70 backdrop-blur-xs transition-opacity"
@@ -49,7 +55,7 @@ const QuickViewModalContent: React.FC<QuickViewModalContentProps> = ({
           {/* Close button */}
           <button
             onClick={onClose}
-            className="absolute top-4 right-4 z-10 p-2 bg-white/80 hover:bg-white text-neutral-600 hover:text-black rounded-full shadow-sm transition-colors"
+            className="absolute top-4 right-4 z-10 w-11 h-11 min-w-[44px] min-h-[44px] inline-flex items-center justify-center bg-white/80 hover:bg-white text-neutral-600 hover:text-black rounded-full shadow-sm transition-colors cursor-pointer"
             aria-label="Close modal"
           >
             <X className="w-5 h-5" />
@@ -110,7 +116,7 @@ const QuickViewModalContent: React.FC<QuickViewModalContentProps> = ({
                     <span className="text-xs text-neutral-600">{product.fabric}</span>
                   </div>
 
-                  <h3 className="text-xl sm:text-2xl font-serif font-medium text-neutral-900 mt-1">
+                  <h3 id="quickview-title" className="text-xl sm:text-2xl font-serif font-medium text-neutral-900 mt-1">
                     {product.name}
                   </h3>
 

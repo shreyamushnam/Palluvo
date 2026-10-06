@@ -92,7 +92,7 @@ function MobileNavLinksList({ onLinkClick }: { onLinkClick?: () => void }) {
             key={link.label}
             href={link.href}
             onClick={onLinkClick}
-            className={`font-serif-display text-2xl py-1 border-b border-[#1C1A18]/5 transition-colors ${
+            className={`font-serif-display text-2xl py-1 min-h-[44px] flex items-center border-b border-[#1C1A18]/5 transition-colors ${
               isActive ? "text-[#541920] font-bold" : "text-[#1C1A18] hover:text-[#541920]"
             }`}
           >
@@ -219,14 +219,19 @@ export const Navbar: React.FC = () => {
 
       {/* Mobile Drawer Navigation */}
       {mobileMenuOpen && (
-        <div className="fixed inset-0 z-50 flex flex-col bg-[#FAF7F2] text-[#1C1A18] animate-in fade-in duration-200">
+        <div
+          className="fixed inset-0 z-50 flex flex-col bg-[#FAF7F2] text-[#1C1A18] animate-in fade-in duration-200"
+          role="dialog"
+          aria-modal="true"
+          aria-label="Mobile Navigation Menu"
+        >
           <div className="p-4 flex items-center justify-between border-b border-[#1C1A18]/10">
             <span className="font-serif-display text-2xl tracking-[0.2em] uppercase font-medium">
               PALLUVO
             </span>
             <button
               onClick={() => setMobileMenuOpen(false)}
-              className="p-2 text-[#1C1A18] hover:text-[#541920]"
+              className="w-11 h-11 min-w-[44px] min-h-[44px] inline-flex items-center justify-center text-[#1C1A18] hover:text-[#541920] rounded-full transition-colors cursor-pointer focus-visible:ring-2 focus-visible:ring-[#541920] focus-visible:outline-none"
               aria-label="Close menu"
             >
               <X size={24} />
@@ -247,21 +252,21 @@ export const Navbar: React.FC = () => {
               <Link
                 href="/account"
                 onClick={() => setMobileMenuOpen(false)}
-                className="flex items-center gap-3 text-sm py-2 text-[#1C1A18]"
+                className="min-h-[44px] flex items-center gap-3 text-sm py-2 text-[#1C1A18] hover:text-[#541920] transition-colors"
               >
                 <User size={18} /> My Account & Orders
               </Link>
               <Link
                 href="/wishlist"
                 onClick={() => setMobileMenuOpen(false)}
-                className="flex items-center gap-3 text-sm py-2 text-[#1C1A18]"
+                className="min-h-[44px] flex items-center gap-3 text-sm py-2 text-[#1C1A18] hover:text-[#541920] transition-colors"
               >
                 <Heart size={18} /> Saved Wishlist ({wishlistCount})
               </Link>
               <Link
                 href="/cart"
                 onClick={() => setMobileMenuOpen(false)}
-                className="flex items-center gap-3 text-sm py-2 text-[#1C1A18]"
+                className="min-h-[44px] flex items-center gap-3 text-sm py-2 text-[#1C1A18] hover:text-[#541920] transition-colors"
               >
                 <ShoppingBag size={18} /> View Cart ({cartCount})
               </Link>

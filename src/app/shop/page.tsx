@@ -565,7 +565,13 @@ function ShopContent() {
 
       {/* Mobile Filters Slide-over Sheet */}
       {isMobileFilterOpen && (
-        <div className="fixed inset-0 z-50 overflow-hidden lg:hidden" role="dialog" aria-modal="true">
+        <div
+          className="fixed inset-0 z-50 overflow-hidden lg:hidden"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="mobile-filters-title"
+          aria-label="Filter products"
+        >
           <div
             className="fixed inset-0 bg-black/60 transition-opacity"
             onClick={() => setIsMobileFilterOpen(false)}
@@ -576,12 +582,12 @@ function ShopContent() {
               
               <div className="p-4 border-b border-[#E8E2D9] flex items-center justify-between bg-[#F4EFE6]">
                 <div>
-                  <h3 className="font-serif text-base font-semibold">
+                  <h3 id="mobile-filters-title" className="font-serif text-base font-semibold">
                     {selectedCategory && selectedCategory.toLowerCase().includes("saree")
                       ? "Filter Sarees"
                       : "Filter Products"}
                   </h3>
-                  <p className="text-[11px] text-neutral-500 mt-0.5">
+                  <p className="text-[11px] text-neutral-600 mt-0.5">
                     Showing {filteredProducts.length} {filteredProducts.length === 1 ? (selectedCategory?.toLowerCase().includes("saree") ? "saree" : "product") : (selectedCategory?.toLowerCase().includes("saree") ? "sarees" : "products")}
                   </p>
                 </div>

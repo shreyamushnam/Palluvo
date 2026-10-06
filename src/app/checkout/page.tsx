@@ -237,7 +237,7 @@ export default function CheckoutPage() {
                         required
                         value={shippingAddress.fullName}
                         onChange={(e) => setShippingAddress({ ...shippingAddress, fullName: e.target.value })}
-                        className="w-full px-3 py-2 border border-[#DCD5C9] rounded-xs focus:outline-none focus:border-[#541920]"
+                        className="w-full min-h-[44px] px-3 py-2.5 border border-[#DCD5C9] rounded-xs focus:outline-none focus:border-[#541920]"
                       />
                     </div>
                     <div>
@@ -252,7 +252,7 @@ export default function CheckoutPage() {
                         required
                         value={shippingAddress.phone}
                         onChange={(e) => setShippingAddress({ ...shippingAddress, phone: e.target.value })}
-                        className="w-full px-3 py-2 border border-[#DCD5C9] rounded-xs focus:outline-none focus:border-[#541920]"
+                        className="w-full min-h-[44px] px-3 py-2.5 border border-[#DCD5C9] rounded-xs focus:outline-none focus:border-[#541920]"
                       />
                     </div>
                   </div>
@@ -269,7 +269,7 @@ export default function CheckoutPage() {
                       required
                       value={shippingAddress.email}
                       onChange={(e) => setShippingAddress({ ...shippingAddress, email: e.target.value })}
-                      className="w-full px-3 py-2 border border-[#DCD5C9] rounded-xs focus:outline-none focus:border-[#541920]"
+                      className="w-full min-h-[44px] px-3 py-2.5 border border-[#DCD5C9] rounded-xs focus:outline-none focus:border-[#541920]"
                     />
                   </div>
 
@@ -285,7 +285,7 @@ export default function CheckoutPage() {
                       required
                       value={shippingAddress.addressLine1}
                       onChange={(e) => setShippingAddress({ ...shippingAddress, addressLine1: e.target.value })}
-                      className="w-full px-3 py-2 border border-[#DCD5C9] rounded-xs focus:outline-none focus:border-[#541920]"
+                      className="w-full min-h-[44px] px-3 py-2.5 border border-[#DCD5C9] rounded-xs focus:outline-none focus:border-[#541920]"
                     />
                   </div>
 
@@ -302,7 +302,7 @@ export default function CheckoutPage() {
                         required
                         value={shippingAddress.city}
                         onChange={(e) => setShippingAddress({ ...shippingAddress, city: e.target.value })}
-                        className="w-full px-3 py-2 border border-[#DCD5C9] rounded-xs focus:outline-none focus:border-[#541920]"
+                        className="w-full min-h-[44px] px-3 py-2.5 border border-[#DCD5C9] rounded-xs focus:outline-none focus:border-[#541920]"
                       />
                     </div>
                     <div>
@@ -317,7 +317,7 @@ export default function CheckoutPage() {
                         required
                         value={shippingAddress.state}
                         onChange={(e) => setShippingAddress({ ...shippingAddress, state: e.target.value })}
-                        className="w-full px-3 py-2 border border-[#DCD5C9] rounded-xs focus:outline-none focus:border-[#541920]"
+                        className="w-full min-h-[44px] px-3 py-2.5 border border-[#DCD5C9] rounded-xs focus:outline-none focus:border-[#541920]"
                       />
                     </div>
                     <div>
@@ -333,7 +333,7 @@ export default function CheckoutPage() {
                         maxLength={6}
                         value={shippingAddress.pincode}
                         onChange={(e) => setShippingAddress({ ...shippingAddress, pincode: e.target.value })}
-                        className="w-full px-3 py-2 border border-[#DCD5C9] rounded-xs focus:outline-none focus:border-[#541920]"
+                        className="w-full min-h-[44px] px-3 py-2.5 border border-[#DCD5C9] rounded-xs focus:outline-none focus:border-[#541920]"
                       />
                     </div>
                   </div>
@@ -341,7 +341,7 @@ export default function CheckoutPage() {
                   <div className="pt-2">
                     <button
                       type="submit"
-                      className="w-full py-3 bg-[#541920] hover:bg-[#3D1217] text-white uppercase tracking-widest font-semibold rounded-xs shadow-xs"
+                      className="w-full min-h-[44px] py-3 bg-[#541920] hover:bg-[#3D1217] text-white uppercase tracking-widest font-semibold rounded-xs shadow-xs cursor-pointer focus-visible:ring-2 focus-visible:ring-[#541920] focus-visible:outline-none"
                     >
                       Deliver to This Address →
                     </button>
@@ -382,7 +382,7 @@ export default function CheckoutPage() {
                 <form onSubmit={handleDeliverySubmit} className="p-6 space-y-3 text-xs">
                   <label
                     htmlFor="delivery-standard"
-                    className={`flex items-center justify-between p-3.5 border rounded-xs cursor-pointer ${
+                    className={`flex items-center justify-between p-3.5 min-h-[44px] border rounded-xs cursor-pointer ${
                       deliveryMethod === "standard"
                         ? "border-[#541920] bg-[#FAF7F2] ring-1 ring-[#541920]"
                         : "border-[#E8E2D9]"
@@ -400,7 +400,7 @@ export default function CheckoutPage() {
                       />
                       <div>
                         <p className="font-semibold text-neutral-900">Standard Insured Delivery (3-5 Days)</p>
-                        <p className="text-[11px] text-neutral-500">Tamper-proof rigid box with Silk Mark Certificate</p>
+                        <p className="text-[11px] text-neutral-600">Tamper-proof rigid box with Silk Mark Certificate</p>
                       </div>
                     </div>
                     <span className="font-bold text-[#15803D]">FREE</span>
@@ -408,7 +408,7 @@ export default function CheckoutPage() {
 
                   <label
                     htmlFor="delivery-express"
-                    className={`flex items-center justify-between p-3.5 border rounded-xs cursor-pointer ${
+                    className={`flex items-center justify-between p-3.5 min-h-[44px] border rounded-xs cursor-pointer ${
                       deliveryMethod === "express"
                         ? "border-[#541920] bg-[#FAF7F2] ring-1 ring-[#541920]"
                         : "border-[#E8E2D9]"
@@ -426,7 +426,7 @@ export default function CheckoutPage() {
                       />
                       <div>
                         <p className="font-semibold text-neutral-900">Priority Air Express (1-2 Days)</p>
-                        <p className="text-[11px] text-neutral-500">Next-flight priority courier with real-time SMS tracking</p>
+                        <p className="text-[11px] text-neutral-600">Next-flight priority courier with real-time SMS tracking</p>
                       </div>
                     </div>
                     <span className="font-bold text-neutral-900">₹299</span>
@@ -435,7 +435,7 @@ export default function CheckoutPage() {
                   <div className="pt-2">
                     <button
                       type="submit"
-                      className="w-full py-3 bg-[#541920] hover:bg-[#3D1217] text-white uppercase tracking-widest font-semibold rounded-xs shadow-xs"
+                      className="w-full min-h-[44px] py-3 bg-[#541920] hover:bg-[#3D1217] text-white uppercase tracking-widest font-semibold rounded-xs shadow-xs cursor-pointer focus-visible:ring-2 focus-visible:ring-[#541920] focus-visible:outline-none"
                     >
                       Proceed to Payment →
                     </button>
@@ -465,7 +465,7 @@ export default function CheckoutPage() {
                     {/* UPI */}
                     <label
                       htmlFor="payment-upi"
-                      className={`flex flex-col p-3.5 border rounded-xs cursor-pointer ${
+                      className={`flex flex-col p-3.5 min-h-[44px] border rounded-xs cursor-pointer ${
                         paymentMethod === "upi" ? "border-[#541920] bg-[#FAF7F2] ring-1 ring-[#541920]" : "border-[#E8E2D9]"
                       }`}
                     >
@@ -496,7 +496,7 @@ export default function CheckoutPage() {
                             placeholder="Enter UPI ID (e.g. mobile@upi)"
                             value={upiId}
                             onChange={(e) => setUpiId(e.target.value)}
-                            className="w-full px-3 py-2 bg-white border border-[#DCD5C9] rounded-xs"
+                            className="w-full min-h-[44px] px-3 py-2.5 bg-white border border-[#DCD5C9] rounded-xs focus:outline-none focus:border-[#541920]"
                           />
                         </div>
                       )}
@@ -505,7 +505,7 @@ export default function CheckoutPage() {
                     {/* Card */}
                     <label
                       htmlFor="payment-card"
-                      className={`flex flex-col p-3.5 border rounded-xs cursor-pointer ${
+                      className={`flex flex-col p-3.5 min-h-[44px] justify-center border rounded-xs cursor-pointer ${
                         paymentMethod === "card" ? "border-[#541920] bg-[#FAF7F2] ring-1 ring-[#541920]" : "border-[#E8E2D9]"
                       }`}
                     >
@@ -526,7 +526,7 @@ export default function CheckoutPage() {
                     {/* Netbanking */}
                     <label
                       htmlFor="payment-netbanking"
-                      className={`flex flex-col p-3.5 border rounded-xs cursor-pointer ${
+                      className={`flex flex-col p-3.5 min-h-[44px] justify-center border rounded-xs cursor-pointer ${
                         paymentMethod === "netbanking" ? "border-[#541920] bg-[#FAF7F2] ring-1 ring-[#541920]" : "border-[#E8E2D9]"
                       }`}
                     >
@@ -547,7 +547,7 @@ export default function CheckoutPage() {
                     {/* Cash on Delivery */}
                     <label
                       htmlFor="payment-cod"
-                      className={`flex flex-col p-3.5 border rounded-xs cursor-pointer ${
+                      className={`flex flex-col p-3.5 min-h-[44px] justify-center border rounded-xs cursor-pointer ${
                         paymentMethod === "cod" ? "border-[#541920] bg-[#FAF7F2] ring-1 ring-[#541920]" : "border-[#E8E2D9]"
                       }`}
                     >
@@ -564,7 +564,7 @@ export default function CheckoutPage() {
                           />
                           <span className="font-semibold text-neutral-900">Cash on Delivery (COD)</span>
                         </div>
-                        <span className="text-[10px] text-neutral-500">Pay when delivered</span>
+                        <span className="text-[10px] text-neutral-600">Pay when delivered</span>
                       </div>
                     </label>
                   </div>
@@ -572,7 +572,7 @@ export default function CheckoutPage() {
                   <div className="pt-4">
                     <button
                       onClick={handlePlaceOrder}
-                      className="w-full py-3.5 bg-[#541920] hover:bg-[#3D1217] text-white uppercase tracking-widest font-semibold rounded-xs shadow-md transition-all flex items-center justify-center gap-2 text-xs"
+                      className="w-full min-h-[44px] py-3.5 bg-[#541920] hover:bg-[#3D1217] text-white uppercase tracking-widest font-semibold rounded-xs shadow-md transition-all flex items-center justify-center gap-2 text-xs cursor-pointer focus-visible:ring-2 focus-visible:ring-[#541920] focus-visible:outline-none"
                     >
                       <ShieldCheck className="w-4 h-4 text-green-300" />
                       <span>Place Order ({formatPrice(effectiveTotal)})</span>
