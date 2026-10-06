@@ -25,13 +25,15 @@ const QuickViewModalContent: React.FC<QuickViewModalContentProps> = ({
 
   const [activeImageIdx, setActiveImageIdx] = useState(0);
   const [selectedColor, setSelectedColor] = useState<string>(product.colors[0]?.name || "");
-  const [blouseOption, setBlouseOption] = useState<string>(product.blouseOptions?.[0] || "Unstitched (Included)");
+  const [blouseOption, setBlouseOption] = useState<string>(
+    product.hasBlousePiece ? (product.blouseOptions?.[0] || "Unstitched (Included)") : ""
+  );
   const [quantity, setQuantity] = useState(1);
 
   const isFav = isInWishlist(product.id);
 
   const handleAddToCart = () => {
-    addToCart(product, quantity, selectedColor, blouseOption);
+    addToCart(product, quantity, selectedColor, product.hasBlousePiece ? blouseOption : "");
     onClose();
     setIsCartOpen(true);
   };
@@ -179,28 +181,30 @@ const QuickViewModalContent: React.FC<QuickViewModalContentProps> = ({
                 )}
 
                 {/* Blouse Option */}
-                <div>
-                  <label className="block text-xs font-semibold uppercase tracking-wider text-neutral-700 mb-2">
-                    Blouse Option:
-                  </label>
-                  <div className="grid grid-cols-2 gap-2">
-                    {(product.blouseOptions || ["Unstitched (Included)", "Custom Stitched (+₹1,499)"]).map((opt: string) => (
-                      <button
-                        key={opt}
-                        type="button"
-                        onClick={() => setBlouseOption(opt)}
-                        className={`min-h-[44px] p-2.5 text-xs text-left rounded-xs border transition-colors flex items-center justify-between cursor-pointer focus-visible:ring-2 focus-visible:ring-[#541920] focus-visible:outline-none ${
-                          blouseOption === opt
-                            ? "border-[#541920] bg-white ring-1 ring-[#541920] text-neutral-900"
-                            : "border-[#DCD5C9] bg-white/70 text-neutral-600 hover:border-neutral-400"
-                        }`}
-                      >
-                        <span className="font-medium text-[11px]">{opt}</span>
-                        {blouseOption === opt && <Check className="w-3.5 h-3.5 text-[#541920]" />}
-                      </button>
-                    ))}
+                {product.hasBlousePiece && (
+                  <div>
+                    <label className="block text-xs font-semibold uppercase tracking-wider text-neutral-700 mb-2">
+                      Blouse Option:
+                    </label>
+                    <div className="grid grid-cols-2 gap-2">
+                      {(product.blouseOptions || ["Unstitched (Included)", "Custom Stitched (+₹1,499)"]).map((opt: string) => (
+                        <button
+                          key={opt}
+                          type="button"
+                          onClick={() => setBlouseOption(opt)}
+                          className={`min-h-[44px] p-2.5 text-xs text-left rounded-xs border transition-colors flex items-center justify-between cursor-pointer focus-visible:ring-2 focus-visible:ring-[#541920] focus-visible:outline-none ${
+                            blouseOption === opt
+                              ? "border-[#541920] bg-white ring-1 ring-[#541920] text-neutral-900"
+                              : "border-[#DCD5C9] bg-white/70 text-neutral-600 hover:border-neutral-400"
+                          }`}
+                        >
+                          <span className="font-medium text-[11px]">{opt}</span>
+                          {blouseOption === opt && <Check className="w-3.5 h-3.5 text-[#541920]" />}
+                        </button>
+                      ))}
+                    </div>
                   </div>
-                </div>
+                )}
 
                 {/* Quantity */}
                 <div>

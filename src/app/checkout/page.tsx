@@ -16,6 +16,7 @@ export default function CheckoutPage() {
     finalTotal,
     formatPrice,
     placeOrder,
+    showToast,
   } = useStore();
 
   const [step, setStep] = useState<1 | 2 | 3>(1);
@@ -56,6 +57,7 @@ export default function CheckoutPage() {
   const [deliveryMethod, setDeliveryMethod] = useState<"standard" | "express">("standard");
   const [paymentMethod, setPaymentMethod] = useState<"upi" | "card" | "netbanking" | "cod">("upi");
   const [upiId, setUpiId] = useState("radhika@okhdfcbank");
+  const [upiError, setUpiError] = useState("");
 
   const handleAddressSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -68,6 +70,17 @@ export default function CheckoutPage() {
   };
 
   const handlePlaceOrder = () => {
+    if (paymentMethod === "upi" && !upiId.trim()) {
+      setUpiError("Please enter a valid UPI ID (e.g. mobile@upi).");
+      showToast("Please enter a valid UPI ID before placing your order.", "info");
+      const input = document.getElementById("upiId");
+      if (input) {
+        input.focus();
+      }
+      return;
+    }
+    setUpiError("");
+
     const newOrder = placeOrder({
       items: cart.map((i) => ({
         id: i.product.id,
@@ -544,9 +557,25 @@ export default function CheckoutPage() {
                             type="text"
                             placeholder="Enter UPI ID (e.g. mobile@upi)"
                             value={upiId}
-                            onChange={(e) => setUpiId(e.target.value)}
-                            className="w-full min-h-[44px] px-3 py-2.5 bg-white border border-[#DCD5C9] rounded-xs focus:outline-none focus:border-[#541920]"
+                            onChange={(e) => {
+                              setUpiId(e.target.value);
+                              if (upiError && e.target.value.trim()) {
+                                setUpiError("");
+                              }
+                            }}
+                            className={`w-full min-h-[44px] px-3 py-2.5 bg-white border rounded-xs focus:outline-none transition-colors ${
+                              upiError
+                                ? "border-red-600 focus:border-red-600 ring-1 ring-red-600"
+                                : "border-[#DCD5C9] focus:border-[#541920]"
+                            }`}
+                            aria-invalid={!!upiError}
+                            aria-describedby={upiError ? "upi-error-msg" : undefined}
                           />
+                          {upiError && (
+                            <p id="upi-error-msg" className="text-xs text-red-600 font-medium mt-1">
+                              {upiError}
+                            </p>
+                          )}
                         </div>
                       )}
                     </div>
