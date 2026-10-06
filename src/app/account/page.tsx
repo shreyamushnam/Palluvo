@@ -74,7 +74,7 @@ export default function AccountPage() {
     setIsAddressModalOpen(true);
   };
 
-  const handleDeleteAddress = (id: string, name?: string) => {
+  const handleDeleteAddress = (id: string) => {
     deleteAddress(id);
   };
 
@@ -369,7 +369,7 @@ export default function AccountPage() {
                           <span className="text-neutral-300 select-none">•</span>
                           <button
                             type="button"
-                            onClick={() => handleDeleteAddress(addr.id, addr.name)}
+                            onClick={() => handleDeleteAddress(addr.id)}
                             className="min-h-[44px] px-2.5 inline-flex items-center gap-1.5 text-neutral-500 hover:text-red-600 hover:bg-red-50 rounded-xs transition-colors cursor-pointer focus-visible:ring-2 focus-visible:ring-[#541920] focus-visible:outline-none"
                             aria-label={`Delete recipient address for ${addr.name}`}
                           >
@@ -535,9 +535,15 @@ export default function AccountPage() {
                     id="addr-phone"
                     name="phone"
                     type="tel"
+                    inputMode="numeric"
+                    pattern="[0-9]*"
+                    maxLength={10}
                     required
                     value={addressForm.phone}
-                    onChange={(e) => setAddressForm({ ...addressForm, phone: e.target.value })}
+                    onChange={(e) => {
+                      const digitsOnly = e.target.value.replace(/\D/g, "").slice(0, 10);
+                      setAddressForm({ ...addressForm, phone: digitsOnly });
+                    }}
                     className="w-full min-h-[44px] px-3.5 py-2.5 bg-white border border-[#DCD5C9] rounded-xs focus:outline-none focus:border-[#541920]"
                   />
                 </div>
@@ -617,7 +623,10 @@ export default function AccountPage() {
                     required
                     maxLength={6}
                     value={addressForm.pincode}
-                    onChange={(e) => setAddressForm({ ...addressForm, pincode: e.target.value })}
+                    onChange={(e) => {
+                      const digitsOnly = e.target.value.replace(/\D/g, "").slice(0, 6);
+                      setAddressForm({ ...addressForm, pincode: digitsOnly });
+                    }}
                     className="w-full min-h-[44px] px-3.5 py-2.5 bg-white border border-[#DCD5C9] rounded-xs focus:outline-none focus:border-[#541920]"
                   />
                 </div>

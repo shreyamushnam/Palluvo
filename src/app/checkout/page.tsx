@@ -167,7 +167,12 @@ export default function CheckoutPage() {
                 <strong>{completedOrder.paymentMethod}</strong>
               </div>
               <div className="flex justify-between text-neutral-800">
-                <span>Total Amount Paid:</span>
+                <span>
+                  {completedOrder.paymentMethod.toLowerCase().includes("cash on delivery") ||
+                  completedOrder.paymentMethod.toLowerCase().includes("cod")
+                    ? "Total Amount to Pay on Delivery:"
+                    : "Total Amount Paid:"}
+                </span>
                 <strong className="text-[#541920]">{formatPrice(completedOrder.totalAmount)}</strong>
               </div>
               <div className="pt-2 border-t border-[#E8E2D9] text-neutral-600">
@@ -382,10 +387,16 @@ export default function CheckoutPage() {
                         id="phone"
                         name="phone"
                         type="tel"
+                        inputMode="numeric"
+                        pattern="[0-9]*"
                         autoComplete="tel"
+                        maxLength={10}
                         required
                         value={shippingAddress.phone}
-                        onChange={(e) => setShippingAddress({ ...shippingAddress, phone: e.target.value })}
+                        onChange={(e) => {
+                          const digitsOnly = e.target.value.replace(/\D/g, "").slice(0, 10);
+                          setShippingAddress({ ...shippingAddress, phone: digitsOnly });
+                        }}
                         className="w-full min-h-[44px] px-3 py-2.5 border border-[#DCD5C9] rounded-xs focus:outline-none focus:border-[#541920]"
                       />
                     </div>
@@ -477,11 +488,16 @@ export default function CheckoutPage() {
                         id="pincode"
                         name="pincode"
                         type="text"
+                        inputMode="numeric"
+                        pattern="[0-9]*"
                         autoComplete="postal-code"
                         required
                         maxLength={6}
                         value={shippingAddress.pincode}
-                        onChange={(e) => setShippingAddress({ ...shippingAddress, pincode: e.target.value })}
+                        onChange={(e) => {
+                          const digitsOnly = e.target.value.replace(/\D/g, "").slice(0, 6);
+                          setShippingAddress({ ...shippingAddress, pincode: digitsOnly });
+                        }}
                         className="w-full min-h-[44px] px-3 py-2.5 border border-[#DCD5C9] rounded-xs focus:outline-none focus:border-[#541920]"
                       />
                     </div>
