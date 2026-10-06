@@ -202,7 +202,7 @@ export default function CartPage() {
                         <div className="flex items-center gap-4 text-xs font-medium">
                           <button
                             onClick={() => handleMoveToWishlist(item.product.id, item.selectedColor)}
-                            className="text-neutral-500 hover:text-[#541920] flex items-center gap-1"
+                            className="text-neutral-600 hover:text-[#541920] flex items-center gap-1"
                             aria-label={`Save ${item.product.name} to Wishlist`}
                           >
                             <Heart className="w-3.5 h-3.5" />
@@ -210,7 +210,7 @@ export default function CartPage() {
                           </button>
                           <button
                             onClick={() => removeFromCart(item.product.id, item.selectedColor)}
-                            className="text-neutral-400 hover:text-red-600 flex items-center gap-1"
+                            className="text-neutral-600 hover:text-red-600 flex items-center gap-1"
                             aria-label={`Remove ${item.product.name} from cart`}
                           >
                             <Trash2 className="w-3.5 h-3.5" />

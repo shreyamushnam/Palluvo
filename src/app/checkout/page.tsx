@@ -148,7 +148,7 @@ export default function CheckoutPage() {
     return (
       <div className="min-h-screen bg-[#FAF7F2] py-16 text-center">
         <h2 className="text-2xl font-serif">Your bag is empty</h2>
-        <p className="text-xs text-neutral-500 mt-2">Add products to your bag before proceeding to checkout.</p>
+        <p className="text-xs text-neutral-600 mt-2">Add products to your bag before proceeding to checkout.</p>
         <Link
           href="/shop"
           className="inline-block mt-4 px-6 py-2.5 bg-[#541920] text-white text-xs uppercase tracking-widest font-semibold rounded-xs"
