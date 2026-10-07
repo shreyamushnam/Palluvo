@@ -60,3 +60,44 @@ export const YoutubeIcon: React.FC<{ size?: number; className?: string }> = ({
     <path d="m10 15 5-3-5-3z" />
   </svg>
 );
+
+export const FacebookIcon: React.FC<{ size?: number; className?: string }> = ({
+  size = 18,
+  className = "",
+}) => (
+  <svg
+    width={size}
+    height={size}
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="1.6"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    className={className}
+  >
+    <path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z" />
+  </svg>
+);
+
+export const PinterestIcon: React.FC<{ size?: number; className?: string }> = ({
+  size = 18,
+  className = "",
+}) => (
+  <svg
+    width={size}
+    height={size}
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="1.6"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    className={className}
+  >
+    <line x1="8" y1="20" x2="12" y2="11" />
+    <path d="M10.7 14c.45 1.25 1.45 2 2.55 2 2.05 0 3.75-1.55 3.75-4a5 5 0 1 0-9.7 1.7" />
+    <circle cx="12" cy="12" r="9" />
+  </svg>
+);
+

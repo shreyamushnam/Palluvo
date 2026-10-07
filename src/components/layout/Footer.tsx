@@ -3,7 +3,7 @@
 import React, { useState } from "react";
 import Link from "next/link";
 import { Check } from "lucide-react";
-import { InstagramIcon } from "@/components/icons/BrandIcons";
+import { InstagramIcon, FacebookIcon, PinterestIcon } from "@/components/icons/BrandIcons";
 import { InfoModal, InfoModalTab } from "@/components/layout/InfoModal";
 
 export const Footer: React.FC = () => {
@@ -219,11 +219,11 @@ export const Footer: React.FC = () => {
                 <a href="https://instagram.com" target="_blank" rel="noreferrer" className="min-w-[44px] min-h-[44px] inline-flex items-center justify-center hover:text-[#C5A575] focus-visible:ring-2 focus-visible:ring-[#C5A575] focus-visible:outline-none rounded-xs" aria-label="Instagram">
                   <InstagramIcon size={18} />
                 </a>
-                <a href="https://facebook.com" target="_blank" rel="noreferrer" className="min-w-[44px] min-h-[44px] inline-flex items-center justify-center hover:text-[#C5A575] text-xs font-semibold focus-visible:ring-2 focus-visible:ring-[#C5A575] focus-visible:outline-none rounded-xs" aria-label="Facebook">
-                  FB
+                <a href="https://facebook.com" target="_blank" rel="noreferrer" className="min-w-[44px] min-h-[44px] inline-flex items-center justify-center hover:text-[#C5A575] focus-visible:ring-2 focus-visible:ring-[#C5A575] focus-visible:outline-none rounded-xs" aria-label="Facebook">
+                  <FacebookIcon size={18} />
                 </a>
-                <a href="https://pinterest.com" target="_blank" rel="noreferrer" className="min-w-[44px] min-h-[44px] inline-flex items-center justify-center hover:text-[#C5A575] text-xs font-semibold focus-visible:ring-2 focus-visible:ring-[#C5A575] focus-visible:outline-none rounded-xs" aria-label="Pinterest">
-                  PIN
+                <a href="https://pinterest.com" target="_blank" rel="noreferrer" className="min-w-[44px] min-h-[44px] inline-flex items-center justify-center hover:text-[#C5A575] focus-visible:ring-2 focus-visible:ring-[#C5A575] focus-visible:outline-none rounded-xs" aria-label="Pinterest">
+                  <PinterestIcon size={18} />
                 </a>
               </div>
             </div>
