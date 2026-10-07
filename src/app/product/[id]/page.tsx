@@ -21,7 +21,7 @@ export async function generateMetadata({
   }
 
   const title = `${product.name} | PALLUVO`;
-  const description = `${product.description.slice(0, 155)}... Pure ${product.fabric} handcrafted saree.`;
+  const description = `${product.description.slice(0, 155)}… Pure ${product.fabric} handcrafted saree.`;
   const canonicalUrl = `https://palluvo.com/product/${product.id}`;
 
   return {

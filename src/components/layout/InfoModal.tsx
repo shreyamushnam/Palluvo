@@ -244,7 +244,7 @@ export const InfoModal: React.FC<InfoModalProps> = ({
                             rows={3}
                             value={contactMessage}
                             onChange={(e) => setContactMessage(e.target.value)}
-                            placeholder="Ask about saree fabrics, bridal curation, or delivery timelines..."
+                            placeholder="Ask about saree fabrics, bridal curation, or delivery timelines…"
                             className="w-full px-3 py-2 text-xs border border-[#DCD5C9] rounded-xs bg-[#FAF7F2] focus:bg-white focus:outline-none focus:border-[#541920]"
                           />
                         </div>
