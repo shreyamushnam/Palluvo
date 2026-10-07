@@ -26,6 +26,7 @@ const montserrat = Montserrat({
 });
 
 export const metadata: Metadata = {
+  metadataBase: new URL("https://palluvo.com"),
   title: "PALLUVO | Buy Designer Sarees Online — Pure Silk, Handloom, & Bridal",
   description:
     "Shop premium Indian sarees online at PALLUVO. Discover handwoven Kanjeevaram silk, Banarasi brocades, lightweight organza, and festive party wear. Free shipping above ₹1999 & easy returns.",
@@ -66,6 +67,50 @@ export const viewport: Viewport = {
   viewportFit: "cover",
 };
 
+const organizationAndWebsiteJsonLd = {
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "Organization",
+      "@id": "https://palluvo.com/#organization",
+      "name": "PALLUVO",
+      "url": "https://palluvo.com",
+      "logo": "https://palluvo.com/favicon.ico",
+      "description": "Premium Indian sarees online. Authentic handlooms, pure silk, and modern silhouettes.",
+      "sameAs": [
+        "https://instagram.com",
+        "https://facebook.com",
+        "https://pinterest.com",
+      ],
+      "contactPoint": {
+        "@type": "ContactPoint",
+        "telephone": "+918498854323",
+        "contactType": "customer service",
+        "areaServed": "IN",
+        "availableLanguage": ["English", "Hindi", "Telugu"],
+      },
+    },
+    {
+      "@type": "WebSite",
+      "@id": "https://palluvo.com/#website",
+      "url": "https://palluvo.com",
+      "name": "PALLUVO",
+      "description": "Buy Designer Sarees Online — Pure Silk, Handloom, & Bridal",
+      "publisher": {
+        "@id": "https://palluvo.com/#organization",
+      },
+      "potentialAction": {
+        "@type": "SearchAction",
+        "target": {
+          "@type": "EntryPoint",
+          "urlTemplate": "https://palluvo.com/shop?q={search_term_string}",
+        },
+        "query-input": "required name=search_term_string",
+      },
+    },
+  ],
+};
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -74,6 +119,12 @@ export default function RootLayout({
   return (
     <html lang="en" className={`${cormorant.variable} ${montserrat.variable} scroll-smooth`}>
       <body className="min-h-screen flex flex-col font-sans-body bg-[#FAF7F2] text-[#1C1A18] antialiased selection:bg-[#541920] selection:text-[#FAF7F2] pb-20 lg:pb-0">
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify(organizationAndWebsiteJsonLd),
+          }}
+        />
         <StoreProvider>
           {/* Top Announcement Bar */}
           <AnnouncementBar />
