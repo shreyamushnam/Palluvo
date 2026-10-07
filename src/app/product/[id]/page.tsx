@@ -14,10 +14,7 @@ export async function generateMetadata({
   const product = PRODUCTS.find((p) => p.id === id);
 
   if (!product) {
-    return {
-      title: "Product Not Found | PALLUVO",
-      description: "The requested saree or accessory could not be found.",
-    };
+    notFound();
   }
 
   const title = `${product.name} | PALLUVO`;
