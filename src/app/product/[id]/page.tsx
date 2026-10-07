@@ -3,7 +3,7 @@
 import React, { useState, useRef, useEffect, use } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { notFound, useRouter } from "next/navigation";
 import {
   Star,
   Heart,
@@ -32,7 +32,10 @@ export default function ProductDetailPage({
     showToast,
   } = useStore();
 
-  const product = PRODUCTS.find((p) => p.id === resolvedParams.id) || PRODUCTS[0];
+  const product = PRODUCTS.find((p) => p.id === resolvedParams.id);
+  if (!product) {
+    notFound();
+  }
 
   const [activeImageIdx, setActiveImageIdx] = useState(0);
   const [selectedColor, setSelectedColor] = useState(product.colors[0]?.name || "");
@@ -50,21 +53,48 @@ export default function ProductDetailPage({
   const [optionsPassed, setOptionsPassed] = useState(false);
 
   useEffect(() => {
-    const handleScroll = () => {
-      if (!optionsRef.current) return;
-      const rect = optionsRef.current.getBoundingClientRect();
-      const ctaHeight = ctaRef.current?.offsetHeight || 52;
-      // Pinned when options have scrolled above the sticky CTA's docked position (bottom: 54px)
-      const threshold = window.innerHeight - 54 - ctaHeight;
-      setOptionsPassed(rect.bottom <= threshold);
+    let rafId: number | null = null;
+    let cachedCtaHeight = ctaRef.current?.offsetHeight || 52;
+
+    const measureCtaHeight = () => {
+      if (ctaRef.current) {
+        cachedCtaHeight = ctaRef.current.offsetHeight;
+      }
     };
 
-    handleScroll();
-    window.addEventListener("scroll", handleScroll, { passive: true });
-    window.addEventListener("resize", handleScroll, { passive: true });
+    const updateStickyState = () => {
+      if (!optionsRef.current) return;
+      const rect = optionsRef.current.getBoundingClientRect();
+      // Pinned when options have scrolled above the sticky CTA's docked position (bottom: 54px)
+      const threshold = window.innerHeight - 54 - cachedCtaHeight;
+      const passed = rect.bottom <= threshold;
+      setOptionsPassed((prev) => (prev !== passed ? passed : prev));
+      rafId = null;
+    };
+
+    const onScrollOrResize = () => {
+      if (rafId === null) {
+        rafId = window.requestAnimationFrame(updateStickyState);
+      }
+    };
+
+    const onResize = () => {
+      measureCtaHeight();
+      onScrollOrResize();
+    };
+
+    measureCtaHeight();
+    updateStickyState();
+
+    window.addEventListener("scroll", onScrollOrResize, { passive: true });
+    window.addEventListener("resize", onResize, { passive: true });
+
     return () => {
-      window.removeEventListener("scroll", handleScroll);
-      window.removeEventListener("resize", handleScroll);
+      if (rafId !== null) {
+        window.cancelAnimationFrame(rafId);
+      }
+      window.removeEventListener("scroll", onScrollOrResize);
+      window.removeEventListener("resize", onResize);
     };
   }, []);
 
