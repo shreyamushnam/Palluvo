@@ -61,7 +61,7 @@ const QuickViewModalContent: React.FC<QuickViewModalContentProps> = ({
       />
 
       <div className="min-h-screen flex items-center justify-center p-4 sm:p-6 md:p-8">
-        <div className="relative w-full max-w-4xl bg-[#FAF7F2] rounded-md shadow-2xl overflow-hidden border border-[#E5DFD5] animate-in fade-in zoom-in-95 duration-200">
+        <div className="relative w-full max-w-4xl bg-[#FAF7F2] rounded-sm shadow-2xl overflow-hidden border border-[#E5DFD5] animate-in fade-in zoom-in-95 duration-200">
           {/* Close button */}
           <button
             onClick={onClose}
@@ -270,7 +270,7 @@ const QuickViewModalContent: React.FC<QuickViewModalContentProps> = ({
                 <Link
                   href={`/product/${product.id}`}
                   onClick={onClose}
-                  className="block text-center text-xs font-medium text-neutral-600 hover:text-[#541920] underline tracking-wider uppercase"
+                  className="block text-center text-xs font-medium text-neutral-600 hover:text-[#541920] underline tracking-wider uppercase rounded-xs focus-visible:ring-2 focus-visible:ring-[#541920] focus-visible:outline-none"
                 >
                   View Full Product Details & Saree Specs →
                 </Link>

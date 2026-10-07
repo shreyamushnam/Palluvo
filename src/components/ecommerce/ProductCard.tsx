@@ -45,10 +45,10 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
       onMouseLeave={() => setIsHovered(false)}
     >
       {/* Product Image Area */}
-      <div className="relative aspect-[3/4] w-full overflow-hidden bg-[#F5EFEB]">
+      <div className="relative aspect-[3/4] w-full overflow-hidden bg-[#F5EFEB] rounded-sm">
         <Link
           href={`/product/${product.id}`}
-          className="relative block w-full h-full rounded-xs focus-visible:ring-2 focus-visible:ring-[#541920] focus-visible:outline-none"
+          className="relative block w-full h-full rounded-sm focus-visible:ring-2 focus-visible:ring-[#541920] focus-visible:outline-none"
           aria-label={`View ${product.name}`}
         >
           {/* Primary Image */}
@@ -77,12 +77,12 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
         {/* Badges */}
         <div className="absolute bottom-2 left-2 sm:bottom-auto sm:top-2.5 sm:left-2.5 flex flex-col gap-1 z-10 pointer-events-none items-start">
           {product.isBestseller && (
-            <span className="px-2 py-0.5 bg-[#541920] text-[#FAF7F2] text-[9px] uppercase tracking-wider font-semibold rounded-2xs w-fit">
+            <span className="px-2 py-0.5 bg-[#541920] text-[#FAF7F2] text-[9px] uppercase tracking-wider font-semibold rounded-xs w-fit">
               Bestseller
             </span>
           )}
           {product.discountPercent > 0 && (
-            <span className="px-2 py-0.5 bg-[#15803D] text-[#FAF7F2] text-[9px] uppercase tracking-wider font-semibold rounded-2xs w-fit">
+            <span className="px-2 py-0.5 bg-[#15803D] text-[#FAF7F2] text-[9px] uppercase tracking-wider font-semibold rounded-xs w-fit">
               {product.discountPercent}% OFF
             </span>
           )}
@@ -107,7 +107,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
           <button
             type="button"
             onClick={handleQuickView}
-            className="flex-1 py-2.5 min-h-[44px] bg-[#FAF7F2]/95 hover:bg-white text-[#1C1A18] text-[11px] uppercase tracking-wider font-semibold shadow-sm flex items-center justify-center gap-1.5 transition-colors cursor-pointer focus-visible:ring-2 focus-visible:ring-[#541920] focus-visible:outline-none"
+            className="flex-1 py-2.5 min-h-[44px] bg-[#FAF7F2]/95 hover:bg-white text-[#1C1A18] text-[11px] uppercase tracking-wider font-semibold shadow-sm flex items-center justify-center gap-1.5 transition-colors cursor-pointer rounded-xs focus-visible:ring-2 focus-visible:ring-[#541920] focus-visible:outline-none"
             aria-label={`Quick view ${product.name}`}
           >
             <Eye size={13} /> Quick View

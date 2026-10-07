@@ -28,8 +28,6 @@
     background-color: var(--bg-ivory);
     color: var(--text-charcoal);
     overflow-x: hidden;
-    selection-background-color: #541920;
-    selection-color: #FAF7F2;
   }
 
   ::selection {

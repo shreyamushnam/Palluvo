@@ -111,7 +111,7 @@ export const CartDrawer: React.FC = () => {
                 <Link
                   href="/shop"
                   onClick={() => setIsCartOpen(false)}
-                  className="min-h-[44px] inline-flex items-center justify-center px-6 py-2.5 bg-[#541920] text-white text-xs uppercase tracking-widest font-medium hover:bg-[#3D1217] transition-colors rounded-sm"
+                  className="min-h-[44px] inline-flex items-center justify-center px-6 py-2.5 bg-[#541920] text-white text-xs uppercase tracking-widest font-medium hover:bg-[#3D1217] transition-colors rounded-xs"
                 >
                   Explore Products
                 </Link>
@@ -178,7 +178,7 @@ export const CartDrawer: React.FC = () => {
 
                     {/* Quantity controls */}
                     <div className="flex items-center justify-between pt-2">
-                      <div className="flex items-center border border-[#DCD5C9] rounded-sm bg-white">
+                      <div className="flex items-center border border-[#DCD5C9] rounded-xs bg-white">
                         <button
                           type="button"
                           onClick={() => updateQuantity(item.product.id, item.quantity - 1, item.selectedColor)}
@@ -240,11 +240,11 @@ export const CartDrawer: React.FC = () => {
                         placeholder="e.g. PALLUVO10"
                         value={inputCoupon}
                         onChange={(e) => setInputCoupon(e.target.value.toUpperCase())}
-                        className="flex-1 min-h-[44px] px-3 py-2 text-xs bg-white border border-[#DCD5C9] rounded-sm focus:outline-none focus:border-[#541920] placeholder:text-neutral-500 font-mono uppercase"
+                        className="flex-1 min-h-[44px] px-3 py-2 text-xs bg-white border border-[#DCD5C9] rounded-xs focus:outline-none focus:border-[#541920] placeholder:text-neutral-500 font-mono uppercase"
                       />
                       <button
                         type="submit"
-                        className="min-h-[44px] px-4 py-2 bg-neutral-900 text-white text-xs uppercase tracking-wider font-semibold hover:bg-black rounded-sm shrink-0 cursor-pointer focus-visible:ring-2 focus-visible:ring-[#541920] focus-visible:outline-none"
+                        className="min-h-[44px] px-4 py-2 bg-neutral-900 text-white text-xs uppercase tracking-wider font-semibold hover:bg-black rounded-xs shrink-0 cursor-pointer focus-visible:ring-2 focus-visible:ring-[#541920] focus-visible:outline-none"
                       >
                         Apply
                       </button>
@@ -283,7 +283,7 @@ export const CartDrawer: React.FC = () => {
                 <Link
                   href="/checkout"
                   onClick={() => setIsCartOpen(false)}
-                  className="w-full min-h-[44px] flex items-center justify-center gap-2 py-3 bg-[#541920] text-white text-xs uppercase tracking-widest font-semibold hover:bg-[#3D1217] transition-all rounded-sm shadow-sm cursor-pointer"
+                  className="w-full min-h-[44px] flex items-center justify-center gap-2 py-3 bg-[#541920] text-white text-xs uppercase tracking-widest font-semibold hover:bg-[#3D1217] transition-all rounded-xs shadow-sm cursor-pointer"
                 >
                   <span>Proceed to Checkout</span>
                   <ArrowRight className="w-4 h-4" />
@@ -292,7 +292,7 @@ export const CartDrawer: React.FC = () => {
                 <Link
                   href="/cart"
                   onClick={() => setIsCartOpen(false)}
-                  className="w-full min-h-[44px] flex items-center justify-center text-center py-2 text-xs text-neutral-600 hover:text-black uppercase tracking-wider underline font-sans"
+                  className="w-full min-h-[44px] flex items-center justify-center text-center py-2 text-xs text-neutral-600 hover:text-black uppercase tracking-wider underline font-sans rounded-xs focus-visible:ring-2 focus-visible:ring-[#541920] focus-visible:outline-none"
                 >
                   View Full Cart Details
                 </Link>
