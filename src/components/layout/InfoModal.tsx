@@ -189,7 +189,7 @@ export const InfoModal: React.FC<InfoModalProps> = ({
                             +91 81067 89789
                           </a>
                         </div>
-                        <p className="text-[11px] text-neutral-600 mt-0.5">Mon–Sat, 10 AM – 7 PM IST</p>
+                        <p className="text-[11px] text-neutral-600 mt-0.5">Mon - Sat, 10 AM to 7 PM IST</p>
                       </div>
                     </div>
                   </div>
@@ -286,8 +286,8 @@ export const InfoModal: React.FC<InfoModalProps> = ({
                         ⏱️ Dispatch & Delivery Timelines
                       </strong>
                       <p>• <strong>Dispatch:</strong> Ready-to-ship sarees dispatch within 24 to 48 hours.</p>
-                      <p>• <strong>Metro Cities:</strong> Delivered in 2–4 business days (Delhi, Mumbai, Bengaluru, Hyderabad, Chennai, Kolkata).</p>
-                      <p>• <strong>Tier 2 & 3 Cities:</strong> Delivered in 4–6 business days via BlueDart, Delhivery, or DTDC.</p>
+                      <p>• <strong>Metro Cities:</strong> Delivered in 2-4 Business Days (Delhi, Mumbai, Bengaluru, Hyderabad, Chennai, Kolkata).</p>
+                      <p>• <strong>Tier 2 & 3 Cities:</strong> Delivered in 4-6 Business Days via BlueDart, Delhivery, or DTDC.</p>
                     </div>
 
                     <div className="p-4 bg-white rounded-xs border border-[#E8E2D9] space-y-1.5">
@@ -393,7 +393,7 @@ export const InfoModal: React.FC<InfoModalProps> = ({
 
                   <div className="space-y-3.5 text-xs text-neutral-700 leading-relaxed font-sans">
                     <p>
-                      PALLUVO was born from a reverent celebration of the Indian saree — a six-yard tapestry of generational wisdom, cultural legacy, and effortless femininity.
+                      PALLUVO was born from a reverent celebration of the Indian saree, a six-yard tapestry of generational wisdom, cultural legacy, and effortless femininity.
                     </p>
                     <p>
                       In an era of fleeting fast fashion, PALLUVO anchors itself in the enduring poetry of slow textiles. We bridge the world between revered artisan handloom clusters and the contemporary woman who wears her heritage with modern grace.

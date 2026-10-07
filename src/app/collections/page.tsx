@@ -77,7 +77,7 @@ export default function CollectionsPage() {
             The PALLUVO Collections
           </h1>
           <p className="text-xs sm:text-sm text-neutral-600 mt-2 font-sans max-w-2xl">
-            Thematic explorations of Indian textiles — from celebratory gold zari brocades to lightweight twilight chiffons.
+            Thematic explorations of Indian textiles, from celebratory gold zari brocades to lightweight twilight chiffons.
           </p>
         </div>
       </div>

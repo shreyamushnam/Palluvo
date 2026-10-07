@@ -42,6 +42,18 @@ export default function sitemap(): MetadataRoute.Sitemap {
       changeFrequency: "monthly",
       priority: 0.4,
     },
+    {
+      url: `${baseUrl}/about`,
+      lastModified,
+      changeFrequency: "monthly",
+      priority: 0.6,
+    },
+    {
+      url: `${baseUrl}/contact`,
+      lastModified,
+      changeFrequency: "monthly",
+      priority: 0.6,
+    },
   ];
 
   const productRoutes: MetadataRoute.Sitemap = PRODUCTS.map((product) => ({

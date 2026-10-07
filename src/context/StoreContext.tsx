@@ -100,7 +100,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     }
   }, []);
 
-  // Save changes — guarded against initial hydration race/overwrite
+  // Save changes - guarded against initial hydration race/overwrite
   useEffect(() => {
     if (!isHydratedRef.current) return;
     try {

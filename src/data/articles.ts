@@ -21,7 +21,7 @@ export const ARTICLES: Article[] = [
     date: "Autumn / Edition 01",
     author: "Ananya Sen, Textile Curator",
     image: "https://images.unsplash.com/photo-1742287724816-4a8a1cc7ad5c?q=80&w=1200&auto=format&fit=crop",
-    excerpt: "Why the unstitched garment remains the purest form of human clothing—a dynamic sculpture born anew each dawn.",
+    excerpt: "Why the unstitched garment remains the purest form of human clothing, a dynamic sculpture born anew each dawn.",
     content: [
       "To drape a saree is not merely to dress; it is an act of kinetic architecture. Unlike Western tailoring that enforces rigid seams upon the body, the Indian saree respects the organic contours of the human form, offering infinite reinvention through tension, pleating, and fall.",
       "The weight of the pallu acts as a pendulum, anchoring balance while the fluid pleats at the waist create a natural accordion of movement. In an era obsessed with fast silhouettes and disposable fashion, the unstitched textile stands as an eternal testament to conscious elegance.",

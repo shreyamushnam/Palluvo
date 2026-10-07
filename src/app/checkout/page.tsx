@@ -632,7 +632,7 @@ export default function CheckoutPage() {
                         className="text-[#541920]"
                       />
                       <div>
-                        <p className="font-semibold text-neutral-900">Standard Insured Delivery (3-5 Days)</p>
+                        <p className="font-semibold text-neutral-900">Standard Insured Delivery (3-5 Business Days)</p>
                         <p className="text-[11px] text-neutral-600">Tamper-proof rigid box with Silk Mark Certificate</p>
                       </div>
                     </div>
@@ -662,7 +662,7 @@ export default function CheckoutPage() {
                         className="text-[#541920]"
                       />
                       <div>
-                        <p className="font-semibold text-neutral-900">Priority Air Express (1-2 Days)</p>
+                        <p className="font-semibold text-neutral-900">Priority Air Express (1-2 Business Days)</p>
                         <p className="text-[11px] text-neutral-600">Next-flight priority courier with real-time SMS tracking</p>
                       </div>
                     </div>

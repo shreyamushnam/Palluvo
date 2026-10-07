@@ -1,4 +1,4 @@
-# PALLUVO — “Every drape, a little magic”
+# PALLUVO | "Every drape, a little magic"
 
 A luxury saree and drape fashion brand website built from scratch with an ultra-premium editorial magazine aesthetic inspired by contemporary Indian haute couture and international fashion publications.
 
