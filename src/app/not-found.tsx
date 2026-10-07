@@ -1,33 +1,42 @@
 import Link from "next/link";
-import { ArrowLeft, ShoppingBag } from "lucide-react";
+import { ArrowLeft, Sparkles } from "lucide-react";
 
 export default function NotFound() {
   return (
-    <div className="min-h-[70vh] flex items-center justify-center px-4 py-16 bg-[#FAF7F2]">
-      <div className="max-w-md w-full text-center space-y-6">
-        <span className="text-xs uppercase tracking-[0.25em] text-[#C5A575] font-semibold">
-          Error 404
-        </span>
-        <h1 className="text-3xl sm:text-4xl font-serif font-medium text-[#1C1A18] leading-tight">
+    <div className="min-h-[75vh] flex items-center justify-center px-4 py-20 bg-[#F8F5EF]">
+      <div className="max-w-lg w-full text-center space-y-6">
+        {/* Subtle Luxury Badge */}
+        <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-white border border-[#D6B878]/40 shadow-xs">
+          <Sparkles className="w-3.5 h-3.5 text-[#D6B878]" />
+          <span className="text-[11px] uppercase tracking-[0.25em] text-[#641C2D] font-semibold">
+            Error 404 • Lost Drape
+          </span>
+        </div>
+
+        {/* Error Headline */}
+        <h1 className="text-4xl sm:text-5xl font-serif font-medium text-[#1C1A18] leading-tight">
           Page Not Found
         </h1>
-        <p className="text-xs sm:text-sm text-neutral-600 leading-relaxed font-sans max-w-sm mx-auto">
-          The saree or drape you are searching for does not exist, may have retired from our collection, or the link may be broken.
+
+        {/* Helpful Explanation Copy */}
+        <p className="text-sm sm:text-base text-neutral-600 leading-relaxed font-sans max-w-md mx-auto">
+          The saree or heirloom piece you are searching for may have retired from our collection, moved to a new vault, or the link may be outdated.
         </p>
 
-        <div className="pt-2 flex flex-col sm:flex-row items-center justify-center gap-3">
+        {/* CTAs */}
+        <div className="pt-4 flex flex-col sm:flex-row items-center justify-center gap-3">
           <Link
-            href="/shop"
-            className="w-full sm:w-auto min-h-[44px] px-6 py-3 bg-[#541920] hover:bg-[#3D1217] text-white text-xs uppercase tracking-widest font-semibold rounded-xs shadow-sm transition-colors flex items-center justify-center gap-2 cursor-pointer focus-visible:ring-2 focus-visible:ring-[#541920] focus-visible:outline-none"
+            href="/sarees"
+            className="w-full sm:w-auto min-h-[46px] px-7 py-3 bg-[#641C2D] hover:bg-[#4E1422] text-[#F8F5EF] text-xs uppercase tracking-widest font-semibold rounded-xs shadow-sm transition-all duration-200 flex items-center justify-center gap-2 cursor-pointer focus-visible:ring-2 focus-visible:ring-[#641C2D] focus-visible:outline-none"
           >
-            <ShoppingBag className="w-4 h-4" />
-            <span>Explore Collection</span>
+            <span>Explore Saree Collection</span>
           </Link>
+
           <Link
             href="/"
-            className="w-full sm:w-auto min-h-[44px] px-6 py-3 bg-white border border-[#DCD5C9] hover:border-neutral-400 text-neutral-800 text-xs uppercase tracking-widest font-medium rounded-xs transition-colors flex items-center justify-center gap-2 cursor-pointer focus-visible:ring-2 focus-visible:ring-[#541920] focus-visible:outline-none"
+            className="w-full sm:w-auto min-h-[46px] px-6 py-3 bg-white border border-[#D6B878]/50 hover:border-[#641C2D] text-[#1C1A18] text-xs uppercase tracking-widest font-medium rounded-xs shadow-xs transition-colors flex items-center justify-center gap-2 cursor-pointer focus-visible:ring-2 focus-visible:ring-[#641C2D] focus-visible:outline-none"
           >
-            <ArrowLeft className="w-4 h-4" />
+            <ArrowLeft className="w-4 h-4 text-[#641C2D]" />
             <span>Return Home</span>
           </Link>
         </div>

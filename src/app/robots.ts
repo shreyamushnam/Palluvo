@@ -6,7 +6,7 @@ export default function robots(): MetadataRoute.Robots {
       {
         userAgent: "*",
         allow: "/",
-        disallow: ["/api/", "/checkout/"],
+        disallow: ["/checkout", "/account", "/cart", "/api/"],
       },
     ],
     sitemap: "https://palluvo.com/sitemap.xml",

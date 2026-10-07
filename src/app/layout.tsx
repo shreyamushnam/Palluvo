@@ -27,6 +27,9 @@ const montserrat = Montserrat({
 
 export const metadata: Metadata = {
   metadataBase: new URL("https://palluvo.com"),
+  alternates: {
+    canonical: "/",
+  },
   title: "PALLUVO | Buy Designer Sarees Online | Pure Silk, Handloom, & Bridal",
   description:
     "Shop premium Indian sarees online at PALLUVO. Discover handwoven Kanjeevaram silk, Banarasi brocades, lightweight organza, and festive party wear. Free shipping above ₹1999 & easy returns.",
@@ -56,12 +59,26 @@ export const metadata: Metadata = {
     locale: "en_IN",
     type: "website",
   },
+  twitter: {
+    card: "summary_large_image",
+    title: "PALLUVO | Buy Designer Sarees Online | Pure Silk, Handloom, & Bridal",
+    description: "Premium Indian sarees online. Authentic handlooms, pure silk, and modern silhouettes.",
+    images: [
+      {
+        url: "/images/hero-saree.jpg",
+        width: 1200,
+        height: 630,
+        alt: "PALLUVO Saree Collection",
+      },
+    ],
+  },
   icons: {
     icon: "/favicon.ico",
   },
 };
 
 export const viewport: Viewport = {
+  themeColor: "#641C2D",
   width: "device-width",
   initialScale: 1,
   viewportFit: "cover",
