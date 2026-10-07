@@ -799,7 +799,7 @@ function ShopContent() {
 
 export default function ShopPage() {
   return (
-    <Suspense fallback={<div className="p-12 text-center text-xs text-neutral-500 font-sans">Loading products...</div>}>
+    <Suspense fallback={<div className="p-12 text-center text-xs text-neutral-500 font-sans">Loading products…</div>}>
       <ShopContent />
     </Suspense>
   );

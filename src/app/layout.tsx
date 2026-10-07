@@ -27,7 +27,7 @@ const montserrat = Montserrat({
 
 export const metadata: Metadata = {
   metadataBase: new URL("https://palluvo.com"),
-  title: "PALLUVO | Buy Designer Sarees Online — Pure Silk, Handloom, & Bridal",
+  title: "PALLUVO | Buy Designer Sarees Online | Pure Silk, Handloom, & Bridal",
   description:
     "Shop premium Indian sarees online at PALLUVO. Discover handwoven Kanjeevaram silk, Banarasi brocades, lightweight organza, and festive party wear. Free shipping above ₹1999 & easy returns.",
   keywords: [
@@ -41,7 +41,7 @@ export const metadata: Metadata = {
     "Organza Sarees",
   ],
   openGraph: {
-    title: "PALLUVO — Every drape, a little magic",
+    title: "PALLUVO | Every drape, a little magic",
     description: "Premium Indian sarees online. Authentic handlooms, pure silk, and modern silhouettes.",
     url: "https://palluvo.com",
     siteName: "PALLUVO",
@@ -95,7 +95,7 @@ const organizationAndWebsiteJsonLd = {
       "@id": "https://palluvo.com/#website",
       "url": "https://palluvo.com",
       "name": "PALLUVO",
-      "description": "Buy Designer Sarees Online — Pure Silk, Handloom, & Bridal",
+      "description": "Buy Designer Sarees Online | Pure Silk, Handloom, & Bridal",
       "publisher": {
         "@id": "https://palluvo.com/#organization",
       },

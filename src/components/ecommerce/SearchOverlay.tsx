@@ -113,7 +113,7 @@ export const SearchOverlay: React.FC = () => {
                   setIsSearchOpen(false);
                 }
               }}
-              placeholder="Search sarees by fabric, weave, color, or occasion..."
+              placeholder="Search sarees by fabric, weave, color, or occasion…"
               className="flex-1 text-base sm:text-lg bg-transparent border-none outline-none text-[#1C1A18] placeholder:text-neutral-600 placeholder-neutral-600 font-sans"
               aria-label="Search sarees by fabric, weave, color, or occasion"
             />
