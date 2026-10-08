@@ -6,6 +6,7 @@ import Link from "next/link";
 import { Search, X, ArrowRight, Sparkles } from "lucide-react";
 import { useStore } from "@/context/StoreContext";
 import { PRODUCTS } from "@/data/products";
+import { useFocusTrap } from "@/hooks/useFocusTrap";
 
 const POPULAR_SEARCHES = [
   "Kanjeevaram Silk",
@@ -22,6 +23,7 @@ export const SearchOverlay: React.FC = () => {
   const { isSearchOpen, setIsSearchOpen, formatPrice } = useStore();
   const [query, setQuery] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
+  const dialogRef = useFocusTrap<HTMLDivElement>({ isOpen: isSearchOpen });
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -62,7 +64,9 @@ export const SearchOverlay: React.FC = () => {
 
   return (
     <div
-      className="fixed inset-0 z-50 overflow-y-auto"
+      ref={dialogRef}
+      tabIndex={-1}
+      className="fixed inset-0 z-50 overflow-y-auto outline-none"
       role="dialog"
       aria-modal="true"
       aria-labelledby="search-dialog-title"

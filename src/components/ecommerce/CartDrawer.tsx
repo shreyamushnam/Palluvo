@@ -1,10 +1,11 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useCallback } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { X, Trash2, Plus, Minus, ShoppingBag, ArrowRight, ShieldCheck, Tag, Sparkles } from "lucide-react";
 import { useStore } from "@/context/StoreContext";
+import { useFocusTrap } from "@/hooks/useFocusTrap";
 
 export const CartDrawer: React.FC = () => {
   const {
@@ -27,6 +28,9 @@ export const CartDrawer: React.FC = () => {
   const [inputCoupon, setInputCoupon] = useState("");
   const [couponError, setCouponError] = useState<string | null>(null);
 
+  const closeCart = useCallback(() => setIsCartOpen(false), [setIsCartOpen]);
+  const drawerRef = useFocusTrap<HTMLDivElement>({ isOpen: isCartOpen, onClose: closeCart });
+
   if (!isCartOpen) return null;
 
   const freeShippingLeft = Math.max(0, freeShippingThreshold - subtotal);
@@ -45,7 +49,7 @@ export const CartDrawer: React.FC = () => {
   };
 
   return (
-    <div className="fixed inset-0 z-50 overflow-hidden" aria-labelledby="slide-over-title" role="dialog" aria-modal="true">
+    <div ref={drawerRef} tabIndex={-1} className="fixed inset-0 z-50 overflow-hidden outline-none" aria-labelledby="slide-over-title" role="dialog" aria-modal="true">
       {/* Backdrop */}
       <div
         className="fixed inset-0 bg-black/60 backdrop-blur-xs transition-opacity"

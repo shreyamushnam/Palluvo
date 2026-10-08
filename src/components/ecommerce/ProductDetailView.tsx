@@ -315,6 +315,7 @@ export const ProductDetailView: React.FC<ProductDetailViewProps> = ({
                       <button
                         key={c.name}
                         type="button"
+                        aria-pressed={selectedColor === c.name}
                         onClick={() => setSelectedColor(c.name)}
                         className="w-11 h-11 min-w-[44px] min-h-[44px] flex items-center justify-center rounded-full cursor-pointer focus-visible:ring-2 focus-visible:ring-[#541920] focus-visible:outline-none -my-1 sm:my-0 shrink-0"
                         title={c.name}
@@ -344,6 +345,7 @@ export const ProductDetailView: React.FC<ProductDetailViewProps> = ({
                     {["With Blouse", "Without Blouse"].map((opt) => (
                       <button
                         key={opt}
+                        aria-pressed={blouseOption === opt}
                         onClick={() => setBlouseOption(opt)}
                         className={`min-h-[44px] px-2.5 sm:px-4 py-2 text-xs rounded-xs border transition-all font-medium focus-visible:ring-2 focus-visible:ring-[#541920] focus-visible:outline-none cursor-pointer ${
                           blouseOption === opt

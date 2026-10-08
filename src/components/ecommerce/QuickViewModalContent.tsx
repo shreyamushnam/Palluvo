@@ -177,6 +177,7 @@ export const QuickViewModalContent: React.FC<QuickViewModalContentProps> = ({
                         <button
                           key={color.name}
                           type="button"
+                          aria-pressed={selectedColor === color.name}
                           onClick={() => setSelectedColor(color.name)}
                           className={`min-h-[44px] px-3.5 py-2 text-xs rounded-xs border transition-colors cursor-pointer focus-visible:ring-2 focus-visible:ring-[#541920] focus-visible:outline-none ${
                             selectedColor === color.name
@@ -202,6 +203,7 @@ export const QuickViewModalContent: React.FC<QuickViewModalContentProps> = ({
                         <button
                           key={opt}
                           type="button"
+                          aria-pressed={blouseOption === opt}
                           onClick={() => setBlouseOption(opt)}
                           className={`min-h-[44px] p-2.5 text-xs text-left rounded-xs border transition-colors flex items-center justify-between cursor-pointer focus-visible:ring-2 focus-visible:ring-[#541920] focus-visible:outline-none ${
                             blouseOption === opt
