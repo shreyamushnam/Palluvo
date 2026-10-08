@@ -156,6 +156,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
           {/* Add to Bag Button */}
           <button
             onClick={handleQuickAdd}
+            aria-label={justAdded ? `${product.name} added to bag` : `Add ${product.name} to bag`}
             className={`w-full mt-3 min-h-[44px] py-2.5 text-[11px] uppercase tracking-[0.16em] font-semibold flex items-center justify-center gap-1.5 transition-colors rounded-xs focus-visible:ring-2 focus-visible:ring-[#541920] focus-visible:outline-none cursor-pointer ${
               justAdded
                 ? "bg-[#15803D] text-[#FAF7F2]"

@@ -185,7 +185,7 @@ export default function CartPage() {
                           <button
                             onClick={() => updateQuantity(item.product.id, item.quantity - 1, item.selectedColor)}
                             className="w-11 h-11 min-w-[44px] min-h-[44px] flex items-center justify-center text-neutral-600 hover:text-black hover:bg-neutral-100 transition-colors cursor-pointer focus-visible:ring-2 focus-visible:ring-[#541920] focus-visible:outline-none"
-                            aria-label="Decrease quantity"
+                            aria-label={`Decrease quantity of ${item.product.name}`}
                           >
                             <Minus className="w-3.5 h-3.5" />
                           </button>
@@ -193,7 +193,7 @@ export default function CartPage() {
                           <button
                             onClick={() => updateQuantity(item.product.id, item.quantity + 1, item.selectedColor)}
                             className="w-11 h-11 min-w-[44px] min-h-[44px] flex items-center justify-center text-neutral-600 hover:text-black hover:bg-neutral-100 transition-colors cursor-pointer focus-visible:ring-2 focus-visible:ring-[#541920] focus-visible:outline-none"
-                            aria-label="Increase quantity"
+                            aria-label={`Increase quantity of ${item.product.name}`}
                           >
                             <Plus className="w-3.5 h-3.5" />
                           </button>

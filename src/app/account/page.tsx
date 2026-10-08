@@ -139,8 +139,16 @@ export default function AccountPage() {
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 sm:gap-8 items-start">
           
           {/* Left Navigation Tabs */}
-          <div className="lg:col-span-3 bg-white p-2 sm:p-3 rounded-sm border border-[#E8E2D9] flex flex-col space-y-1">
+          <div
+            role="tablist"
+            aria-label="Account sections"
+            className="lg:col-span-3 bg-white p-2 sm:p-3 rounded-sm border border-[#E8E2D9] flex flex-col space-y-1"
+          >
             <button
+              id="account-tab-orders"
+              role="tab"
+              aria-selected={activeTab === "orders"}
+              aria-controls="account-panel-orders"
               type="button"
               onClick={() => setActiveTab("orders")}
               className={`w-full flex items-center justify-start gap-3 px-3.5 sm:px-4 py-2.5 sm:py-3 min-h-[44px] text-xs font-semibold rounded-xs transition-colors cursor-pointer focus-visible:ring-2 focus-visible:ring-[#541920] focus-visible:outline-none ${
@@ -154,6 +162,10 @@ export default function AccountPage() {
             </button>
 
             <button
+              id="account-tab-addresses"
+              role="tab"
+              aria-selected={activeTab === "addresses"}
+              aria-controls="account-panel-addresses"
               type="button"
               onClick={() => setActiveTab("addresses")}
               className={`w-full flex items-center justify-start gap-3 px-3.5 sm:px-4 py-2.5 sm:py-3 min-h-[44px] text-xs font-semibold rounded-xs transition-colors cursor-pointer focus-visible:ring-2 focus-visible:ring-[#541920] focus-visible:outline-none ${
@@ -167,6 +179,10 @@ export default function AccountPage() {
             </button>
 
             <button
+              id="account-tab-profile"
+              role="tab"
+              aria-selected={activeTab === "profile"}
+              aria-controls="account-panel-profile"
               type="button"
               onClick={() => setActiveTab("profile")}
               className={`w-full flex items-center justify-start gap-3 px-3.5 sm:px-4 py-2.5 sm:py-3 min-h-[44px] text-xs font-semibold rounded-xs transition-colors cursor-pointer focus-visible:ring-2 focus-visible:ring-[#541920] focus-visible:outline-none ${
@@ -185,7 +201,13 @@ export default function AccountPage() {
             
             {/* Orders Tab */}
             {activeTab === "orders" && (
-              <div className="space-y-6">
+              <div
+                id="account-panel-orders"
+                role="tabpanel"
+                aria-labelledby="account-tab-orders"
+                tabIndex={0}
+                className="space-y-6 focus-visible:outline-none"
+              >
                 <div className="flex items-center justify-between">
                   <h2 className="font-serif text-xl text-neutral-900">Order History</h2>
                   <span className="text-xs text-neutral-600 font-sans">{orders.length} Total orders</span>
@@ -292,7 +314,13 @@ export default function AccountPage() {
 
             {/* Saved Addresses Tab */}
             {activeTab === "addresses" && (
-              <div className="space-y-6">
+              <div
+                id="account-panel-addresses"
+                role="tabpanel"
+                aria-labelledby="account-tab-addresses"
+                tabIndex={0}
+                className="space-y-6 focus-visible:outline-none"
+              >
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
                   <div>
                     <h2 className="font-serif text-xl text-neutral-900">Saved Delivery Addresses</h2>
@@ -392,7 +420,13 @@ export default function AccountPage() {
 
             {/* Profile Tab */}
             {activeTab === "profile" && (
-              <div className="bg-white p-6 rounded-sm border border-[#E8E2D9] space-y-6">
+              <div
+                id="account-panel-profile"
+                role="tabpanel"
+                aria-labelledby="account-tab-profile"
+                tabIndex={0}
+                className="bg-white p-6 rounded-sm border border-[#E8E2D9] space-y-6 focus-visible:outline-none"
+              >
                 <div>
                   <h2 className="font-serif text-xl text-neutral-900 pb-1">
                     Profile & Settings

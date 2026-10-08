@@ -126,7 +126,11 @@ export const InfoModal: React.FC<InfoModalProps> = ({
 
           <div className="grid grid-cols-1 md:grid-cols-12 min-h-[480px]">
             {/* Sidebar Tabs */}
-            <div className="md:col-span-4 bg-[#EFEAE1]/60 p-4 border-b md:border-b-0 md:border-r border-[#E8E2D9] space-y-1">
+            <div
+              role="tablist"
+              aria-label="Information topics"
+              className="md:col-span-4 bg-[#EFEAE1]/60 p-4 border-b md:border-b-0 md:border-r border-[#E8E2D9] space-y-1"
+            >
               {[
                 { id: "contact", label: "Contact Us", icon: Phone },
                 { id: "shipping", label: "Shipping Policy", icon: Truck },
@@ -140,8 +144,13 @@ export const InfoModal: React.FC<InfoModalProps> = ({
                 return (
                   <button
                     key={tab.id}
+                    id={`info-tab-${tab.id}`}
+                    role="tab"
+                    type="button"
+                    aria-selected={isActive}
+                    aria-controls={`info-panel-${tab.id}`}
                     onClick={() => setActiveTab(tab.id as InfoModalTab)}
-                    className={`w-full flex items-center gap-3 px-3.5 py-3 min-h-[44px] text-xs font-semibold rounded-xs transition-colors text-left cursor-pointer ${
+                    className={`w-full flex items-center gap-3 px-3.5 py-3 min-h-[44px] text-xs font-semibold rounded-xs transition-colors text-left cursor-pointer focus-visible:ring-2 focus-visible:ring-[#541920] focus-visible:outline-none ${
                       isActive
                         ? "bg-[#541920] text-white shadow-xs"
                         : "text-neutral-700 hover:bg-[#FAF7F2]"
@@ -155,7 +164,13 @@ export const InfoModal: React.FC<InfoModalProps> = ({
             </div>
 
             {/* Content Area */}
-            <div className="md:col-span-8 p-6 sm:p-8 max-h-[70vh] overflow-y-auto">
+            <div
+              id={`info-panel-${activeTab}`}
+              role="tabpanel"
+              aria-labelledby={`info-tab-${activeTab}`}
+              tabIndex={0}
+              className="md:col-span-8 p-6 sm:p-8 max-h-[70vh] overflow-y-auto focus-visible:outline-none"
+            >
               
               {/* CONTACT US */}
               {activeTab === "contact" && (

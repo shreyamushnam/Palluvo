@@ -96,10 +96,13 @@ const QuickViewModalContent: React.FC<QuickViewModalContentProps> = ({
                   {product.images.map((img, idx) => (
                     <button
                       key={idx}
+                      type="button"
                       onClick={() => setActiveImageIdx(idx)}
-                      className={`relative w-14 h-18 rounded-xs overflow-hidden border-2 transition-all shrink-0 ${
+                      className={`relative w-14 h-18 rounded-xs overflow-hidden border-2 transition-all shrink-0 cursor-pointer focus-visible:ring-2 focus-visible:ring-[#541920] focus-visible:outline-none ${
                         activeImageIdx === idx ? "border-[#541920] ring-1 ring-[#541920]" : "border-transparent opacity-70 hover:opacity-100"
                       }`}
+                      aria-label={`View image ${idx + 1} of ${product.images.length} for ${product.name}`}
+                      aria-pressed={activeImageIdx === idx}
                     >
                       <Image
                         src={img}
