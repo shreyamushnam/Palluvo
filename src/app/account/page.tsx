@@ -571,6 +571,7 @@ export default function AccountPage() {
                     id="addr-name"
                     name="name"
                     type="text"
+                    autoComplete="name"
                     required
                     value={addressForm.name}
                     onChange={(e) => setAddressForm({ ...addressForm, name: e.target.value })}
@@ -585,6 +586,7 @@ export default function AccountPage() {
                     id="addr-phone"
                     name="phone"
                     type="tel"
+                    autoComplete="tel"
                     inputMode="numeric"
                     pattern="[0-9]*"
                     maxLength={10}
@@ -623,6 +625,7 @@ export default function AccountPage() {
                   id="addr-line"
                   name="addressLine"
                   type="text"
+                  autoComplete="street-address"
                   required
                   value={addressForm.addressLine}
                   onChange={(e) => setAddressForm({ ...addressForm, addressLine: e.target.value })}
@@ -640,6 +643,7 @@ export default function AccountPage() {
                     id="addr-city"
                     name="city"
                     type="text"
+                    autoComplete="address-level2"
                     required
                     value={addressForm.city}
                     onChange={(e) => setAddressForm({ ...addressForm, city: e.target.value })}
@@ -654,6 +658,7 @@ export default function AccountPage() {
                     id="addr-state"
                     name="state"
                     type="text"
+                    autoComplete="address-level1"
                     required
                     value={addressForm.state}
                     onChange={(e) => setAddressForm({ ...addressForm, state: e.target.value })}
@@ -668,6 +673,7 @@ export default function AccountPage() {
                     id="addr-pincode"
                     name="pincode"
                     type="text"
+                    autoComplete="postal-code"
                     inputMode="numeric"
                     pattern="[0-9]*"
                     required

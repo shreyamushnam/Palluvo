@@ -30,6 +30,11 @@ export const MobileBottomNav: React.FC = () => {
         const isActive = pathname === item.href;
         const Icon = item.icon;
 
+        const ariaLabel =
+          item.count !== undefined && item.count > 0
+            ? `${item.label} with ${item.count} items`
+            : item.label;
+
         if (item.isCartDrawer) {
           return (
             <button
@@ -42,6 +47,7 @@ export const MobileBottomNav: React.FC = () => {
                 }
               }}
               aria-current={isActive ? "page" : undefined}
+              aria-label={ariaLabel}
               className={`min-w-[44px] min-h-[44px] flex flex-col items-center justify-center p-1 relative transition-colors ${
                 isActive ? "text-[#541920] font-semibold" : "text-[#5E5A54] hover:text-[#541920]"
               }`}
@@ -49,7 +55,10 @@ export const MobileBottomNav: React.FC = () => {
               <div className="relative">
                 <Icon size={20} />
                 {item.count !== undefined && item.count > 0 && (
-                  <span className="absolute -top-1 -right-2 bg-[#541920] text-[#FAF7F2] text-[8px] font-bold w-3.5 h-3.5 rounded-full flex items-center justify-center">
+                  <span
+                    aria-hidden="true"
+                    className="absolute -top-1 -right-2 bg-[#541920] text-[#FAF7F2] text-[8px] font-bold w-3.5 h-3.5 rounded-full flex items-center justify-center"
+                  >
                     {item.count}
                   </span>
                 )}
@@ -66,6 +75,7 @@ export const MobileBottomNav: React.FC = () => {
             key={item.label}
             href={item.href}
             aria-current={isActive ? "page" : undefined}
+            aria-label={ariaLabel}
             className={`min-w-[44px] min-h-[44px] flex flex-col items-center justify-center p-1 relative transition-colors ${
               isActive ? "text-[#541920] font-semibold" : "text-[#5E5A54] hover:text-[#541920]"
             }`}
@@ -73,7 +83,10 @@ export const MobileBottomNav: React.FC = () => {
             <div className="relative">
               <Icon size={20} />
               {item.count !== undefined && item.count > 0 && (
-                <span className="absolute -top-1 -right-2 bg-[#8E371F] text-[#FAF7F2] text-[8px] font-bold w-3.5 h-3.5 rounded-full flex items-center justify-center">
+                <span
+                  aria-hidden="true"
+                  className="absolute -top-1 -right-2 bg-[#8E371F] text-[#FAF7F2] text-[8px] font-bold w-3.5 h-3.5 rounded-full flex items-center justify-center"
+                >
                   {item.count}
                 </span>
               )}
