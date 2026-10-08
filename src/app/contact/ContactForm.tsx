@@ -50,7 +50,7 @@ export function ContactForm() {
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 placeholder="e.g. Radhika Sharma"
-                className="w-full min-h-[44px] px-3.5 py-2.5 text-xs border border-[#DCD5C9] rounded-xs bg-[#FAF7F2] focus:bg-white focus:outline-none focus:border-[#541920]"
+                className="w-full min-h-[44px] px-3.5 py-2.5 text-xs border border-[#DCD5C9] rounded-xs bg-[#FAF7F2] focus:bg-white focus:border-[#541920] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#541920]"
               />
             </div>
             <div>
@@ -64,7 +64,7 @@ export function ContactForm() {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="e.g. radhika@example.com"
-                className="w-full min-h-[44px] px-3.5 py-2.5 text-xs border border-[#DCD5C9] rounded-xs bg-[#FAF7F2] focus:bg-white focus:outline-none focus:border-[#541920]"
+                className="w-full min-h-[44px] px-3.5 py-2.5 text-xs border border-[#DCD5C9] rounded-xs bg-[#FAF7F2] focus:bg-white focus:border-[#541920] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#541920]"
               />
             </div>
             <div>
@@ -77,7 +77,7 @@ export function ContactForm() {
                 value={phone}
                 onChange={(e) => setPhone(e.target.value)}
                 placeholder="e.g. +91 98765 43210…"
-                className="w-full min-h-[44px] px-3.5 py-2.5 text-xs border border-[#DCD5C9] rounded-xs bg-[#FAF7F2] focus:bg-white focus:outline-none focus:border-[#541920]"
+                className="w-full min-h-[44px] px-3.5 py-2.5 text-xs border border-[#DCD5C9] rounded-xs bg-[#FAF7F2] focus:bg-white focus:border-[#541920] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#541920]"
               />
             </div>
           </div>
@@ -93,13 +93,13 @@ export function ContactForm() {
               value={message}
               onChange={(e) => setMessage(e.target.value)}
               placeholder="Ask about saree fabrics, bridal curation, or delivery timelines…"
-              className="w-full px-3.5 py-2.5 text-xs border border-[#DCD5C9] rounded-xs bg-[#FAF7F2] focus:bg-white focus:outline-none focus:border-[#541920]"
+              className="w-full px-3.5 py-2.5 text-xs border border-[#DCD5C9] rounded-xs bg-[#FAF7F2] focus:bg-white focus:border-[#541920] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#541920]"
             />
           </div>
 
           <button
             type="submit"
-            className="min-h-[44px] px-8 py-3 bg-[#541920] hover:bg-[#3D1217] text-white text-xs uppercase tracking-widest font-semibold rounded-xs shadow-xs transition-colors cursor-pointer inline-flex items-center justify-center gap-2"
+            className="min-h-[44px] px-8 py-3 bg-[#541920] hover:bg-[#3D1217] text-white text-xs uppercase tracking-widest font-semibold rounded-xs shadow-xs transition-colors cursor-pointer inline-flex items-center justify-center gap-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#541920]"
           >
             <Send className="w-3.5 h-3.5" />
             <span>Submit Message</span>

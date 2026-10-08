@@ -423,7 +423,7 @@ export default function AccountPage() {
                         required
                         value={profile.fullName}
                         onChange={(e) => setProfile({ ...profile, fullName: e.target.value })}
-                        className="w-full min-h-[44px] px-3.5 py-2.5 border border-[#DCD5C9] rounded-xs focus:outline-none focus:border-[#541920]"
+                        className="w-full min-h-[44px] px-3.5 py-2.5 border border-[#DCD5C9] rounded-xs focus:border-[#541920] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#541920]"
                       />
                     </div>
                     <div>
@@ -438,7 +438,7 @@ export default function AccountPage() {
                         required
                         value={profile.email}
                         onChange={(e) => setProfile({ ...profile, email: e.target.value })}
-                        className="w-full min-h-[44px] px-3.5 py-2.5 border border-[#DCD5C9] rounded-xs focus:outline-none focus:border-[#541920]"
+                        className="w-full min-h-[44px] px-3.5 py-2.5 border border-[#DCD5C9] rounded-xs focus:border-[#541920] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#541920]"
                       />
                     </div>
                     <div>
@@ -453,7 +453,7 @@ export default function AccountPage() {
                         required
                         value={profile.mobile}
                         onChange={(e) => setProfile({ ...profile, mobile: e.target.value })}
-                        className="w-full min-h-[44px] px-3.5 py-2.5 border border-[#DCD5C9] rounded-xs focus:outline-none focus:border-[#541920]"
+                        className="w-full min-h-[44px] px-3.5 py-2.5 border border-[#DCD5C9] rounded-xs focus:border-[#541920] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#541920]"
                       />
                     </div>
                     <div>
@@ -467,7 +467,7 @@ export default function AccountPage() {
                         value={profile.preferredDrape}
                         onChange={(e) => setProfile({ ...profile, preferredDrape: e.target.value })}
                         placeholder="e.g. Nivi Style, Bengali, Nauvari"
-                        className="w-full min-h-[44px] px-3.5 py-2.5 border border-[#DCD5C9] rounded-xs focus:outline-none focus:border-[#541920] placeholder:text-neutral-500"
+                        className="w-full min-h-[44px] px-3.5 py-2.5 border border-[#DCD5C9] rounded-xs focus:border-[#541920] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#541920] placeholder:text-neutral-500"
                       />
                     </div>
                   </div>
@@ -475,7 +475,7 @@ export default function AccountPage() {
                   <div className="pt-2 flex items-center gap-3">
                     <button
                       type="submit"
-                      className="min-h-[44px] inline-flex items-center justify-center px-6 py-2.5 bg-[#541920] hover:bg-[#3D1217] text-white text-xs uppercase tracking-widest font-semibold rounded-xs shadow-xs transition-colors cursor-pointer"
+                      className="min-h-[44px] inline-flex items-center justify-center px-6 py-2.5 bg-[#541920] hover:bg-[#3D1217] text-white text-xs uppercase tracking-widest font-semibold rounded-xs shadow-xs transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#541920]"
                     >
                       Save Changes
                     </button>

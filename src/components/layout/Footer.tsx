@@ -70,7 +70,7 @@ export const Footer: React.FC = () => {
                       onChange={(e) => setEmail(e.target.value)}
                       placeholder="Enter your email address…"
                       required
-                      className="min-h-[44px] h-11 flex-1 px-3.5 bg-[#FAF7F2]/10 border border-[#FAF7F2]/20 text-xs text-[#FAF7F2] placeholder:text-[#FAF7F2]/75 focus:outline-none focus:border-[#C5A575]"
+                      className="min-h-[44px] h-11 flex-1 px-3.5 bg-[#FAF7F2]/10 border border-[#FAF7F2]/20 text-xs text-[#FAF7F2] placeholder:text-[#FAF7F2]/75 focus:border-[#C5A575] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#C5A575]"
                     />
                     <button
                       type="submit"

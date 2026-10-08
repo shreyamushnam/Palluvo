@@ -262,7 +262,7 @@ export default function CartPage() {
                           placeholder="e.g. PALLUVO10"
                           value={couponInput}
                           onChange={(e) => setCouponInput(e.target.value.toUpperCase())}
-                          className="flex-1 min-h-[44px] px-3 py-2 text-xs bg-white border border-[#DCD5C9] rounded-xs focus:outline-none focus:border-[#541920] placeholder:text-neutral-500 font-mono uppercase"
+                          className="flex-1 min-h-[44px] px-3 py-2 text-xs bg-white border border-[#DCD5C9] rounded-xs focus:border-[#541920] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#541920] placeholder:text-neutral-500 font-mono uppercase"
                           aria-label="Coupon code"
                         />
                         <button
