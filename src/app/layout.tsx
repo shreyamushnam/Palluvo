@@ -92,7 +92,7 @@ const organizationAndWebsiteJsonLd = {
       "@id": "https://palluvo.com/#organization",
       "name": "PALLUVO",
       "url": "https://palluvo.com",
-      "logo": "https://palluvo.com/favicon.ico",
+      "logo": "https://palluvo.com/images/logo.png",
       "description": "Premium Indian sarees online. Authentic handlooms, pure silk, and modern silhouettes.",
       "sameAs": [
         "https://instagram.com",

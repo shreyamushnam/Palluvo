@@ -4,7 +4,7 @@ import React from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { ArrowRight } from "lucide-react";
-import { CATEGORIES } from "@/data/categories";
+import { CATEGORIES, getCategoryHref } from "@/data/categories";
 
 export const CategoryGrid: React.FC = () => {
   return (
@@ -30,7 +30,7 @@ export const CategoryGrid: React.FC = () => {
           {CATEGORIES.map((cat) => (
             <Link
               key={cat.id}
-              href={`/shop?category=${encodeURIComponent(cat.name)}`}
+              href={getCategoryHref(cat.canonicalQuery || cat.name)}
               className="group flex flex-col items-center text-center p-1 rounded-sm focus-visible:ring-2 focus-visible:ring-[#541920] focus-visible:outline-none"
             >
               <div className="relative aspect-[3/4] w-full rounded-sm overflow-hidden bg-neutral-100 shadow-xs group-hover:shadow-md transition-all duration-300 border border-[#E8E2D9]">

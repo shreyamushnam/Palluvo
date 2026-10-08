@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { PRODUCTS } from "@/data/products";
+import { getCategoryHref } from "@/data/categories";
 import { ProductDetailView } from "@/components/ecommerce/ProductDetailView";
 
 interface ProductPageProps {
@@ -133,7 +134,7 @@ export default async function ProductDetailPage({ params }: ProductPageProps) {
             "@type": "ListItem",
             position: 3,
             name: product.category,
-            item: `https://palluvo.com/shop?category=${encodeURIComponent(product.category)}`,
+            item: `https://palluvo.com${getCategoryHref(product.category)}`,
           },
           {
             "@type": "ListItem",

@@ -38,7 +38,7 @@ export const CollectionBanner: React.FC = () => {
 
             <div className="pt-3">
               <Link
-                href="/shop?category=Festive+Sarees"
+                href="/shop?category=Festive"
                 className="inline-flex items-center gap-2 px-8 py-3.5 bg-[#541920] hover:bg-[#3D1217] text-white text-xs uppercase tracking-widest font-semibold rounded-xs shadow-md transition-all border border-[#C5A575]/40"
               >
                 <span>Shop Festive</span>

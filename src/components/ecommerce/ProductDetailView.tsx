@@ -14,6 +14,7 @@ import {
   ArrowRight,
 } from "lucide-react";
 import { Product, PRODUCTS } from "@/data/products";
+import { getCategoryHref } from "@/data/categories";
 import { useStore } from "@/context/StoreContext";
 import { ProductCard } from "@/components/ecommerce/ProductCard";
 
@@ -130,7 +131,7 @@ export const ProductDetailView: React.FC<ProductDetailViewProps> = ({
             <span>/</span>
             <Link href="/shop" className="hover:text-black">Shop</Link>
             <span>/</span>
-            <Link href={`/shop?category=${encodeURIComponent(product.category)}`} className="hover:text-black">
+            <Link href={getCategoryHref(product.category)} className="hover:text-black">
               {product.category}
             </Link>
             <span>/</span>

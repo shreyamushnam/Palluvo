@@ -34,8 +34,8 @@ const OCCASIONS = [
 
 export function matchesCategory(product: Product, category: string): boolean {
   if (!category) return true;
-  const norm = category.toLowerCase().trim();
-  if (norm.includes("new arrival")) {
+  const norm = category.toLowerCase().trim().replace(/\+/g, " ");
+  if (norm.includes("new arrival") || norm.includes("new")) {
     return !!product.isNewArrival;
   } else if (norm.includes("silk") && !norm.includes("cotton")) {
     return product.category.toLowerCase() === "silk" || product.fabric.toLowerCase().includes("silk");
@@ -59,6 +59,24 @@ export function matchesCategory(product: Product, category: string): boolean {
       product.occasion.toLowerCase().includes(root)
     );
   }
+}
+
+function isCategoryActive(selectedCategory: string, cat: (typeof CATEGORIES)[number]): boolean {
+  if (!selectedCategory) return false;
+  const selNorm = selectedCategory.toLowerCase().trim().replace(/\+/g, " ");
+  const catCanonNorm = cat.canonicalQuery.toLowerCase().trim().replace(/\+/g, " ");
+  const catNameNorm = cat.name.toLowerCase().trim();
+
+  if (selNorm === catCanonNorm || selNorm === catNameNorm) return true;
+  if (catCanonNorm === "silk" && selNorm.includes("silk") && !selNorm.includes("cotton")) return true;
+  if (catCanonNorm === "handloom" && selNorm.includes("handloom")) return true;
+  if (catCanonNorm === "cotton" && selNorm.includes("cotton")) return true;
+  if (catCanonNorm === "festive" && selNorm.includes("festive")) return true;
+  if (catCanonNorm === "bridal" && (selNorm.includes("bridal") || selNorm.includes("wedding"))) return true;
+  if (catCanonNorm.includes("party") && selNorm.includes("party")) return true;
+  if (catCanonNorm === "printed" && selNorm.includes("printed")) return true;
+  if (catCanonNorm.includes("new") && selNorm.includes("new")) return true;
+  return false;
 }
 
 export function matchesFabric(product: Product, fabric: string): boolean {
@@ -128,6 +146,13 @@ export function ShopContent() {
   const selectedCategory = searchParams.get("category") || "";
   const initialQuery = searchParams.get("q") || "";
 
+  const displayCategoryName = useMemo(() => {
+    if (!selectedCategory) return "";
+    const matched = CATEGORIES.find((cat) => isCategoryActive(selectedCategory, cat));
+    if (matched) return matched.name;
+    return decodeURIComponent(selectedCategory).replace(/\+/g, " ");
+  }, [selectedCategory]);
+
   const [selectedFabric, setSelectedFabric] = useState<string>("");
   const [selectedOccasion, setSelectedOccasion] = useState<string>("");
   const [selectedPriceRange, setSelectedPriceRange] = useState<number | null>(null);
@@ -180,16 +205,9 @@ export function ShopContent() {
     );
   }, [selectedFabric, selectedOccasion, selectedPriceRange, initialQuery]);
 
-  const handleCategoryToggle = (catName: string) => {
-    const isCurrent =
-      selectedCategory.toLowerCase() === catName.toLowerCase() ||
-      (catName.toLowerCase().includes("silk") && selectedCategory.toLowerCase() === "silk") ||
-      (catName.toLowerCase().includes("handloom") && selectedCategory.toLowerCase() === "handloom") ||
-      (catName.toLowerCase().includes("festive") && selectedCategory.toLowerCase() === "festive") ||
-      (catName.toLowerCase().includes("bridal") && selectedCategory.toLowerCase() === "bridal") ||
-      (catName.toLowerCase().includes("new") && selectedCategory.toLowerCase().includes("new"));
-
-    const count = getCategoryItemCount(catName, productsForCategoryCounts);
+  const handleCategoryToggle = (cat: (typeof CATEGORIES)[number]) => {
+    const isCurrent = isCategoryActive(selectedCategory, cat);
+    const count = getCategoryItemCount(cat.canonicalQuery, productsForCategoryCounts);
 
     // Prevent selecting categories with zero items for active filters
     if (count === 0 && !isCurrent) {
@@ -200,7 +218,7 @@ export function ShopContent() {
     if (isCurrent) {
       params.delete("category");
     } else {
-      params.set("category", catName);
+      params.set("category", cat.canonicalQuery.replace(/\+/g, " "));
     }
     const newQuery = params.toString();
     router.push(newQuery ? `/shop?${newQuery}` : "/shop", { scroll: false });
@@ -255,13 +273,13 @@ export function ShopContent() {
             {selectedCategory && (
               <>
                 <span>/</span>
-                <span className="text-[#541920] font-semibold">{selectedCategory}</span>
+                <span className="text-[#541920] font-semibold">{displayCategoryName}</span>
               </>
             )}
           </nav>
 
           <h1 className="text-3xl sm:text-4xl font-serif font-normal text-neutral-900">
-            {selectedCategory || "All Handcrafted Products"}
+            {displayCategoryName || "All Handcrafted Products"}
           </h1>
           <p className="text-xs sm:text-sm text-neutral-600 mt-1 font-sans max-w-2xl">
             {selectedCategory
@@ -336,7 +354,7 @@ export function ShopContent() {
             <span className="text-xs text-neutral-600 font-medium">Active Filters:</span>
             {selectedCategory && (
               <span className="inline-flex items-center pl-3 pr-1 py-0.5 bg-white border border-[#DCD5C9] rounded-full text-xs text-neutral-800">
-                <span>Category: {selectedCategory}</span>
+                <span>Category: {displayCategoryName || selectedCategory}</span>
                 <button
                   type="button"
                   onClick={() => {
@@ -346,7 +364,7 @@ export function ShopContent() {
                     router.push(qStr ? `/shop?${qStr}` : "/shop", { scroll: false });
                   }}
                   className="w-11 h-11 min-w-[44px] min-h-[44px] -my-2.5 -mr-1 flex items-center justify-center text-neutral-500 hover:text-red-600 transition-colors cursor-pointer rounded-full focus-visible:ring-2 focus-visible:ring-[#541920] focus-visible:outline-none"
-                  aria-label={`Remove category filter: ${selectedCategory}`}
+                  aria-label={`Remove category filter: ${displayCategoryName || selectedCategory}`}
                 >
                   <X className="w-3.5 h-3.5" />
                 </button>
@@ -431,15 +449,8 @@ export function ShopContent() {
                 </h4>
                 <div className="space-y-1.5">
                   {CATEGORIES.map((cat) => {
-                    const isSelected =
-                      selectedCategory.toLowerCase() === cat.name.toLowerCase() ||
-                      (cat.name.toLowerCase().includes("silk") && selectedCategory.toLowerCase() === "silk") ||
-                      (cat.name.toLowerCase().includes("handloom") && selectedCategory.toLowerCase() === "handloom") ||
-                      (cat.name.toLowerCase().includes("festive") && selectedCategory.toLowerCase() === "festive") ||
-                      (cat.name.toLowerCase().includes("bridal") && selectedCategory.toLowerCase() === "bridal") ||
-                      (cat.name.toLowerCase().includes("new") && selectedCategory.toLowerCase().includes("new"));
-
-                    const count = getCategoryItemCount(cat.name, productsForCategoryCounts);
+                    const isSelected = isCategoryActive(selectedCategory, cat);
+                    const count = getCategoryItemCount(cat.canonicalQuery, productsForCategoryCounts);
                     const isDisabled = count === 0 && !isSelected;
 
                     return (
@@ -449,7 +460,7 @@ export function ShopContent() {
                         aria-pressed={isSelected}
                         disabled={isDisabled}
                         aria-disabled={isDisabled}
-                        onClick={() => !isDisabled && handleCategoryToggle(cat.name)}
+                        onClick={() => !isDisabled && handleCategoryToggle(cat)}
                         className={`w-full min-h-[44px] px-2.5 py-2 flex items-center justify-between text-xs text-left rounded-xs transition-colors focus-visible:ring-2 focus-visible:ring-[#541920] focus-visible:outline-none ${
                           isDisabled
                             ? "cursor-not-allowed text-neutral-600"
@@ -647,15 +658,8 @@ export function ShopContent() {
                   </h4>
                   <div className="space-y-1">
                     {CATEGORIES.map((cat) => {
-                      const isSelected =
-                        selectedCategory.toLowerCase() === cat.name.toLowerCase() ||
-                        (cat.name.toLowerCase().includes("silk") && selectedCategory.toLowerCase() === "silk") ||
-                        (cat.name.toLowerCase().includes("handloom") && selectedCategory.toLowerCase() === "handloom") ||
-                        (cat.name.toLowerCase().includes("festive") && selectedCategory.toLowerCase() === "festive") ||
-                        (cat.name.toLowerCase().includes("bridal") && selectedCategory.toLowerCase() === "bridal") ||
-                        (cat.name.toLowerCase().includes("new") && selectedCategory.toLowerCase().includes("new"));
-
-                      const count = getCategoryItemCount(cat.name, productsForCategoryCounts);
+                      const isSelected = isCategoryActive(selectedCategory, cat);
+                      const count = getCategoryItemCount(cat.canonicalQuery, productsForCategoryCounts);
                       const isDisabled = count === 0 && !isSelected;
 
                       return (
@@ -665,7 +669,7 @@ export function ShopContent() {
                           aria-pressed={isSelected}
                           disabled={isDisabled}
                           aria-disabled={isDisabled}
-                          onClick={() => !isDisabled && handleCategoryToggle(cat.name)}
+                          onClick={() => !isDisabled && handleCategoryToggle(cat)}
                           className={`w-full min-h-[44px] flex items-center justify-between px-2.5 py-2 text-xs text-left rounded-xs transition-colors focus-visible:ring-2 focus-visible:ring-[#541920] focus-visible:outline-none ${
                             isDisabled
                               ? "cursor-not-allowed text-neutral-600 bg-neutral-200/20"
