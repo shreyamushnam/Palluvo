@@ -58,7 +58,11 @@ export const Footer: React.FC = () => {
                   Get the latest from PALLUVO
                 </p>
                 {subscribed ? (
-                  <div className="flex items-center gap-2 text-xs text-[#A8D5BA] min-h-[44px]">
+                  <div
+                    role="status"
+                    aria-live="polite"
+                    className="flex items-center gap-2 text-xs text-[#A8D5BA] min-h-[44px]"
+                  >
                     <Check size={16} /> Thank you for subscribing! Check your inbox for 10% off.
                   </div>
                 ) : (

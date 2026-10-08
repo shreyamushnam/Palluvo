@@ -405,6 +405,7 @@ export default function CheckoutPage() {
                             <button
                               key={addr.id}
                               type="button"
+                              aria-pressed={Boolean(isSelected)}
                               onClick={() => {
                                 setSelectedAddressId(addr.id);
                                 setShippingAddress((prev) => ({
