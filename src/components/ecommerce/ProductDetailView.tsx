@@ -414,7 +414,10 @@ export const ProductDetailView: React.FC<ProductDetailViewProps> = ({
               {/* Description */}
               <div className="py-1">
                 <button
+                  id="accordion-trigger-description"
                   type="button"
+                  aria-expanded={Boolean(openAccordions.description)}
+                  aria-controls="accordion-panel-description"
                   onClick={() => toggleAccordion("description")}
                   className="w-full min-h-[44px] flex items-center justify-between font-semibold text-neutral-900 text-left cursor-pointer focus-visible:ring-2 focus-visible:ring-[#541920] focus-visible:outline-none"
                 >
@@ -422,16 +425,25 @@ export const ProductDetailView: React.FC<ProductDetailViewProps> = ({
                   {openAccordions.description ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
                 </button>
                 {openAccordions.description && (
-                  <p className="pb-3 text-neutral-600 leading-relaxed font-sans">
-                    {product.description}
-                  </p>
+                  <div
+                    id="accordion-panel-description"
+                    role="region"
+                    aria-labelledby="accordion-trigger-description"
+                  >
+                    <p className="pb-3 text-neutral-600 leading-relaxed font-sans">
+                      {product.description}
+                    </p>
+                  </div>
                 )}
               </div>
 
               {/* Shipping & Delivery */}
               <div className="py-1">
                 <button
+                  id="accordion-trigger-shipping"
                   type="button"
+                  aria-expanded={Boolean(openAccordions.shipping)}
+                  aria-controls="accordion-panel-shipping"
                   onClick={() => toggleAccordion("shipping")}
                   className="w-full min-h-[44px] flex items-center justify-between font-semibold text-neutral-900 text-left cursor-pointer focus-visible:ring-2 focus-visible:ring-[#541920] focus-visible:outline-none"
                 >
@@ -439,16 +451,25 @@ export const ProductDetailView: React.FC<ProductDetailViewProps> = ({
                   {openAccordions.shipping ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
                 </button>
                 {openAccordions.shipping && (
-                  <p className="pb-3 text-neutral-600 leading-relaxed font-sans">
-                    Free express shipping on all orders above ₹1,999. Dispatches within 24-48 hours. Delivered safely in a tamper-proof luxury keepsake box.
-                  </p>
+                  <div
+                    id="accordion-panel-shipping"
+                    role="region"
+                    aria-labelledby="accordion-trigger-shipping"
+                  >
+                    <p className="pb-3 text-neutral-600 leading-relaxed font-sans">
+                      Free express shipping on all orders above ₹1,999. Dispatches within 24-48 hours. Delivered safely in a tamper-proof luxury keepsake box.
+                    </p>
+                  </div>
                 )}
               </div>
 
               {/* Returns */}
               <div className="py-1">
                 <button
+                  id="accordion-trigger-returns"
                   type="button"
+                  aria-expanded={Boolean(openAccordions.returns)}
+                  aria-controls="accordion-panel-returns"
                   onClick={() => toggleAccordion("returns")}
                   className="w-full min-h-[44px] flex items-center justify-between font-semibold text-neutral-900 text-left cursor-pointer focus-visible:ring-2 focus-visible:ring-[#541920] focus-visible:outline-none"
                 >
@@ -456,16 +477,25 @@ export const ProductDetailView: React.FC<ProductDetailViewProps> = ({
                   {openAccordions.returns ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
                 </button>
                 {openAccordions.returns && (
-                  <p className="pb-3 text-neutral-600 leading-relaxed font-sans">
-                    7-day hassle-free return and exchange policy. Doorstep reverse pickup available across India.
-                  </p>
+                  <div
+                    id="accordion-panel-returns"
+                    role="region"
+                    aria-labelledby="accordion-trigger-returns"
+                  >
+                    <p className="pb-3 text-neutral-600 leading-relaxed font-sans">
+                      7-day hassle-free return and exchange policy. Doorstep reverse pickup available across India.
+                    </p>
+                  </div>
                 )}
               </div>
 
               {/* Care Guide */}
               <div className="py-1">
                 <button
+                  id="accordion-trigger-care"
                   type="button"
+                  aria-expanded={Boolean(openAccordions.care)}
+                  aria-controls="accordion-panel-care"
                   onClick={() => toggleAccordion("care")}
                   className="w-full min-h-[44px] flex items-center justify-between font-semibold text-neutral-900 text-left cursor-pointer focus-visible:ring-2 focus-visible:ring-[#541920] focus-visible:outline-none"
                 >
@@ -473,9 +503,15 @@ export const ProductDetailView: React.FC<ProductDetailViewProps> = ({
                   {openAccordions.care ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
                 </button>
                 {openAccordions.care && (
-                  <p className="mt-2 text-neutral-600 leading-relaxed font-sans">
-                    {product.details.careInstructions} Store folded in breathable pure cotton muslin cloth. Avoid direct perfume spray.
-                  </p>
+                  <div
+                    id="accordion-panel-care"
+                    role="region"
+                    aria-labelledby="accordion-trigger-care"
+                  >
+                    <p className="mt-2 text-neutral-600 leading-relaxed font-sans">
+                      {product.details.careInstructions} Store folded in breathable pure cotton muslin cloth. Avoid direct perfume spray.
+                    </p>
+                  </div>
                 )}
               </div>
             </div>

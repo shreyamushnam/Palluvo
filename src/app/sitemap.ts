@@ -19,28 +19,16 @@ export default function sitemap(): MetadataRoute.Sitemap {
       priority: 0.9,
     },
     {
+      url: `${baseUrl}/sarees`,
+      lastModified,
+      changeFrequency: "daily",
+      priority: 0.9,
+    },
+    {
       url: `${baseUrl}/collections`,
       lastModified,
       changeFrequency: "weekly",
       priority: 0.8,
-    },
-    {
-      url: `${baseUrl}/cart`,
-      lastModified,
-      changeFrequency: "weekly",
-      priority: 0.5,
-    },
-    {
-      url: `${baseUrl}/wishlist`,
-      lastModified,
-      changeFrequency: "weekly",
-      priority: 0.5,
-    },
-    {
-      url: `${baseUrl}/account`,
-      lastModified,
-      changeFrequency: "monthly",
-      priority: 0.4,
     },
     {
       url: `${baseUrl}/about`,
