@@ -53,7 +53,7 @@ const SLIDES = [
       name: "Red Banarasi Brocade Saree",
       price: "₹6,300",
       originalPrice: "₹8,000",
-      discount: "22% OFF",
+      discount: "21% OFF",
       href: "/product/pal-005",
     },
   },
@@ -134,7 +134,7 @@ export const HeroBanner: React.FC = () => {
                   fill
                   priority
                   loading="eager"
-                  sizes="(max-width: 1024px) 100vw, 550px"
+                  sizes="(max-width: 639px) 240px, (max-width: 767px) 280px, (max-width: 1023px) 384px, (min-width: 1280px) 584px, 45vw"
                   className="object-cover object-top transition-opacity duration-300"
                 />
 

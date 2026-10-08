@@ -226,7 +226,7 @@ export const PRODUCTS: Product[] = [
     fabric: "Pure Katan Silk",
     price: 6300,
     originalPrice: 8000,
-    discountPercent: 22,
+    discountPercent: 21,
     rating: 4.9,
     reviewsCount: 210,
     reviewCount: 210,
