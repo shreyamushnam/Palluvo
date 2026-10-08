@@ -3,7 +3,7 @@
 import React, { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { Trash2, Heart, ShoppingBag, ArrowRight, ShieldCheck, Tag, Plus, Minus } from "lucide-react";
+import { Trash2, Heart, ShoppingBag, ArrowRight, ShieldCheck, Tag, Plus, Minus, Sparkles } from "lucide-react";
 import { useStore } from "@/context/StoreContext";
 
 export default function CartPage() {
@@ -69,8 +69,8 @@ export default function CartPage() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12">
         {cart.length === 0 ? (
           <div className="max-w-md mx-auto text-center py-16 space-y-4 bg-white p-8 rounded-sm border border-[#E8E2D9]">
-            <div className="w-16 h-16 mx-auto rounded-full bg-[#F4EFE6] flex items-center justify-center text-neutral-400">
-              <ShoppingBag className="w-8 h-8" />
+            <div className="w-16 h-16 mx-auto rounded-full bg-[#F4EFE6] flex items-center justify-center text-[#541920]">
+              <ShoppingBag className="w-8 h-8 text-[#541920]" />
             </div>
             <div>
               <h2 className="text-xl font-serif text-neutral-900">Your shopping bag is empty</h2>
@@ -95,8 +95,9 @@ export default function CartPage() {
               <div className="bg-white p-4 rounded-sm border border-[#E8E2D9]">
                 <div className="text-xs text-neutral-700 flex justify-between font-sans mb-1.5">
                   {freeShippingLeft === 0 ? (
-                    <span className="text-[#15803D] font-medium">
-                      🎉 Congratulations! You qualify for FREE Express Shipping.
+                    <span className="text-[#15803D] font-medium flex items-center gap-1.5">
+                      <Sparkles className="w-3.5 h-3.5 text-[#15803D] shrink-0" />
+                      <span>Congratulations! You qualify for FREE Express Shipping.</span>
                     </span>
                   ) : (
                     <span>

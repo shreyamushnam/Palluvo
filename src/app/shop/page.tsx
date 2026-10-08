@@ -3,7 +3,7 @@
 import React, { useState, useMemo, Suspense } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Filter, X, SlidersHorizontal, Check } from "lucide-react";
+import { Filter, X, SlidersHorizontal, Check, Search } from "lucide-react";
 import { PRODUCTS, type Product } from "@/data/products";
 import { CATEGORIES } from "@/data/categories";
 import { ProductCard } from "@/components/ecommerce/ProductCard";
@@ -122,7 +122,7 @@ const PRICE_RANGES = [
   { label: "Above ₹15,000", min: 15000, max: 999999 },
 ];
 
-function ShopContent() {
+export function ShopContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const selectedCategory = searchParams.get("category") || "";
@@ -559,6 +559,9 @@ function ShopContent() {
           <div className="lg:col-span-3">
             {filteredProducts.length === 0 ? (
               <div className="bg-white p-12 rounded-sm border border-[#E8E2D9] text-center space-y-4">
+                <div className="w-16 h-16 mx-auto rounded-full bg-[#F4EFE6] flex items-center justify-center text-[#541920]">
+                  <Search className="w-8 h-8 text-[#541920]" />
+                </div>
                 <p className="font-serif text-lg text-neutral-800">
                   {selectedCategory && selectedCategory.toLowerCase().includes("saree")
                     ? "No sarees found matching your selected filters."
@@ -569,7 +572,7 @@ function ShopContent() {
                 </p>
                 <button
                   onClick={clearAllFilters}
-                  className="px-6 py-2.5 bg-[#541920] text-white text-xs uppercase tracking-widest font-semibold rounded-xs"
+                  className="px-6 py-2.5 bg-[#541920] hover:bg-[#3D1217] text-white text-xs uppercase tracking-widest font-semibold rounded-xs transition-colors cursor-pointer"
                 >
                   Reset All Filters
                 </button>

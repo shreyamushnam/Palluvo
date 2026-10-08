@@ -175,17 +175,33 @@ export const Navbar: React.FC = () => {
 
           {/* Right: E-Commerce Utilities */}
           <div className="flex items-center gap-0.5 sm:gap-1.5 xl:gap-3 shrink-0">
-            {/* Search */}
+            {/* Desktop Search Input */}
+            <div className="hidden lg:flex items-center relative">
+              <input
+                type="text"
+                readOnly
+                onClick={() => setIsSearchOpen(true)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" || e.key === " ") {
+                    e.preventDefault();
+                    setIsSearchOpen(true);
+                  }
+                }}
+                placeholder="Search sarees…"
+                aria-label="Search sarees"
+                className="w-36 xl:w-52 pl-8 pr-3 py-1.5 text-xs bg-[#F4EFE6]/70 hover:bg-[#F4EFE6] border border-[#DCD5C9] rounded-full text-neutral-800 placeholder:text-neutral-500 cursor-pointer focus:outline-none focus:ring-1 focus:ring-[#541920] transition-colors"
+              />
+              <Search size={14} className="absolute left-2.5 text-neutral-500 pointer-events-none" />
+            </div>
+
+            {/* Mobile Search Button */}
             <button
               onClick={() => setIsSearchOpen(true)}
-              className="min-h-[44px] min-w-[44px] p-2 text-[#1C1A18] hover:text-[#541920] transition-colors flex items-center justify-center gap-1.5 focus-visible:ring-2 focus-visible:ring-[#541920] focus-visible:outline-none cursor-pointer"
+              className="lg:hidden min-h-[44px] min-w-[44px] p-2 text-[#1C1A18] hover:text-[#541920] transition-colors flex items-center justify-center gap-1.5 focus-visible:ring-2 focus-visible:ring-[#541920] focus-visible:outline-none cursor-pointer"
               aria-label="Search sarees"
               title="Search"
             >
               <Search size={20} strokeWidth={1.8} />
-              <span className="text-xs uppercase tracking-wider text-[#5E5A54] hidden 2xl:inline-block font-normal">
-                Search
-              </span>
             </button>
 
             {/* Account - on mobile <sm, Account is accessed via the mobile drawer or bottom nav */}

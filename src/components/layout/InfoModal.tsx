@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { X, Mail, Phone, Truck, RotateCcw, HelpCircle, BookOpen, Sparkles, CheckCircle2, ChevronDown, ChevronUp } from "lucide-react";
+import { X, Mail, Phone, Truck, RotateCcw, HelpCircle, BookOpen, Sparkles, CheckCircle2, ChevronDown, ChevronUp, Clock, Gift, ClipboardList, CreditCard } from "lucide-react";
 import { useFocusTrap } from "@/hooks/useFocusTrap";
 
 export type InfoModalTab = "contact" | "shipping" | "returns" | "faqs" | "story" | "craftsmanship";
@@ -34,6 +34,7 @@ export const InfoModal: React.FC<InfoModalProps> = ({
   const [contactFormSubmitted, setContactFormSubmitted] = useState(false);
   const [contactName, setContactName] = useState("");
   const [contactEmail, setContactEmail] = useState("");
+  const [contactPhone, setContactPhone] = useState("");
   const [contactMessage, setContactMessage] = useState("");
 
   useEffect(() => {
@@ -79,6 +80,7 @@ export const InfoModal: React.FC<InfoModalProps> = ({
       setContactFormSubmitted(false);
       setContactName("");
       setContactEmail("");
+      setContactPhone("");
       setContactMessage("");
     }, 4000);
   };
@@ -206,7 +208,7 @@ export const InfoModal: React.FC<InfoModalProps> = ({
                       </div>
                     ) : (
                       <form onSubmit={handleContactSubmit} className="space-y-3">
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                           <div>
                             <label className="block text-[11px] font-semibold text-neutral-700 uppercase mb-1">
                               Your Name
@@ -230,6 +232,18 @@ export const InfoModal: React.FC<InfoModalProps> = ({
                               value={contactEmail}
                               onChange={(e) => setContactEmail(e.target.value)}
                               placeholder="e.g. radhika@example.com"
+                              className="w-full px-3 py-2 text-xs border border-[#DCD5C9] rounded-xs bg-[#FAF7F2] focus:bg-white focus:outline-none focus:border-[#541920]"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-[11px] font-semibold text-neutral-700 uppercase mb-1">
+                              Phone Number
+                            </label>
+                            <input
+                              type="tel"
+                              value={contactPhone}
+                              onChange={(e) => setContactPhone(e.target.value)}
+                              placeholder="e.g. +91 98765 43210…"
                               className="w-full px-3 py-2 text-xs border border-[#DCD5C9] rounded-xs bg-[#FAF7F2] focus:bg-white focus:outline-none focus:border-[#541920]"
                             />
                           </div>
@@ -273,8 +287,9 @@ export const InfoModal: React.FC<InfoModalProps> = ({
 
                   <div className="space-y-3.5 text-xs text-neutral-700 leading-relaxed font-sans">
                     <div className="p-4 bg-white rounded-xs border border-[#E8E2D9] space-y-1.5">
-                      <strong className="text-neutral-900 font-semibold block text-sm">
-                        🚚 Free Express Shipping
+                      <strong className="text-neutral-900 font-semibold flex items-center gap-2 text-sm">
+                        <Truck className="w-4 h-4 text-[#541920]" />
+                        <span>Free Express Shipping</span>
                       </strong>
                       <p>
                         We offer 100% complimentary insured express shipping across India on all orders above <strong>₹1,999</strong>. For orders under ₹1,999, a flat nominal fee of ₹150 applies.
@@ -282,8 +297,9 @@ export const InfoModal: React.FC<InfoModalProps> = ({
                     </div>
 
                     <div className="p-4 bg-white rounded-xs border border-[#E8E2D9] space-y-1.5">
-                      <strong className="text-neutral-900 font-semibold block text-sm">
-                        ⏱️ Dispatch & Delivery Timelines
+                      <strong className="text-neutral-900 font-semibold flex items-center gap-2 text-sm">
+                        <Clock className="w-4 h-4 text-[#541920]" />
+                        <span>Dispatch & Delivery Timelines</span>
                       </strong>
                       <p>• <strong>Dispatch:</strong> Ready-to-ship sarees dispatch within 24 to 48 hours.</p>
                       <p>• <strong>Metro Cities:</strong> Delivered in 2-4 Business Days (Delhi, Mumbai, Bengaluru, Hyderabad, Chennai, Kolkata).</p>
@@ -291,8 +307,9 @@ export const InfoModal: React.FC<InfoModalProps> = ({
                     </div>
 
                     <div className="p-4 bg-white rounded-xs border border-[#E8E2D9] space-y-1.5">
-                      <strong className="text-neutral-900 font-semibold block text-sm">
-                        🎁 Keepsake Packaging
+                      <strong className="text-neutral-900 font-semibold flex items-center gap-2 text-sm">
+                        <Gift className="w-4 h-4 text-[#541920]" />
+                        <span>Keepsake Packaging</span>
                       </strong>
                       <p>
                         Every drape is layered in archival butter paper, enveloped in breathable pure cotton muslin, and encased in our signature PALLUVO gold-embossed keepsake hard box.
@@ -314,8 +331,9 @@ export const InfoModal: React.FC<InfoModalProps> = ({
 
                   <div className="space-y-3 text-xs text-neutral-700 leading-relaxed font-sans">
                     <div className="p-4 bg-white rounded-xs border border-[#E8E2D9] space-y-2">
-                      <strong className="text-neutral-900 font-semibold block text-sm">
-                        ✨ Easy Return Window
+                      <strong className="text-neutral-900 font-semibold flex items-center gap-2 text-sm">
+                        <Sparkles className="w-4 h-4 text-[#541920]" />
+                        <span>Easy Return Window</span>
                       </strong>
                       <p>
                         You can initiate a return or exchange within <strong>7 days of delivery</strong> directly from your account or by emailing us at <strong>contact@palluvo.com</strong>.
@@ -323,8 +341,9 @@ export const InfoModal: React.FC<InfoModalProps> = ({
                     </div>
 
                     <div className="p-4 bg-white rounded-xs border border-[#E8E2D9] space-y-2">
-                      <strong className="text-neutral-900 font-semibold block text-sm">
-                        📋 Return Conditions
+                      <strong className="text-neutral-900 font-semibold flex items-center gap-2 text-sm">
+                        <ClipboardList className="w-4 h-4 text-[#541920]" />
+                        <span>Return Conditions</span>
                       </strong>
                       <p>• Saree must be unused, unwashed, and folded with all original tags & Silk Mark tags intact.</p>
                       <p>• Attached unstitched blouse piece must remain intact and uncut.</p>
@@ -332,8 +351,9 @@ export const InfoModal: React.FC<InfoModalProps> = ({
                     </div>
 
                     <div className="p-4 bg-white rounded-xs border border-[#E8E2D9] space-y-2">
-                      <strong className="text-neutral-900 font-semibold block text-sm">
-                        💳 Refund Processing
+                      <strong className="text-neutral-900 font-semibold flex items-center gap-2 text-sm">
+                        <CreditCard className="w-4 h-4 text-[#541920]" />
+                        <span>Refund Processing</span>
                       </strong>
                       <p>
                         Once our quality check team receives and inspects the drape, refunds are credited back to your original payment method (or UPI/Bank Account for COD orders) within 24 to 48 hours.

@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Phone, Mail, Clock, MapPin, Sparkles } from "lucide-react";
+import { ContactForm } from "./ContactForm";
 
 export const metadata: Metadata = {
   title: "Contact Concierge | Client Services & Inquiries | PALLUVO",
@@ -111,6 +112,11 @@ export default function ContactPage() {
               </Link>
             </div>
           </div>
+        </div>
+
+        {/* Interactive Inquiry Form */}
+        <div className="mt-8">
+          <ContactForm />
         </div>
       </div>
     </div>

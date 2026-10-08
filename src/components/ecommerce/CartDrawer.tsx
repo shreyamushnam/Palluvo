@@ -3,7 +3,7 @@
 import React, { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { X, Trash2, Plus, Minus, ShoppingBag, ArrowRight, ShieldCheck, Tag } from "lucide-react";
+import { X, Trash2, Plus, Minus, ShoppingBag, ArrowRight, ShieldCheck, Tag, Sparkles } from "lucide-react";
 import { useStore } from "@/context/StoreContext";
 
 export const CartDrawer: React.FC = () => {
@@ -76,8 +76,9 @@ export const CartDrawer: React.FC = () => {
           <div className="bg-[#FAF7F2] px-6 py-3 border-b border-[#E8E2D9]">
             <div className="text-xs text-neutral-600 mb-1.5 flex justify-between font-sans">
               {freeShippingLeft === 0 ? (
-                <span className="text-[#15803D] font-medium flex items-center gap-1">
-                  🎉 You have unlocked FREE Express Shipping!
+                <span className="text-[#15803D] font-medium flex items-center gap-1.5">
+                  <Sparkles className="w-3.5 h-3.5 text-[#15803D] shrink-0" />
+                  <span>You have unlocked FREE Express Shipping!</span>
                 </span>
               ) : (
                 <span>
@@ -99,8 +100,8 @@ export const CartDrawer: React.FC = () => {
           <div className="flex-1 overflow-y-auto px-6 py-4 space-y-4 divide-y divide-[#EFEAE1]">
             {cart.length === 0 ? (
               <div className="py-16 text-center space-y-4">
-                <div className="w-16 h-16 mx-auto rounded-full bg-[#F4EFE6] flex items-center justify-center text-neutral-400">
-                  <ShoppingBag className="w-8 h-8" />
+                <div className="w-16 h-16 mx-auto rounded-full bg-[#F4EFE6] flex items-center justify-center text-[#541920]">
+                  <ShoppingBag className="w-8 h-8 text-[#541920]" />
                 </div>
                 <div>
                   <h3 className="font-serif text-lg text-neutral-800">Your bag is empty</h3>

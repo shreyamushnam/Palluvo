@@ -221,6 +221,9 @@ export const SearchOverlay: React.FC = () => {
 
                 {filteredProducts.length === 0 ? (
                   <div className="py-12 text-center space-y-3">
+                    <div className="w-16 h-16 mx-auto rounded-full bg-[#F4EFE6] flex items-center justify-center text-[#541920] mb-2">
+                      <Search className="w-8 h-8 text-[#541920]" />
+                    </div>
                     <p className="font-serif text-base text-neutral-800">
                       No sarees found matching &ldquo;{query}&rdquo;
                     </p>
