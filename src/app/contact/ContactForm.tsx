@@ -50,6 +50,8 @@ export function ContactForm() {
               <input
                 id="contact-name"
                 type="text"
+                name="name"
+                autoComplete="name"
                 required
                 value={name}
                 onChange={(e) => setName(e.target.value)}
@@ -64,6 +66,8 @@ export function ContactForm() {
               <input
                 id="contact-email"
                 type="email"
+                name="email"
+                autoComplete="email"
                 required
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
@@ -78,6 +82,9 @@ export function ContactForm() {
               <input
                 id="contact-phone"
                 type="tel"
+                name="phone"
+                autoComplete="tel"
+                inputMode="tel"
                 value={phone}
                 onChange={(e) => setPhone(e.target.value)}
                 placeholder="e.g. +91 98765 43210…"

@@ -276,6 +276,8 @@ export default function CartPage() {
                           onChange={(e) => setCouponInput(e.target.value.toUpperCase())}
                           className="flex-1 min-h-[44px] px-3 py-2 text-xs bg-white border border-[#DCD5C9] rounded-xs focus:border-[#541920] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#541920] placeholder:text-neutral-500 font-mono uppercase"
                           aria-label="Coupon code"
+                          aria-invalid={Boolean(couponError)}
+                          aria-describedby={couponError ? "cart-page-coupon-error" : undefined}
                         />
                         <button
                           type="submit"
@@ -285,7 +287,11 @@ export default function CartPage() {
                         </button>
                       </div>
                     </div>
-                    {couponError && <p className="text-xs text-red-600 mt-1">{couponError}</p>}
+                    {couponError && (
+                      <p id="cart-page-coupon-error" role="alert" className="text-xs text-red-600 mt-1">
+                        {couponError}
+                      </p>
+                    )}
                   </form>
                 )}
 
