@@ -2,9 +2,15 @@
 
 import React, { useState } from "react";
 import Link from "next/link";
+import dynamic from "next/dynamic";
 import { Check } from "lucide-react";
 import { InstagramIcon, FacebookIcon, PinterestIcon } from "@/components/icons/BrandIcons";
-import { InfoModal, InfoModalTab } from "@/components/layout/InfoModal";
+import type { InfoModalTab } from "@/components/layout/InfoModal";
+
+const InfoModal = dynamic(
+  () => import("@/components/layout/InfoModal").then((mod) => mod.InfoModal),
+  { ssr: false }
+);
 
 export const Footer: React.FC = () => {
   const [email, setEmail] = useState("");
@@ -245,12 +251,14 @@ export const Footer: React.FC = () => {
         </div>
       </footer>
 
-      {/* Interactive InfoModal */}
-      <InfoModal
-        isOpen={infoModalOpen}
-        initialTab={infoModalTab}
-        onClose={() => setInfoModalOpen(false)}
-      />
+      {/* Interactive InfoModal loaded on-demand */}
+      {infoModalOpen && (
+        <InfoModal
+          isOpen={infoModalOpen}
+          initialTab={infoModalTab}
+          onClose={() => setInfoModalOpen(false)}
+        />
+      )}
     </>
   );
 };

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { createContext, useContext, useState, useEffect, useRef } from "react";
+import React, { createContext, useContext, useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { Product, PRODUCTS } from "@/data/products";
 import { OrderRecord, MOCK_ORDERS, SavedAddress, MOCK_ADDRESSES } from "@/data/mockOrders";
 
@@ -129,79 +129,97 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     } catch {}
   }, [addresses, isHydrated]);
 
-  const showToast = (message: string, type: "success" | "info" = "success") => {
+  const showToast = useCallback((message: string, type: "success" | "info" = "success") => {
     const id = Date.now();
     setToast({ id, message, type });
     setTimeout(() => {
       setToast((prev) => (prev?.id === id ? null : prev));
     }, 3200);
-  };
+  }, []);
 
-  const addToCart = (product: Product, quantity = 1, selectedColor?: string, blouseOption = "Unstitched (Included)") => {
-    const color = selectedColor || product.color;
-    setCart((prev) => {
-      const existingIndex = prev.findIndex(
-        (item) => item.product.id === product.id && item.selectedColor === color
-      );
-      if (existingIndex > -1) {
-        const next = [...prev];
-        next[existingIndex].quantity += quantity;
-        return next;
-      }
-      return [...prev, { product, quantity, selectedColor: color, blouseOption }];
-    });
-    setIsCartOpen(true);
-    showToast(`Added ${product.name} to Bag!`);
-  };
-
-  const removeFromCart = (productId: string, selectedColor?: string) => {
-    setCart((prev) =>
-      prev.filter((item) => {
-        if (selectedColor) {
-          return !(item.product.id === productId && item.selectedColor === selectedColor);
+  const addToCart = useCallback(
+    (product: Product, quantity = 1, selectedColor?: string, blouseOption = "Unstitched (Included)") => {
+      const color = selectedColor || product.color;
+      setCart((prev) => {
+        const existingIndex = prev.findIndex(
+          (item) => item.product.id === product.id && item.selectedColor === color
+        );
+        if (existingIndex > -1) {
+          const next = [...prev];
+          next[existingIndex].quantity += quantity;
+          return next;
         }
-        return item.product.id !== productId;
-      })
-    );
-    showToast("Item removed from Bag", "info");
-  };
+        return [...prev, { product, quantity, selectedColor: color, blouseOption }];
+      });
+      setIsCartOpen(true);
+      showToast(`Added ${product.name} to Bag!`);
+    },
+    [showToast]
+  );
 
-  const updateQuantity = (productId: string, quantity: number, selectedColor?: string) => {
-    if (quantity <= 0) {
-      removeFromCart(productId, selectedColor);
-      return;
-    }
-    setCart((prev) =>
-      prev.map((item) => {
-        const matches = selectedColor
-          ? item.product.id === productId && item.selectedColor === selectedColor
-          : item.product.id === productId;
-        return matches ? { ...item, quantity } : item;
-      })
-    );
-  };
+  const removeFromCart = useCallback(
+    (productId: string, selectedColor?: string) => {
+      setCart((prev) =>
+        prev.filter((item) => {
+          if (selectedColor) {
+            return !(item.product.id === productId && item.selectedColor === selectedColor);
+          }
+          return item.product.id !== productId;
+        })
+      );
+      showToast("Item removed from Bag", "info");
+    },
+    [showToast]
+  );
 
-  const clearCart = () => {
+  const updateQuantity = useCallback(
+    (productId: string, quantity: number, selectedColor?: string) => {
+      if (quantity <= 0) {
+        removeFromCart(productId, selectedColor);
+        return;
+      }
+      setCart((prev) =>
+        prev.map((item) => {
+          const matches = selectedColor
+            ? item.product.id === productId && item.selectedColor === selectedColor
+            : item.product.id === productId;
+          return matches ? { ...item, quantity } : item;
+        })
+      );
+    },
+    [removeFromCart]
+  );
+
+  const clearCart = useCallback(() => {
     setCart([]);
     setAppliedCoupon(null);
-  };
+  }, []);
 
-  const toggleWishlist = (productId: string) => {
-    setWishlist((prev) => {
-      const exists = prev.includes(productId);
-      if (exists) {
-        showToast("Removed from Wishlist", "info");
-        return prev.filter((id) => id !== productId);
-      } else {
-        showToast("Saved to Wishlist!");
-        return [...prev, productId];
-      }
-    });
-  };
+  const toggleWishlist = useCallback(
+    (productId: string) => {
+      setWishlist((prev) => {
+        const exists = prev.includes(productId);
+        if (exists) {
+          showToast("Removed from Wishlist", "info");
+          return prev.filter((id) => id !== productId);
+        } else {
+          showToast("Saved to Wishlist!");
+          return [...prev, productId];
+        }
+      });
+    },
+    [showToast]
+  );
 
-  const isInWishlist = (productId: string) => wishlist.includes(productId);
+  const isInWishlist = useCallback(
+    (productId: string) => wishlist.includes(productId),
+    [wishlist]
+  );
 
-  const subtotal = cart.reduce((sum, item) => sum + item.product.price * item.quantity, 0);
+  const subtotal = useMemo(
+    () => cart.reduce((sum, item) => sum + item.product.price * item.quantity, 0),
+    [cart]
+  );
   const freeShippingThreshold = 1999;
   const shippingFee = subtotal >= freeShippingThreshold || subtotal === 0 ? 0 : 149;
 
@@ -212,147 +230,214 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       setAppliedCoupon(null);
       showToast("Coupon MAGIC500 removed: Requires a minimum subtotal of ₹3,000.", "info");
     }
-  }, [appliedCoupon, subtotal, isHydrated]);
+  }, [appliedCoupon, subtotal, isHydrated, showToast]);
 
   // Calculate coupon discount directly from subtotal and applied coupon
-  const discountAmount = appliedCoupon === "PALLUVO10"
-    ? Math.round(subtotal * 0.1)
-    : appliedCoupon === "MAGIC500" && subtotal >= 3000
-    ? 500
-    : 0;
-
-  const applyCoupon = (code: string) => {
-    const formatted = code.trim().toUpperCase();
-    if (formatted === "PALLUVO10") {
-      setAppliedCoupon("PALLUVO10");
-      showToast("Coupon PALLUVO10 applied: 10% discount!");
-      return { success: true, message: "10% discount applied successfully!" };
-    } else if (formatted === "MAGIC500") {
-      if (subtotal >= 3000) {
-        setAppliedCoupon("MAGIC500");
-        showToast("Coupon MAGIC500 applied: ₹500 discount!");
-        return { success: true, message: "₹500 discount applied successfully!" };
-      }
-      return { success: false, message: "Coupon MAGIC500 requires a minimum subtotal of ₹3,000." };
+  const discountAmount = useMemo(() => {
+    if (appliedCoupon === "PALLUVO10") {
+      return Math.round(subtotal * 0.1);
     }
-    return { success: false, message: "Invalid or expired coupon code. Try 'PALLUVO10'" };
-  };
+    if (appliedCoupon === "MAGIC500" && subtotal >= 3000) {
+      return 500;
+    }
+    return 0;
+  }, [appliedCoupon, subtotal]);
 
-  const removeCoupon = () => {
+  const applyCoupon = useCallback(
+    (code: string) => {
+      const formatted = code.trim().toUpperCase();
+      if (formatted === "PALLUVO10") {
+        setAppliedCoupon("PALLUVO10");
+        showToast("Coupon PALLUVO10 applied: 10% discount!");
+        return { success: true, message: "10% discount applied successfully!" };
+      } else if (formatted === "MAGIC500") {
+        if (subtotal >= 3000) {
+          setAppliedCoupon("MAGIC500");
+          showToast("Coupon MAGIC500 applied: ₹500 discount!");
+          return { success: true, message: "₹500 discount applied successfully!" };
+        }
+        return { success: false, message: "Coupon MAGIC500 requires a minimum subtotal of ₹3,000." };
+      }
+      return { success: false, message: "Invalid or expired coupon code. Try 'PALLUVO10'" };
+    },
+    [subtotal, showToast]
+  );
+
+  const removeCoupon = useCallback(() => {
     setAppliedCoupon(null);
     showToast("Coupon removed", "info");
-  };
+  }, [showToast]);
 
-  const finalTotal = Math.max(0, subtotal - discountAmount + shippingFee);
-  const cartCount = cart.reduce((total, item) => total + item.quantity, 0);
+  const finalTotal = useMemo(
+    () => Math.max(0, subtotal - discountAmount + shippingFee),
+    [subtotal, discountAmount, shippingFee]
+  );
+  const cartCount = useMemo(
+    () => cart.reduce((total, item) => total + item.quantity, 0),
+    [cart]
+  );
   const wishlistCount = wishlist.length;
 
-  const placeOrder = (orderData: Omit<OrderRecord, "id" | "orderNumber" | "date" | "status" | "deliveryDate">): OrderRecord => {
-    const randomSuffix = Math.floor(1000 + Math.random() * 9000);
-    const newOrder: OrderRecord = {
-      ...orderData,
-      id: `ord-${Date.now()}`,
-      orderNumber: `PAL-2026-${randomSuffix}`,
-      date: "Today",
-      status: "Processing",
-      trackingNumber: `EXP${Math.floor(10000000 + Math.random() * 90000000)}`,
-      deliveryDate: "Expected within 3-4 working days",
-    };
+  const placeOrder = useCallback(
+    (orderData: Omit<OrderRecord, "id" | "orderNumber" | "date" | "status" | "deliveryDate">): OrderRecord => {
+      const randomSuffix = Math.floor(1000 + Math.random() * 9000);
+      const newOrder: OrderRecord = {
+        ...orderData,
+        id: `ord-${Date.now()}`,
+        orderNumber: `PAL-2026-${randomSuffix}`,
+        date: "Today",
+        status: "Processing",
+        trackingNumber: `EXP${Math.floor(10000000 + Math.random() * 90000000)}`,
+        deliveryDate: "Expected within 3-4 working days",
+      };
 
-    setOrders((prev) => [newOrder, ...prev]);
-    clearCart();
-    return newOrder;
-  };
+      setOrders((prev) => [newOrder, ...prev]);
+      clearCart();
+      return newOrder;
+    },
+    [clearCart]
+  );
 
-  const addAddress = (newAddrData: Omit<SavedAddress, "id">): SavedAddress => {
-    const newAddress: SavedAddress = {
-      id: `addr-${Date.now()}`,
-      ...newAddrData,
-    };
-    setAddresses((prev) => {
-      if (newAddrData.isDefault) {
-        return [...prev.map((a) => ({ ...a, isDefault: false })), newAddress];
-      }
-      return [...prev, newAddress];
-    });
-    showToast("New address added successfully!");
-    return newAddress;
-  };
-
-  const updateAddress = (id: string, updatedData: Partial<SavedAddress>) => {
-    setAddresses((prev) =>
-      prev.map((a) => {
-        if (a.id === id) {
-          return { ...a, ...updatedData };
+  const addAddress = useCallback(
+    (newAddrData: Omit<SavedAddress, "id">): SavedAddress => {
+      const newAddress: SavedAddress = {
+        id: `addr-${Date.now()}`,
+        ...newAddrData,
+      };
+      setAddresses((prev) => {
+        if (newAddrData.isDefault) {
+          return [...prev.map((a) => ({ ...a, isDefault: false })), newAddress];
         }
-        if (updatedData.isDefault) {
-          return { ...a, isDefault: false };
-        }
-        return a;
-      })
-    );
-    showToast("Address updated successfully!");
-  };
+        return [...prev, newAddress];
+      });
+      showToast("New address added successfully!");
+      return newAddress;
+    },
+    [showToast]
+  );
 
-  const deleteAddress = (id: string) => {
-    setAddresses((prev) => prev.filter((a) => a.id !== id));
-    showToast("Address deleted", "info");
-  };
+  const updateAddress = useCallback(
+    (id: string, updatedData: Partial<SavedAddress>) => {
+      setAddresses((prev) =>
+        prev.map((a) => {
+          if (a.id === id) {
+            return { ...a, ...updatedData };
+          }
+          if (updatedData.isDefault) {
+            return { ...a, isDefault: false };
+          }
+          return a;
+        })
+      );
+      showToast("Address updated successfully!");
+    },
+    [showToast]
+  );
 
-  const setDefaultAddress = (id: string) => {
-    setAddresses((prev) =>
-      prev.map((a) => ({
-        ...a,
-        isDefault: a.id === id,
-      }))
-    );
-    showToast("Default address updated");
-  };
+  const deleteAddress = useCallback(
+    (id: string) => {
+      setAddresses((prev) => prev.filter((a) => a.id !== id));
+      showToast("Address deleted", "info");
+    },
+    [showToast]
+  );
 
-  const formatPrice = (amount: number): string => {
+  const setDefaultAddress = useCallback(
+    (id: string) => {
+      setAddresses((prev) =>
+        prev.map((a) => ({
+          ...a,
+          isDefault: a.id === id,
+        }))
+      );
+      showToast("Default address updated");
+    },
+    [showToast]
+  );
+
+  const formatPrice = useCallback((amount: number): string => {
     return `₹${amount.toLocaleString("en-IN")}`;
-  };
+  }, []);
+
+  const contextValue = useMemo<StoreContextType>(
+    () => ({
+      isHydrated,
+      cart,
+      wishlist,
+      orders,
+      addresses,
+      isCartOpen,
+      isSearchOpen,
+      quickViewProduct,
+      discountAmount,
+      appliedCoupon,
+      toast,
+      subtotal,
+      shippingFee,
+      freeShippingThreshold,
+      finalTotal,
+      cartCount,
+      wishlistCount,
+      addToCart,
+      removeFromCart,
+      updateQuantity,
+      clearCart,
+      toggleWishlist,
+      isInWishlist,
+      applyCoupon,
+      removeCoupon,
+      placeOrder,
+      addAddress,
+      updateAddress,
+      deleteAddress,
+      setDefaultAddress,
+      setIsCartOpen,
+      setIsSearchOpen,
+      setQuickViewProduct,
+      showToast,
+      formatPrice,
+    }),
+    [
+      isHydrated,
+      cart,
+      wishlist,
+      orders,
+      addresses,
+      isCartOpen,
+      isSearchOpen,
+      quickViewProduct,
+      discountAmount,
+      appliedCoupon,
+      toast,
+      subtotal,
+      shippingFee,
+      freeShippingThreshold,
+      finalTotal,
+      cartCount,
+      wishlistCount,
+      addToCart,
+      removeFromCart,
+      updateQuantity,
+      clearCart,
+      toggleWishlist,
+      isInWishlist,
+      applyCoupon,
+      removeCoupon,
+      placeOrder,
+      addAddress,
+      updateAddress,
+      deleteAddress,
+      setDefaultAddress,
+      setIsCartOpen,
+      setIsSearchOpen,
+      setQuickViewProduct,
+      showToast,
+      formatPrice,
+    ]
+  );
 
   return (
-    <StoreContext.Provider
-      value={{
-        isHydrated,
-        cart,
-        wishlist,
-        orders,
-        addresses,
-        isCartOpen,
-        isSearchOpen,
-        quickViewProduct,
-        discountAmount,
-        appliedCoupon,
-        toast,
-        subtotal,
-        shippingFee,
-        freeShippingThreshold,
-        finalTotal,
-        cartCount,
-        wishlistCount,
-        addToCart,
-        removeFromCart,
-        updateQuantity,
-        clearCart,
-        toggleWishlist,
-        isInWishlist,
-        applyCoupon,
-        removeCoupon,
-        placeOrder,
-        addAddress,
-        updateAddress,
-        deleteAddress,
-        setDefaultAddress,
-        setIsCartOpen,
-        setIsSearchOpen,
-        setQuickViewProduct,
-        showToast,
-        formatPrice,
-      }}
-    >
+    <StoreContext.Provider value={contextValue}>
       {children}
     </StoreContext.Provider>
   );

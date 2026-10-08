@@ -8,8 +8,12 @@ import { Footer } from "@/components/layout/Footer";
 import { MobileBottomNav } from "@/components/layout/MobileBottomNav";
 import { CartDrawer } from "@/components/ecommerce/CartDrawer";
 import { SearchOverlay } from "@/components/ecommerce/SearchOverlay";
-import { QuickViewModal } from "@/components/ecommerce/QuickViewModal";
+import dynamic from "next/dynamic";
 import { Toast } from "@/components/ecommerce/Toast";
+
+const QuickViewModal = dynamic(
+  () => import("@/components/ecommerce/QuickViewModal").then((mod) => mod.QuickViewModal)
+);
 
 const cormorant = Cormorant_Garamond({
   variable: "--font-cormorant",
