@@ -254,6 +254,7 @@ export const Footer: React.FC = () => {
       {/* Interactive InfoModal loaded on-demand */}
       {infoModalOpen && (
         <InfoModal
+          key={infoModalTab}
           isOpen={infoModalOpen}
           initialTab={infoModalTab}
           onClose={() => setInfoModalOpen(false)}

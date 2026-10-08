@@ -138,18 +138,24 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   }, []);
 
   const addToCart = useCallback(
-    (product: Product, quantity = 1, selectedColor?: string, blouseOption = "Unstitched (Included)") => {
+    (product: Product, quantity = 1, selectedColor?: string, blouseOption?: string) => {
       const color = selectedColor || product.color;
+      const finalBlouseOption = product.hasBlousePiece
+        ? (blouseOption ?? product.blouseOptions?.[0] ?? "Unstitched (Included)")
+        : undefined;
       setCart((prev) => {
         const existingIndex = prev.findIndex(
-          (item) => item.product.id === product.id && item.selectedColor === color
+          (item) =>
+            item.product.id === product.id &&
+            item.selectedColor === color &&
+            item.blouseOption === finalBlouseOption
         );
         if (existingIndex > -1) {
           const next = [...prev];
           next[existingIndex].quantity += quantity;
           return next;
         }
-        return [...prev, { product, quantity, selectedColor: color, blouseOption }];
+        return [...prev, { product, quantity, selectedColor: color, blouseOption: finalBlouseOption }];
       });
       setIsCartOpen(true);
       showToast(`Added ${product.name} to Bag!`);

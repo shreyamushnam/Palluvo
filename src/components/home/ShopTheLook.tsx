@@ -33,7 +33,7 @@ export const ShopTheLook: React.FC = () => {
   const handleAddSingleItem = (item: typeof SHOP_THE_LOOK_ITEMS[0]) => {
     if (item.productId) {
       const prod = PRODUCTS.find((p) => p.id === item.productId) || PRODUCTS[0];
-      addToCart(prod, 1, prod.colors?.[0]?.name || "Default", prod.hasBlousePiece ? "With Blouse" : "Standard");
+      addToCart(prod, 1, prod.colors?.[0]?.name || "Default", prod.hasBlousePiece ? "With Blouse" : undefined);
     } else {
       showToast(`Added ${item.title || item.name} to bag!`);
     }

@@ -39,7 +39,7 @@ export const QuickViewModalContent: React.FC<QuickViewModalContentProps> = ({
   const isFav = isInWishlist(product.id);
 
   const handleAddToCart = () => {
-    addToCart(product, quantity, selectedColor, product.hasBlousePiece ? blouseOption : "");
+    addToCart(product, quantity, selectedColor, product.hasBlousePiece ? blouseOption : undefined);
     onClose();
     setIsCartOpen(true);
   };

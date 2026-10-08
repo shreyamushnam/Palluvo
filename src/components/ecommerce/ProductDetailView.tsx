@@ -37,7 +37,9 @@ export const ProductDetailView: React.FC<ProductDetailViewProps> = ({
 
   const [activeImageIdx, setActiveImageIdx] = useState(0);
   const [selectedColor, setSelectedColor] = useState(product.colors[0]?.name || "");
-  const [blouseOption, setBlouseOption] = useState<string>("With Blouse");
+  const [blouseOption, setBlouseOption] = useState<string>(
+    product.hasBlousePiece ? (product.blouseOptions?.[0] || "With Blouse") : ""
+  );
   const [quantity, setQuantity] = useState(1);
   const [openAccordions, setOpenAccordions] = useState<{ [key: string]: boolean }>({
     description: true,
@@ -103,12 +105,12 @@ export const ProductDetailView: React.FC<ProductDetailViewProps> = ({
   };
 
   const handleAddToCart = () => {
-    addToCart(product, quantity, selectedColor, blouseOption);
+    addToCart(product, quantity, selectedColor, product.hasBlousePiece ? blouseOption : undefined);
     setIsCartOpen(true);
   };
 
   const handleBuyNow = () => {
-    addToCart(product, quantity, selectedColor, blouseOption);
+    addToCart(product, quantity, selectedColor, product.hasBlousePiece ? blouseOption : undefined);
     router.push("/checkout");
   };
 

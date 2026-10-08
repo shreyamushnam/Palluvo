@@ -18,17 +18,15 @@ export const InfoModal: React.FC<InfoModalProps> = ({
   onClose,
 }) => {
   const [activeTab, setActiveTab] = useState<InfoModalTab>(initialTab);
-  const [prevInitialTab, setPrevInitialTab] = useState(initialTab);
 
   const modalRef = useFocusTrap<HTMLDivElement>({
     isOpen,
     onClose,
   });
 
-  if (prevInitialTab !== initialTab) {
-    setPrevInitialTab(initialTab);
+  useEffect(() => {
     setActiveTab(initialTab);
-  }
+  }, [initialTab]);
 
   const [openFaqIndex, setOpenFaqIndex] = useState<number | null>(0);
   const [contactFormSubmitted, setContactFormSubmitted] = useState(false);
