@@ -215,7 +215,7 @@ export const InfoModal: React.FC<InfoModalProps> = ({
                       Send Us a Message
                     </h4>
                     {contactFormSubmitted ? (
-                      <div className="p-4 bg-green-50 border border-green-200 text-green-800 rounded-xs flex items-center gap-2 text-xs">
+                      <div role="status" aria-live="polite" className="p-4 bg-green-50 border border-green-200 text-green-800 rounded-xs flex items-center gap-2 text-xs">
                         <CheckCircle2 className="w-4 h-4 text-green-600 shrink-0" />
                         <span>Thank you! Your message has been received. Our concierge will get back to you shortly.</span>
                       </div>
@@ -223,10 +223,13 @@ export const InfoModal: React.FC<InfoModalProps> = ({
                       <form onSubmit={handleContactSubmit} className="space-y-3">
                         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                           <div>
-                            <label className="block text-[11px] font-semibold text-neutral-700 uppercase mb-1">
+                            <label htmlFor="info-modal-contact-name" className="block text-[11px] font-semibold text-neutral-700 uppercase mb-1">
                               Your Name
                             </label>
                             <input
+                              id="info-modal-contact-name"
+                              name="name"
+                              autoComplete="name"
                               type="text"
                               required
                               value={contactName}
@@ -236,10 +239,13 @@ export const InfoModal: React.FC<InfoModalProps> = ({
                             />
                           </div>
                           <div>
-                            <label className="block text-[11px] font-semibold text-neutral-700 uppercase mb-1">
+                            <label htmlFor="info-modal-contact-email" className="block text-[11px] font-semibold text-neutral-700 uppercase mb-1">
                               Email Address
                             </label>
                             <input
+                              id="info-modal-contact-email"
+                              name="email"
+                              autoComplete="email"
                               type="email"
                               required
                               value={contactEmail}
@@ -249,10 +255,14 @@ export const InfoModal: React.FC<InfoModalProps> = ({
                             />
                           </div>
                           <div>
-                            <label className="block text-[11px] font-semibold text-neutral-700 uppercase mb-1">
+                            <label htmlFor="info-modal-contact-phone" className="block text-[11px] font-semibold text-neutral-700 uppercase mb-1">
                               Phone Number
                             </label>
                             <input
+                              id="info-modal-contact-phone"
+                              name="phone"
+                              autoComplete="tel"
+                              inputMode="tel"
                               type="tel"
                               value={contactPhone}
                               onChange={(e) => setContactPhone(e.target.value)}
@@ -263,10 +273,12 @@ export const InfoModal: React.FC<InfoModalProps> = ({
                         </div>
 
                         <div>
-                          <label className="block text-[11px] font-semibold text-neutral-700 uppercase mb-1">
+                          <label htmlFor="info-modal-contact-message" className="block text-[11px] font-semibold text-neutral-700 uppercase mb-1">
                             How Can We Help You?
                           </label>
                           <textarea
+                            id="info-modal-contact-message"
+                            name="message"
                             required
                             rows={3}
                             value={contactMessage}
@@ -393,21 +405,29 @@ export const InfoModal: React.FC<InfoModalProps> = ({
                         className="bg-white rounded-xs border border-[#E8E2D9] overflow-hidden"
                       >
                         <button
+                          type="button"
+                          id={`modal-faq-question-${idx}`}
+                          aria-expanded={openFaqIndex === idx}
+                          aria-controls={`modal-faq-answer-${idx}`}
                           onClick={() => setOpenFaqIndex(openFaqIndex === idx ? null : idx)}
                           className="w-full p-4 flex items-center justify-between text-left text-xs sm:text-sm font-semibold text-neutral-900 hover:text-[#541920] transition-colors"
                         >
                           <span>{faq.q}</span>
                           {openFaqIndex === idx ? (
-                            <ChevronUp className="w-4 h-4 text-[#541920] shrink-0" />
+                            <ChevronUp className="w-4 h-4 text-[#541920] shrink-0" aria-hidden="true" />
                           ) : (
-                            <ChevronDown className="w-4 h-4 text-neutral-500 shrink-0" />
+                            <ChevronDown className="w-4 h-4 text-neutral-500 shrink-0" aria-hidden="true" />
                           )}
                         </button>
-                        {openFaqIndex === idx && (
-                          <div className="px-4 pb-4 pt-1 text-xs text-neutral-600 leading-relaxed font-sans border-t border-[#FAF7F2]">
-                            {faq.a}
-                          </div>
-                        )}
+                        <div
+                          id={`modal-faq-answer-${idx}`}
+                          role="region"
+                          aria-labelledby={`modal-faq-question-${idx}`}
+                          hidden={openFaqIndex !== idx}
+                          className="px-4 pb-4 pt-1 text-xs text-neutral-600 leading-relaxed font-sans border-t border-[#FAF7F2]"
+                        >
+                          {faq.a}
+                        </div>
                       </div>
                     ))}
                   </div>
