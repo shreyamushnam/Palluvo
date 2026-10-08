@@ -16,7 +16,7 @@ export const CollectionBanner: React.FC = () => {
               src="/images/banners/festive-edit-banner.jpg"
               alt="The Festive Edit"
               fill
-              priority
+              sizes="(max-width: 1280px) 100vw, 1280px"
               className="object-cover object-right sm:object-center"
             />
             {/* Dark gradient overlay on the left so copy is readable */}
