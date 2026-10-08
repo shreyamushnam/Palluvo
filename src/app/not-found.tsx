@@ -26,7 +26,7 @@ export default function NotFound() {
         {/* CTAs */}
         <div className="pt-4 flex flex-col sm:flex-row items-center justify-center gap-3">
           <Link
-            href="/sarees"
+            href="/shop"
             className="w-full sm:w-auto min-h-[46px] px-7 py-3 bg-[#541920] hover:bg-[#3D1217] text-[#FAF7F2] text-xs uppercase tracking-widest font-semibold rounded-xs shadow-sm transition-all duration-200 flex items-center justify-center gap-2 cursor-pointer focus-visible:ring-2 focus-visible:ring-[#541920] focus-visible:outline-none"
           >
             <span>Explore Saree Collection</span>

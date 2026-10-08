@@ -1,9 +1,32 @@
-"use client";
-
+import type { Metadata } from "next";
 import React from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { ArrowRight, Sparkles } from "lucide-react";
+
+export const metadata: Metadata = {
+  title: "Curated Saree Collections & Heritage Edits | PALLUVO",
+  description:
+    "Explore PALLUVO's thematic collections of Indian textiles: The Silk Edit, Midnight Drapes, Festive Stories, and Everyday Poetry.",
+  alternates: {
+    canonical: "/collections",
+  },
+  openGraph: {
+    title: "Curated Saree Collections & Heritage Edits | PALLUVO",
+    description:
+      "Explore PALLUVO's thematic collections of Indian textiles: The Silk Edit, Midnight Drapes, Festive Stories, and Everyday Poetry.",
+    url: "https://palluvo.com/collections",
+    siteName: "PALLUVO",
+    locale: "en_IN",
+    type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Curated Saree Collections & Heritage Edits | PALLUVO",
+    description:
+      "Explore PALLUVO's thematic collections of Indian textiles: The Silk Edit, Midnight Drapes, Festive Stories, and Everyday Poetry.",
+  },
+};
 
 const CURATED_COLLECTIONS = [
   {
