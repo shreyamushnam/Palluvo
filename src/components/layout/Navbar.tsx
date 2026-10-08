@@ -108,6 +108,7 @@ function MobileNavLinksList({ onLinkClick }: { onLinkClick?: () => void }) {
 }
 
 export const Navbar: React.FC = () => {
+  const pathname = usePathname();
   const [isScrolled, setIsScrolled] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const { cartCount, wishlistCount, setIsCartOpen, isSearchOpen, setIsSearchOpen } = useStore();
@@ -150,17 +151,21 @@ export const Navbar: React.FC = () => {
           {/* Mobile Menu Trigger & Logo Group */}
           <div className="flex items-center gap-1.5 sm:gap-3 xl:gap-0 min-w-0 shrink">
             <button
-              onClick={() => setMobileMenuOpen(true)}
+              onClick={() => setMobileMenuOpen((prev) => !prev)}
               aria-expanded={mobileMenuOpen}
               aria-controls="mobile-navigation-drawer"
               className="xl:hidden min-h-[44px] min-w-[44px] p-2 text-[#1C1A18] hover:text-[#541920] transition-colors flex items-center justify-center focus-visible:ring-2 focus-visible:ring-[#541920] focus-visible:outline-none cursor-pointer shrink-0"
-              aria-label="Open mobile category menu"
+              aria-label={mobileMenuOpen ? "Close mobile category menu" : "Open mobile category menu"}
             >
               <Menu size={22} />
             </button>
 
             {/* Brand Logo */}
-            <Link href="/" className="flex flex-col items-start group min-w-0 rounded-xs focus-visible:ring-2 focus-visible:ring-[#541920] focus-visible:outline-none p-0.5">
+            <Link
+              href="/"
+              aria-current={pathname === "/" ? "page" : undefined}
+              className="flex flex-col items-start group min-w-0 rounded-xs focus-visible:ring-2 focus-visible:ring-[#541920] focus-visible:outline-none p-0.5"
+            >
               <span className="font-serif-display text-xl sm:text-2xl lg:text-3xl font-medium tracking-[0.16em] sm:tracking-[0.2em] text-[#1C1A18] uppercase group-hover:text-[#541920] transition-colors truncate">
                 PALLUVO
               </span>
@@ -208,6 +213,7 @@ export const Navbar: React.FC = () => {
             {/* Account - on mobile <sm, Account is accessed via the mobile drawer or bottom nav */}
             <Link
               href="/account"
+              aria-current={pathname === "/account" ? "page" : undefined}
               className="hidden sm:flex min-h-[44px] min-w-[44px] p-2 text-[#1C1A18] hover:text-[#541920] transition-colors items-center justify-center focus-visible:ring-2 focus-visible:ring-[#541920] focus-visible:outline-none"
               aria-label="My Account"
               title="Account"
@@ -218,6 +224,7 @@ export const Navbar: React.FC = () => {
             {/* Wishlist */}
             <Link
               href="/wishlist"
+              aria-current={pathname === "/wishlist" ? "page" : undefined}
               className="min-h-[44px] min-w-[44px] p-2 text-[#1C1A18] hover:text-[#541920] transition-colors relative flex items-center justify-center focus-visible:ring-2 focus-visible:ring-[#541920] focus-visible:outline-none"
               aria-label={`Wishlist with ${wishlistCount} items`}
               title="Wishlist"
@@ -252,65 +259,71 @@ export const Navbar: React.FC = () => {
       </header>
 
       {/* Mobile Drawer Navigation */}
-      {mobileMenuOpen && (
-        <div
-          id="mobile-navigation-drawer"
-          ref={mobileDrawerRef}
-          tabIndex={-1}
-          className="fixed inset-0 z-50 flex flex-col bg-[#FAF7F2] text-[#1C1A18] animate-in fade-in duration-200 outline-none"
-          role="dialog"
-          aria-modal="true"
-          aria-label="Mobile Navigation Menu"
-        >
-          <div className="p-4 flex items-center justify-between border-b border-[#1C1A18]/10">
-            <span className="font-serif-display text-2xl tracking-[0.2em] uppercase font-medium">
-              PALLUVO
+      <div
+        id="mobile-navigation-drawer"
+        ref={mobileDrawerRef}
+        tabIndex={-1}
+        className={`fixed inset-0 z-50 flex flex-col bg-[#FAF7F2] text-[#1C1A18] transition-opacity duration-200 outline-none ${
+          mobileMenuOpen ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none hidden"
+        }`}
+        role="dialog"
+        aria-modal="true"
+        aria-label="Mobile Navigation Menu"
+        aria-hidden={!mobileMenuOpen}
+      >
+        <div className="p-4 flex items-center justify-between border-b border-[#1C1A18]/10">
+          <span className="font-serif-display text-2xl tracking-[0.2em] uppercase font-medium">
+            PALLUVO
+          </span>
+          <button
+            onClick={() => setMobileMenuOpen(false)}
+            aria-controls="mobile-navigation-drawer"
+            aria-expanded={mobileMenuOpen}
+            className="w-11 h-11 min-w-[44px] min-h-[44px] inline-flex items-center justify-center text-[#1C1A18] hover:text-[#541920] rounded-full transition-colors cursor-pointer focus-visible:ring-2 focus-visible:ring-[#541920] focus-visible:outline-none"
+            aria-label="Close menu"
+          >
+            <X size={24} />
+          </button>
+        </div>
+
+        <div className="flex-1 overflow-y-auto px-6 py-8 flex flex-col justify-between">
+          <div className="flex flex-col space-y-4">
+            <span className="text-[10px] uppercase tracking-[0.25em] text-neutral-600 font-semibold mb-2">
+              Saree Categories
             </span>
-            <button
-              onClick={() => setMobileMenuOpen(false)}
-              className="w-11 h-11 min-w-[44px] min-h-[44px] inline-flex items-center justify-center text-[#1C1A18] hover:text-[#541920] rounded-full transition-colors cursor-pointer focus-visible:ring-2 focus-visible:ring-[#541920] focus-visible:outline-none"
-              aria-label="Close menu"
-            >
-              <X size={24} />
-            </button>
+            <React.Suspense fallback={<div className="h-20" />}>
+              <MobileNavLinksList onLinkClick={() => setMobileMenuOpen(false)} />
+            </React.Suspense>
           </div>
 
-          <div className="flex-1 overflow-y-auto px-6 py-8 flex flex-col justify-between">
-            <div className="flex flex-col space-y-4">
-              <span className="text-[10px] uppercase tracking-[0.25em] text-neutral-600 font-semibold mb-2">
-                Saree Categories
-              </span>
-              <React.Suspense fallback={<div className="h-20" />}>
-                <MobileNavLinksList onLinkClick={() => setMobileMenuOpen(false)} />
-              </React.Suspense>
-            </div>
-
-            <div className="pt-8 border-t border-[#1C1A18]/10 space-y-3">
-              <Link
-                href="/account"
-                onClick={() => setMobileMenuOpen(false)}
-                className="min-h-[44px] flex items-center gap-3 text-sm py-2 text-[#1C1A18] hover:text-[#541920] transition-colors"
-              >
-                <User size={18} /> My Account & Orders
-              </Link>
-              <Link
-                href="/wishlist"
-                onClick={() => setMobileMenuOpen(false)}
-                className="min-h-[44px] flex items-center gap-3 text-sm py-2 text-[#1C1A18] hover:text-[#541920] transition-colors"
-              >
-                <Heart size={18} /> Saved Wishlist ({wishlistCount})
-              </Link>
-              <Link
-                href="/cart"
-                onClick={() => setMobileMenuOpen(false)}
-                className="min-h-[44px] flex items-center gap-3 text-sm py-2 text-[#1C1A18] hover:text-[#541920] transition-colors"
-              >
-                <ShoppingBag size={18} /> View Cart ({cartCount})
-              </Link>
-            </div>
+          <div className="pt-8 border-t border-[#1C1A18]/10 space-y-3">
+            <Link
+              href="/account"
+              onClick={() => setMobileMenuOpen(false)}
+              aria-current={pathname === "/account" ? "page" : undefined}
+              className="min-h-[44px] flex items-center gap-3 text-sm py-2 text-[#1C1A18] hover:text-[#541920] transition-colors"
+            >
+              <User size={18} /> My Account & Orders
+            </Link>
+            <Link
+              href="/wishlist"
+              onClick={() => setMobileMenuOpen(false)}
+              aria-current={pathname === "/wishlist" ? "page" : undefined}
+              className="min-h-[44px] flex items-center gap-3 text-sm py-2 text-[#1C1A18] hover:text-[#541920] transition-colors"
+            >
+              <Heart size={18} /> Saved Wishlist ({wishlistCount})
+            </Link>
+            <Link
+              href="/cart"
+              onClick={() => setMobileMenuOpen(false)}
+              aria-current={pathname === "/cart" ? "page" : undefined}
+              className="min-h-[44px] flex items-center gap-3 text-sm py-2 text-[#1C1A18] hover:text-[#541920] transition-colors"
+            >
+              <ShoppingBag size={18} /> View Cart ({cartCount})
+            </Link>
           </div>
         </div>
-      )}
+      </div>
     </>
   );
 };
