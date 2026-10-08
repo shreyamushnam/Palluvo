@@ -28,7 +28,7 @@ const SLIDES = [
     titleLine1: "Royal heritage,",
     titleLine2: "timeless temple weaves",
     description: "Handcrafted pure silk Kanjeevarams woven with authentic gold zari motifs.",
-    primaryCta: { label: "Shop Kanjeevaram", href: "/shop?category=Silk" },
+    primaryCta: { label: "Shop Kanjeevaram", href: "/shop?category=Kanjeevaram" },
     secondaryCta: { label: "Bridal Edits", href: "/shop?category=Bridal" },
     image: "/images/products/royal-blue-kanjeevaram.jpg",
     product: {
@@ -45,7 +45,7 @@ const SLIDES = [
     titleLine1: "Imperial elegance,",
     titleLine2: "pure Banarasi brocade",
     description: "Opulent crimson red Kadwa silk brocades curated for grand Indian weddings.",
-    primaryCta: { label: "Shop Banarasi", href: "/shop?category=Bridal" },
+    primaryCta: { label: "Shop Banarasi", href: "/shop?category=Banarasi" },
     secondaryCta: { label: "Explore Handloom", href: "/shop?category=Handloom" },
     image: "/images/products/red-banarasi-saree.jpg",
     product: {
@@ -65,10 +65,28 @@ export const HeroBanner: React.FC = () => {
   const totalSlides = SLIDES.length;
 
   return (
-    <section className="relative bg-[#FAF7F2] overflow-hidden border-b border-[#E8E2D9]">
+    <section
+      className="relative bg-[#FAF7F2] overflow-hidden border-b border-[#E8E2D9]"
+      aria-roledescription="carousel"
+      aria-label="Featured Collections Carousel"
+    >
+      {/* Screen-reader live announcement for slide changes */}
+      <div
+        role="status"
+        aria-live="polite"
+        aria-atomic="true"
+        className="sr-only"
+      >
+        Slide {currentSlideIdx + 1} of {totalSlides}: {slide.titleLine1} {slide.titleLine2} - featuring {slide.product.name}
+      </div>
+
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-2 pb-4 sm:py-6 md:py-10 lg:py-16">
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-2 sm:gap-4 md:gap-8 lg:gap-12 items-center">
-          
+        <div
+          role="group"
+          aria-roledescription="slide"
+          aria-label={`Slide ${currentSlideIdx + 1} of ${totalSlides}: ${slide.titleLine1} ${slide.titleLine2}`}
+          className="grid grid-cols-1 lg:grid-cols-12 gap-2 sm:gap-4 md:gap-8 lg:gap-12 items-center"
+        >
           {/* Left Column: Brand Copy & Direct CTAs */}
           <div className="lg:col-span-6 space-y-2 sm:space-y-3.5 md:space-y-6 text-center lg:text-left">
             <h1 className="text-xl sm:text-2xl md:text-3xl lg:text-[2.6rem] xl:text-5xl font-serif font-normal text-[#1C1A18] tracking-tight leading-[1.14]">
@@ -87,7 +105,7 @@ export const HeroBanner: React.FC = () => {
                 className="min-h-[44px] px-2.5 sm:px-6 md:px-8 py-2 sm:py-2.5 md:py-3.5 bg-[#541920] hover:bg-[#3D1217] text-white text-[10px] sm:text-xs uppercase tracking-normal sm:tracking-widest font-semibold rounded-xs shadow-md transition-all flex items-center justify-center gap-1 sm:gap-2 group focus-visible:ring-2 focus-visible:ring-[#541920] focus-visible:outline-none shrink-0"
               >
                 <span>{slide.primaryCta.label}</span>
-                <ArrowRight className="w-3 h-3 sm:w-3.5 sm:h-3.5 group-hover:translate-x-1 transition-transform" />
+                <ArrowRight className="w-3 h-3 sm:w-3.5 sm:h-3.5 group-hover:translate-x-1 transition-transform" aria-hidden="true" />
               </Link>
               <Link
                 href={slide.secondaryCta.href}
@@ -97,8 +115,11 @@ export const HeroBanner: React.FC = () => {
               </Link>
             </div>
 
-            {/* Slider navigation indicator */}
-            <div className="pt-0.5 sm:pt-2 md:pt-4 flex items-center justify-center lg:justify-start gap-2.5 sm:gap-4 text-xs font-mono text-neutral-600">
+            {/* Slider navigation indicator & controls */}
+            <div
+              className="pt-0.5 sm:pt-2 md:pt-4 flex items-center justify-center lg:justify-start gap-2.5 sm:gap-4 text-xs font-mono text-neutral-600"
+              aria-label="Carousel navigation controls"
+            >
               <div className="flex items-center gap-1 font-semibold text-neutral-900 tabular-nums">
                 <span className="tabular-nums">0{currentSlideIdx + 1}</span>
                 <span className="text-neutral-600">/</span>
@@ -106,18 +127,20 @@ export const HeroBanner: React.FC = () => {
               </div>
               <div className="flex items-center gap-1.5 sm:gap-2">
                 <button
+                  type="button"
                   onClick={() => setCurrentSlideIdx((idx) => (idx === 0 ? totalSlides - 1 : idx - 1))}
                   className="w-11 h-11 min-w-[44px] min-h-[44px] rounded-full border border-[#DCD5C9] bg-white hover:bg-neutral-100 text-neutral-700 transition-colors cursor-pointer flex items-center justify-center focus-visible:ring-2 focus-visible:ring-[#541920] focus-visible:outline-none"
-                  aria-label="Previous slide"
+                  aria-label={`Previous slide (currently on slide ${currentSlideIdx + 1} of ${totalSlides})`}
                 >
-                  <ChevronLeft className="w-4 h-4" />
+                  <ChevronLeft className="w-4 h-4" aria-hidden="true" />
                 </button>
                 <button
+                  type="button"
                   onClick={() => setCurrentSlideIdx((idx) => (idx === totalSlides - 1 ? 0 : idx + 1))}
                   className="w-11 h-11 min-w-[44px] min-h-[44px] rounded-full border border-[#DCD5C9] bg-white hover:bg-neutral-100 text-neutral-700 transition-colors cursor-pointer flex items-center justify-center focus-visible:ring-2 focus-visible:ring-[#541920] focus-visible:outline-none"
-                  aria-label="Next slide"
+                  aria-label={`Next slide (currently on slide ${currentSlideIdx + 1} of ${totalSlides})`}
                 >
-                  <ChevronRight className="w-4 h-4" />
+                  <ChevronRight className="w-4 h-4" aria-hidden="true" />
                 </button>
               </div>
             </div>

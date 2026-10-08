@@ -61,9 +61,11 @@ export function getCategoryItemCount(categoryName: string): number {
     } else {
       const root = norm.replace(/sarees?/g, "").trim();
       return (
+        product.name.toLowerCase().includes(root) ||
         product.category.toLowerCase().includes(root) ||
         product.fabric.toLowerCase().includes(root) ||
-        product.occasion.toLowerCase().includes(root)
+        product.occasion.toLowerCase().includes(root) ||
+        (product.tags || []).some((t) => t.toLowerCase().includes(root))
       );
     }
   }).length;
