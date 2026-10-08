@@ -437,7 +437,11 @@ export default function AccountPage() {
                 </div>
 
                 {profileSuccessMessage && (
-                  <div className="p-3 bg-green-50 border border-green-200 text-green-800 rounded-xs flex items-center gap-2 text-xs animate-in fade-in duration-200">
+                  <div
+                    role="status"
+                    aria-live="polite"
+                    className="p-3 bg-green-50 border border-green-200 text-green-800 rounded-xs flex items-center gap-2 text-xs animate-in fade-in duration-200"
+                  >
                     <CheckCircle2 className="w-4 h-4 text-green-600 shrink-0" />
                     <span>Your profile details have been saved successfully!</span>
                   </div>
@@ -514,7 +518,11 @@ export default function AccountPage() {
                       Save Changes
                     </button>
                     {profileSuccessMessage && (
-                      <span className="text-xs text-[#15803D] font-medium flex items-center gap-1">
+                      <span
+                        role="status"
+                        aria-live="polite"
+                        className="text-xs text-[#15803D] font-medium flex items-center gap-1"
+                      >
                         <Check className="w-3.5 h-3.5" /> Saved!
                       </span>
                     )}

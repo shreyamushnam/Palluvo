@@ -32,7 +32,11 @@ export function ContactForm() {
       </div>
 
       {submitted ? (
-        <div className="p-4 bg-[#F4EFE6] border border-[#C5A575]/40 text-neutral-900 rounded-xs flex items-center gap-2.5 text-xs">
+        <div
+          role="status"
+          aria-live="polite"
+          className="p-4 bg-[#F4EFE6] border border-[#C5A575]/40 text-neutral-900 rounded-xs flex items-center gap-2.5 text-xs"
+        >
           <CheckCircle2 className="w-4 h-4 text-[#541920] shrink-0" />
           <span>Thank you! Your message has been received. Our concierge will get back to you shortly.</span>
         </div>

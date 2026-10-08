@@ -284,7 +284,12 @@ export function ShopContent() {
               <span>Filters {activeFiltersCount > 0 && `(${activeFiltersCount})`}</span>
             </button>
 
-            <span className="text-xs text-neutral-600 font-sans">
+            <span
+              className="text-xs text-neutral-600 font-sans"
+              role="status"
+              aria-live="polite"
+              aria-atomic="true"
+            >
               Showing <strong className="text-neutral-900">{filteredProducts.length}</strong>{" "}
               {selectedCategory && selectedCategory.toLowerCase().includes("saree")
                 ? filteredProducts.length === 1
@@ -440,6 +445,8 @@ export function ShopContent() {
                     return (
                       <button
                         key={cat.id}
+                        type="button"
+                        aria-pressed={isSelected}
                         disabled={isDisabled}
                         aria-disabled={isDisabled}
                         onClick={() => !isDisabled && handleCategoryToggle(cat.name)}
@@ -501,6 +508,8 @@ export function ShopContent() {
                     return (
                       <button
                         key={fabric}
+                        type="button"
+                        aria-pressed={selectedFabric === fabric}
                         disabled={isDisabled}
                         aria-disabled={isDisabled}
                         onClick={() => !isDisabled && setSelectedFabric(selectedFabric === fabric ? "" : fabric)}
@@ -533,6 +542,8 @@ export function ShopContent() {
                     return (
                       <button
                         key={occ}
+                        type="button"
+                        aria-pressed={selectedOccasion === occ}
                         disabled={isDisabled}
                         aria-disabled={isDisabled}
                         onClick={() => !isDisabled && setSelectedOccasion(selectedOccasion === occ ? "" : occ)}
@@ -651,6 +662,7 @@ export function ShopContent() {
                         <button
                           key={cat.id}
                           type="button"
+                          aria-pressed={isSelected}
                           disabled={isDisabled}
                           aria-disabled={isDisabled}
                           onClick={() => !isDisabled && handleCategoryToggle(cat.name)}
@@ -716,6 +728,7 @@ export function ShopContent() {
                         <button
                           key={fabric}
                           type="button"
+                          aria-pressed={selectedFabric === fabric}
                           disabled={isDisabled}
                           aria-disabled={isDisabled}
                           onClick={() => !isDisabled && setSelectedFabric(selectedFabric === fabric ? "" : fabric)}
@@ -752,6 +765,7 @@ export function ShopContent() {
                         <button
                           key={occ}
                           type="button"
+                          aria-pressed={selectedOccasion === occ}
                           disabled={isDisabled}
                           aria-disabled={isDisabled}
                           onClick={() => !isDisabled && setSelectedOccasion(selectedOccasion === occ ? "" : occ)}

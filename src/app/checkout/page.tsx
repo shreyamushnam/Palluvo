@@ -965,6 +965,7 @@ export default function CheckoutPage() {
                                   <button
                                     key={b.id}
                                     type="button"
+                                    aria-pressed={isSelected}
                                     onClick={() => setSelectedBank(b.id)}
                                     className={`min-h-[44px] px-3 py-2 text-xs rounded-xs border text-center transition-colors cursor-pointer focus-visible:ring-2 focus-visible:ring-[#541920] focus-visible:outline-none ${
                                       isSelected
