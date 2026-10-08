@@ -360,9 +360,14 @@ export const ProductDetailView: React.FC<ProductDetailViewProps> = ({
             {/* Action Buttons: ADD TO BAG & BUY NOW & WISHLIST */}
             <div
               ref={ctaRef}
+              style={
+                optionsPassed
+                  ? { bottom: "calc(56px + env(safe-area-inset-bottom, 0px))" }
+                  : undefined
+              }
               className={`flex items-center gap-2 pt-0.5 sm:pt-1 z-30 sm:static ${
                 optionsPassed
-                  ? "sticky bottom-[54px] bg-[#FAF7F2]/95 backdrop-blur-xs py-1 border-t border-[#1C1A18]/6 shadow-xs -mx-4 px-4"
+                  ? "sticky bottom-[calc(56px+env(safe-area-inset-bottom,0px))] bg-[#FAF7F2]/95 backdrop-blur-xs py-1 border-t border-[#1C1A18]/6 shadow-xs -mx-4 px-4"
                   : "static bg-transparent py-0 border-0 shadow-none mx-0 px-0"
               } sm:bg-transparent sm:backdrop-blur-none sm:py-0 sm:border-0 sm:shadow-none sm:mx-0 sm:px-0`}
             >
