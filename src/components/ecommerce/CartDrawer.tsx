@@ -88,7 +88,19 @@ export const CartDrawer: React.FC = () => {
               )}
               <span className="font-semibold text-neutral-700">{progressPercent}%</span>
             </div>
-            <div className="w-full bg-[#E5DFD5] h-1.5 rounded-full overflow-hidden">
+            <div
+              role="progressbar"
+              aria-label="Free express shipping progress"
+              aria-valuenow={progressPercent}
+              aria-valuemin={0}
+              aria-valuemax={100}
+              aria-valuetext={
+                freeShippingLeft === 0
+                  ? "Free express shipping unlocked"
+                  : `Add ${formatPrice(freeShippingLeft)} more to get free express shipping`
+              }
+              className="w-full bg-[#E5DFD5] h-1.5 rounded-full overflow-hidden"
+            >
               <div
                 className="bg-[#541920] h-full transition-all duration-500 rounded-full"
                 style={{ width: `${progressPercent}%` }}

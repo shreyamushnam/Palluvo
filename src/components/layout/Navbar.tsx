@@ -64,6 +64,7 @@ function NavLinksList({ onLinkClick }: { onLinkClick?: () => void }) {
             key={link.label}
             href={link.href}
             onClick={onLinkClick}
+            aria-current={isActive ? "page" : undefined}
             className={`relative py-1 px-1.5 rounded-xs hover:text-[#541920] transition-colors focus-visible:ring-2 focus-visible:ring-[#541920] focus-visible:outline-none ${
               isActive ? "text-[#541920] font-bold" : "text-[#1C1A18]"
             }`}
@@ -93,6 +94,7 @@ function MobileNavLinksList({ onLinkClick }: { onLinkClick?: () => void }) {
             key={link.label}
             href={link.href}
             onClick={onLinkClick}
+            aria-current={isActive ? "page" : undefined}
             className={`font-serif-display text-2xl py-1 min-h-[44px] flex items-center border-b border-[#1C1A18]/5 transition-colors ${
               isActive ? "text-[#541920] font-bold" : "text-[#1C1A18] hover:text-[#541920]"
             }`}
@@ -149,6 +151,8 @@ export const Navbar: React.FC = () => {
           <div className="flex items-center gap-1.5 sm:gap-3 xl:gap-0 min-w-0 shrink">
             <button
               onClick={() => setMobileMenuOpen(true)}
+              aria-expanded={mobileMenuOpen}
+              aria-controls="mobile-navigation-drawer"
               className="xl:hidden min-h-[44px] min-w-[44px] p-2 text-[#1C1A18] hover:text-[#541920] transition-colors flex items-center justify-center focus-visible:ring-2 focus-visible:ring-[#541920] focus-visible:outline-none cursor-pointer shrink-0"
               aria-label="Open mobile category menu"
             >
@@ -250,6 +254,7 @@ export const Navbar: React.FC = () => {
       {/* Mobile Drawer Navigation */}
       {mobileMenuOpen && (
         <div
+          id="mobile-navigation-drawer"
           ref={mobileDrawerRef}
           tabIndex={-1}
           className="fixed inset-0 z-50 flex flex-col bg-[#FAF7F2] text-[#1C1A18] animate-in fade-in duration-200 outline-none"

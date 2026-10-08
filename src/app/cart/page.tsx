@@ -106,7 +106,19 @@ export default function CartPage() {
                   )}
                   <span className="font-semibold text-neutral-900">{progressPercent}%</span>
                 </div>
-                <div className="w-full bg-[#EFEAE1] h-2 rounded-full overflow-hidden">
+                <div
+                  role="progressbar"
+                  aria-label="Free express shipping progress"
+                  aria-valuenow={progressPercent}
+                  aria-valuemin={0}
+                  aria-valuemax={100}
+                  aria-valuetext={
+                    freeShippingLeft === 0
+                      ? "Free express shipping unlocked"
+                      : `Add ${formatPrice(freeShippingLeft)} more to get free express shipping`
+                  }
+                  className="w-full bg-[#EFEAE1] h-2 rounded-full overflow-hidden"
+                >
                   <div
                     className="bg-[#541920] h-full transition-all duration-500 rounded-full"
                     style={{ width: `${progressPercent}%` }}

@@ -41,6 +41,7 @@ export const MobileBottomNav: React.FC = () => {
                   setIsCartOpen(true);
                 }
               }}
+              aria-current={isActive ? "page" : undefined}
               className={`min-w-[44px] min-h-[44px] flex flex-col items-center justify-center p-1 relative transition-colors ${
                 isActive ? "text-[#541920] font-semibold" : "text-[#5E5A54] hover:text-[#541920]"
               }`}
@@ -64,6 +65,7 @@ export const MobileBottomNav: React.FC = () => {
           <Link
             key={item.label}
             href={item.href}
+            aria-current={isActive ? "page" : undefined}
             className={`min-w-[44px] min-h-[44px] flex flex-col items-center justify-center p-1 relative transition-colors ${
               isActive ? "text-[#541920] font-semibold" : "text-[#5E5A54] hover:text-[#541920]"
             }`}
