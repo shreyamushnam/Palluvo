@@ -4,7 +4,7 @@ import React from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { InstagramIcon } from "@/components/icons/BrandIcons";
-import { ShoppingBag } from "lucide-react";
+import { ShoppingBag, ArrowRight } from "lucide-react";
 
 const COMMUNITY_POSTS = [
   {
@@ -89,7 +89,10 @@ export const InstagramGrid: React.FC = () => {
                 <ShoppingBag className="w-3.5 h-3.5 sm:w-4 sm:h-4 mb-0.5 sm:mb-1 text-[#C5A575]" />
                 <span className="text-[10px] font-sans font-medium text-neutral-200 line-clamp-1">{post.handle}</span>
                 <span className="text-[10.5px] sm:text-[11px] font-serif font-semibold mt-0.5 line-clamp-2 leading-tight">{post.saree}</span>
-                <span className="text-[9px] uppercase tracking-wider text-[#C5A575] font-semibold mt-0.5 sm:mt-1 whitespace-nowrap">Shop Saree →</span>
+                <span className="text-[9px] uppercase tracking-wider text-[#C5A575] font-semibold mt-0.5 sm:mt-1 whitespace-nowrap inline-flex items-center gap-1">
+                  <span>Shop Saree</span>
+                  <ArrowRight className="w-2.5 h-2.5" />
+                </span>
               </div>
             </Link>
           ))}

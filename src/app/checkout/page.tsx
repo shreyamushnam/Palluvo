@@ -3,7 +3,7 @@
 import React, { useState, useRef, useEffect } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { CheckCircle2, ShieldCheck, ArrowLeft, Lock, CreditCard, Building2 } from "lucide-react";
+import { CheckCircle2, ShieldCheck, ArrowLeft, ArrowRight, ChevronRight, Lock, CreditCard, Building2 } from "lucide-react";
 import { useStore } from "@/context/StoreContext";
 import { OrderRecord } from "@/data/mockOrders";
 
@@ -317,11 +317,11 @@ export default function CheckoutPage() {
               <span className={`whitespace-nowrap font-semibold ${step >= 1 ? "text-[#541920]" : "text-neutral-600"}`}>
                 1. Address
               </span>
-              <span className="text-neutral-400 shrink-0" aria-hidden="true">→</span>
+              <ChevronRight className="w-3.5 h-3.5 text-neutral-400 shrink-0" aria-hidden="true" />
               <span className={`whitespace-nowrap font-semibold ${step >= 2 ? "text-[#541920]" : "text-neutral-600"}`}>
                 2. Delivery
               </span>
-              <span className="text-neutral-400 shrink-0" aria-hidden="true">→</span>
+              <ChevronRight className="w-3.5 h-3.5 text-neutral-400 shrink-0" aria-hidden="true" />
               <span className={`whitespace-nowrap font-semibold ${step >= 3 ? "text-[#541920]" : "text-neutral-600"}`}>
                 3. Payment
               </span>
@@ -375,9 +375,10 @@ export default function CheckoutPage() {
                         </span>
                         <Link
                           href="/account"
-                          className="text-[11px] text-[#541920] font-semibold hover:underline"
+                          className="text-[11px] text-[#541920] font-semibold hover:underline inline-flex items-center gap-1"
                         >
-                          Manage Addresses →
+                          <span>Manage Addresses</span>
+                          <ArrowRight className="w-3 h-3" />
                         </Link>
                       </div>
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
@@ -572,9 +573,10 @@ export default function CheckoutPage() {
                   <div className="pt-2">
                     <button
                       type="submit"
-                      className="w-full min-h-[44px] py-3 bg-[#541920] hover:bg-[#3D1217] text-white uppercase tracking-widest font-semibold rounded-xs shadow-xs cursor-pointer focus-visible:ring-2 focus-visible:ring-[#541920] focus-visible:outline-none"
+                      className="w-full min-h-[44px] py-3 bg-[#541920] hover:bg-[#3D1217] text-white uppercase tracking-widest font-semibold rounded-xs shadow-xs cursor-pointer focus-visible:ring-2 focus-visible:ring-[#541920] focus-visible:outline-none inline-flex items-center justify-center gap-2"
                     >
-                      Deliver to This Address →
+                      <span>Deliver to This Address</span>
+                      <ArrowRight className="w-3.5 h-3.5" />
                     </button>
                   </div>
                 </form>
@@ -672,9 +674,10 @@ export default function CheckoutPage() {
                   <div className="pt-2">
                     <button
                       type="submit"
-                      className="w-full min-h-[44px] py-3 bg-[#541920] hover:bg-[#3D1217] text-white uppercase tracking-widest font-semibold rounded-xs shadow-xs cursor-pointer focus-visible:ring-2 focus-visible:ring-[#541920] focus-visible:outline-none"
+                      className="w-full min-h-[44px] py-3 bg-[#541920] hover:bg-[#3D1217] text-white uppercase tracking-widest font-semibold rounded-xs shadow-xs cursor-pointer focus-visible:ring-2 focus-visible:ring-[#541920] focus-visible:outline-none inline-flex items-center justify-center gap-2"
                     >
-                      Proceed to Payment →
+                      <span>Proceed to Payment</span>
+                      <ArrowRight className="w-3.5 h-3.5" />
                     </button>
                   </div>
                 </form>

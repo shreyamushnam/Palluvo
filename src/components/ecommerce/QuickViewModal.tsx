@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { X, Star, Heart, ShoppingBag, ShieldCheck, Truck, RotateCcw, Check } from "lucide-react";
+import { X, Star, Heart, ShoppingBag, ShieldCheck, Truck, RotateCcw, Check, ArrowRight } from "lucide-react";
 import { useStore } from "@/context/StoreContext";
 import { useFocusTrap } from "@/hooks/useFocusTrap";
 
@@ -154,7 +154,7 @@ const QuickViewModalContent: React.FC<QuickViewModalContentProps> = ({
                   )}
                   {product.discountPercent && (
                     <span className="text-xs font-bold text-[#15803D] tabular-nums">
-                      Save {formatPrice(product.originalPrice! - product.price)}
+                      Save <span className="tabular-nums">{formatPrice(product.originalPrice! - product.price)}</span>
                     </span>
                   )}
                 </div>
@@ -270,9 +270,10 @@ const QuickViewModalContent: React.FC<QuickViewModalContentProps> = ({
                 <Link
                   href={`/product/${product.id}`}
                   onClick={onClose}
-                  className="block text-center text-xs font-medium text-neutral-600 hover:text-[#541920] underline tracking-wider uppercase rounded-xs focus-visible:ring-2 focus-visible:ring-[#541920] focus-visible:outline-none"
+                  className="inline-flex items-center justify-center gap-1.5 w-full text-center text-xs font-medium text-neutral-600 hover:text-[#541920] underline tracking-wider uppercase rounded-xs focus-visible:ring-2 focus-visible:ring-[#541920] focus-visible:outline-none"
                 >
-                  View Full Product Details & Saree Specs →
+                  <span>View Full Product Details & Saree Specs</span>
+                  <ArrowRight className="w-3.5 h-3.5" />
                 </Link>
 
                 {/* Trust Badges */}

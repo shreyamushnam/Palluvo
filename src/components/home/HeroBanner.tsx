@@ -99,10 +99,10 @@ export const HeroBanner: React.FC = () => {
 
             {/* Slider navigation indicator */}
             <div className="pt-0.5 sm:pt-2 md:pt-4 flex items-center justify-center lg:justify-start gap-2.5 sm:gap-4 text-xs font-mono text-neutral-600">
-              <div className="flex items-center gap-1 font-semibold text-neutral-900">
-                <span>0{currentSlideIdx + 1}</span>
+              <div className="flex items-center gap-1 font-semibold text-neutral-900 tabular-nums">
+                <span className="tabular-nums">0{currentSlideIdx + 1}</span>
                 <span className="text-neutral-600">/</span>
-                <span className="text-neutral-600">0{totalSlides}</span>
+                <span className="text-neutral-600 tabular-nums">0{totalSlides}</span>
               </div>
               <div className="flex items-center gap-1.5 sm:gap-2">
                 <button
@@ -154,9 +154,9 @@ export const HeroBanner: React.FC = () => {
                       {slide.product.name}
                     </h2>
 
-                    <div className="flex items-baseline gap-1.5 sm:gap-2 mt-0.5">
-                      <span className="text-xs sm:text-sm font-bold text-[#541920]">{slide.product.price}</span>
-                      <span className="text-[11px] text-neutral-600 line-through">{slide.product.originalPrice}</span>
+                    <div className="flex items-baseline gap-1.5 sm:gap-2 mt-0.5 tabular-nums">
+                      <span className="text-xs sm:text-sm font-bold text-[#541920] tabular-nums">{slide.product.price}</span>
+                      <span className="text-[11px] text-neutral-600 line-through tabular-nums">{slide.product.originalPrice}</span>
                     </div>
                   </div>
 

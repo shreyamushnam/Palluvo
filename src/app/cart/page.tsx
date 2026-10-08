@@ -101,7 +101,7 @@ export default function CartPage() {
                     </span>
                   ) : (
                     <span>
-                      Add <strong>{formatPrice(freeShippingLeft)}</strong> more to get <strong>FREE Express Shipping</strong>!
+                      Add <strong className="tabular-nums">{formatPrice(freeShippingLeft)}</strong> more to get <strong>FREE Express Shipping</strong>!
                     </span>
                   )}
                   <span className="font-semibold text-neutral-900">{progressPercent}%</span>
@@ -237,7 +237,7 @@ export default function CartPage() {
                   <div className="flex items-center justify-between bg-[#F4EFE6] px-3.5 py-2.5 rounded-xs text-xs border border-[#E8E2D9]">
                     <div className="flex items-center gap-1.5 text-[#541920]">
                       <Tag className="w-3.5 h-3.5" />
-                      <span>Code <strong>{appliedCoupon}</strong> (-{formatPrice(discountAmount)})</span>
+                      <span>Code <strong>{appliedCoupon}</strong> (-<span className="tabular-nums">{formatPrice(discountAmount)}</span>)</span>
                     </div>
                     <button
                       type="button"

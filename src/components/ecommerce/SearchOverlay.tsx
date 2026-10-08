@@ -187,7 +187,7 @@ export const SearchOverlay: React.FC = () => {
                             {product.name}
                           </p>
                           <p className="text-[11px] text-neutral-600 mt-0.5">{product.fabric}</p>
-                          <p className="text-xs font-semibold text-[#541920] mt-1">
+                          <p className="text-xs font-semibold text-[#541920] mt-1 tabular-nums">
                             {formatPrice(product.price)}
                           </p>
                         </div>
@@ -270,12 +270,12 @@ export const SearchOverlay: React.FC = () => {
                               {product.fabric} • {product.occasion}
                             </p>
                           </div>
-                          <div className="flex items-baseline gap-2 mt-1">
-                            <span className="text-xs font-bold text-[#541920]">
+                          <div className="flex items-baseline gap-2 mt-1 tabular-nums">
+                            <span className="text-xs font-bold text-[#541920] tabular-nums">
                               {formatPrice(product.price)}
                             </span>
                             {product.originalPrice && (
-                              <span className="text-[10px] text-neutral-600 line-through">
+                              <span className="text-[10px] text-neutral-600 line-through tabular-nums">
                                 {formatPrice(product.originalPrice)}
                               </span>
                             )}

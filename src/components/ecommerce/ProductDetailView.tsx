@@ -11,6 +11,7 @@ import {
   ChevronDown,
   ChevronUp,
   Share2,
+  ArrowRight,
 } from "lucide-react";
 import { Product, PRODUCTS } from "@/data/products";
 import { useStore } from "@/context/StoreContext";
@@ -486,9 +487,10 @@ export const ProductDetailView: React.FC<ProductDetailViewProps> = ({
             </h2>
             <Link
               href="/shop"
-              className="min-h-[44px] min-w-[44px] px-2 -mr-2 inline-flex items-center justify-center text-xs uppercase tracking-wider text-[#541920] font-semibold hover:underline focus-visible:ring-2 focus-visible:ring-[#541920] focus-visible:outline-none rounded-xs"
+              className="min-h-[44px] min-w-[44px] px-2 -mr-2 inline-flex items-center justify-center gap-1.5 text-xs uppercase tracking-wider text-[#541920] font-semibold hover:underline focus-visible:ring-2 focus-visible:ring-[#541920] focus-visible:outline-none rounded-xs"
             >
-              View all →
+              <span>View all</span>
+              <ArrowRight className="w-3.5 h-3.5" />
             </Link>
           </div>
 

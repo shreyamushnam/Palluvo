@@ -82,7 +82,7 @@ export const CartDrawer: React.FC = () => {
                 </span>
               ) : (
                 <span>
-                  Add <strong className="text-[#541920]">{formatPrice(freeShippingLeft)}</strong> more to get{" "}
+                  Add <strong className="text-[#541920] tabular-nums">{formatPrice(freeShippingLeft)}</strong> more to get{" "}
                   <strong>FREE Shipping</strong>
                 </span>
               )}
@@ -218,7 +218,7 @@ export const CartDrawer: React.FC = () => {
                 <div className="flex items-center justify-between bg-[#EAE2D5] px-3 py-2 rounded-sm text-xs">
                   <div className="flex items-center gap-1.5 text-[#541920]">
                     <Tag className="w-3.5 h-3.5" />
-                    <span>Coupon <strong>{appliedCoupon}</strong> applied (-{formatPrice(discountAmount)})</span>
+                    <span>Coupon <strong>{appliedCoupon}</strong> applied (-<span className="tabular-nums">{formatPrice(discountAmount)}</span>)</span>
                   </div>
                   <button
                     onClick={removeCoupon}

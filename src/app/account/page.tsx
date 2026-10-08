@@ -228,7 +228,7 @@ export default function AccountPage() {
                             >
                               {order.status}
                             </span>
-                            <span className="font-serif font-bold text-neutral-900 text-sm">
+                            <span className="font-serif font-bold text-neutral-900 text-sm tabular-nums">
                               {formatPrice(order.totalAmount)}
                             </span>
                           </div>
@@ -255,7 +255,7 @@ export default function AccountPage() {
                                   <p className="text-xs text-neutral-500 mt-0.5">
                                     Qty: {item.quantity} {item.color && `• Color: ${item.color}`}
                                   </p>
-                                  <p className="text-xs font-semibold text-[#541920] mt-1">
+                                  <p className="text-xs font-semibold text-[#541920] mt-1 tabular-nums">
                                     {formatPrice(item.price * item.quantity)}
                                   </p>
                                 </div>
