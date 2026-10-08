@@ -146,6 +146,13 @@ export default function RootLayout({
             __html: JSON.stringify(organizationAndWebsiteJsonLd),
           }}
         />
+        {/* Skip to Main Content Bypass Link */}
+        <a
+          href="#main-content"
+          className="sr-only focus:not-sr-only focus:fixed focus:top-4 focus:left-4 focus:z-50 focus:px-4 focus:py-2.5 focus:bg-[#541920] focus:text-[#FAF7F2] focus:outline-none focus:ring-2 focus:ring-[#C5A575] focus:shadow-lg focus:rounded-xs text-xs font-semibold tracking-wider uppercase transition-colors"
+        >
+          Skip to main content
+        </a>
         <StoreProvider>
           {/* Top Announcement Bar */}
           <AnnouncementBar />
@@ -154,7 +161,9 @@ export default function RootLayout({
           <Navbar />
 
           {/* Main App Content */}
-          <main className="flex-1">{children}</main>
+          <main id="main-content" tabIndex={-1} className="flex-1 outline-none">
+            {children}
+          </main>
 
           {/* E-Commerce Footer */}
           <Footer />

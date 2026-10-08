@@ -313,19 +313,36 @@ export default function CheckoutPage() {
             </div>
 
             {/* Stepper */}
-            <div className="flex items-center justify-center gap-2 sm:gap-4 text-xs font-sans overflow-x-auto py-1 sm:py-0">
-              <span className={`whitespace-nowrap font-semibold ${step >= 1 ? "text-[#541920]" : "text-neutral-600"}`}>
-                1. Address
-              </span>
-              <ChevronRight className="w-3.5 h-3.5 text-neutral-400 shrink-0" aria-hidden="true" />
-              <span className={`whitespace-nowrap font-semibold ${step >= 2 ? "text-[#541920]" : "text-neutral-600"}`}>
-                2. Delivery
-              </span>
-              <ChevronRight className="w-3.5 h-3.5 text-neutral-400 shrink-0" aria-hidden="true" />
-              <span className={`whitespace-nowrap font-semibold ${step >= 3 ? "text-[#541920]" : "text-neutral-600"}`}>
-                3. Payment
-              </span>
-            </div>
+            <nav aria-label="Checkout Progress" className="overflow-x-auto py-1 sm:py-0">
+              <ol className="flex items-center justify-center gap-2 sm:gap-4 text-xs font-sans list-none m-0 p-0">
+                <li className="flex items-center gap-2 sm:gap-4">
+                  <span
+                    aria-current={step === 1 ? "step" : undefined}
+                    className={`whitespace-nowrap font-semibold ${step >= 1 ? "text-[#541920]" : "text-neutral-600"}`}
+                  >
+                    1. Address
+                  </span>
+                  <ChevronRight className="w-3.5 h-3.5 text-neutral-400 shrink-0" aria-hidden="true" />
+                </li>
+                <li className="flex items-center gap-2 sm:gap-4">
+                  <span
+                    aria-current={step === 2 ? "step" : undefined}
+                    className={`whitespace-nowrap font-semibold ${step >= 2 ? "text-[#541920]" : "text-neutral-600"}`}
+                  >
+                    2. Delivery
+                  </span>
+                  <ChevronRight className="w-3.5 h-3.5 text-neutral-400 shrink-0" aria-hidden="true" />
+                </li>
+                <li>
+                  <span
+                    aria-current={step === 3 ? "step" : undefined}
+                    className={`whitespace-nowrap font-semibold ${step >= 3 ? "text-[#541920]" : "text-neutral-600"}`}
+                  >
+                    3. Payment
+                  </span>
+                </li>
+              </ol>
+            </nav>
 
             <div className="hidden sm:flex items-center gap-1.5 text-xs text-[#15803D] font-medium shrink-0">
               <Lock className="w-3.5 h-3.5 shrink-0" />
