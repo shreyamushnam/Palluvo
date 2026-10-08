@@ -131,29 +131,6 @@ export const HeroBanner: React.FC = () => {
                   className="object-cover object-top transition-opacity duration-300"
                 />
 
-                {/* Relocated Carousel Controls: Top-Right of Showcase Container */}
-                <div
-                  className="absolute top-2.5 right-2.5 sm:top-3.5 sm:right-3.5 z-20 flex items-center gap-1.5 p-1 rounded-full bg-white/90 backdrop-blur-md shadow-md border border-[#E8E2D9]"
-                  aria-label="Carousel navigation controls"
-                >
-                  <button
-                    type="button"
-                    onClick={() => setCurrentSlideIdx((idx) => (idx === 0 ? totalSlides - 1 : idx - 1))}
-                    className="w-11 h-11 min-w-[44px] min-h-[44px] rounded-full text-neutral-700 hover:text-black hover:bg-black/5 active:scale-95 transition-all cursor-pointer flex items-center justify-center focus-visible:ring-2 focus-visible:ring-[#541920] focus-visible:outline-none"
-                    aria-label="Previous slide"
-                  >
-                    <ChevronLeft className="w-4 h-4" aria-hidden="true" />
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setCurrentSlideIdx((idx) => (idx === totalSlides - 1 ? 0 : idx + 1))}
-                    className="w-11 h-11 min-w-[44px] min-h-[44px] rounded-full text-neutral-700 hover:text-black hover:bg-black/5 active:scale-95 transition-all cursor-pointer flex items-center justify-center focus-visible:ring-2 focus-visible:ring-[#541920] focus-visible:outline-none"
-                    aria-label="Next slide"
-                  >
-                    <ChevronRight className="w-4 h-4" aria-hidden="true" />
-                  </button>
-                </div>
-
                 {/* Floating Product Highlight Card */}
                 <div className="absolute bottom-2 left-2 right-2 sm:bottom-3 sm:left-3 sm:right-3 md:bottom-4 md:left-4 md:right-4 bg-white/95 backdrop-blur-md p-2 sm:p-2.5 md:p-3.5 rounded-xs shadow-lg border border-[#E8E2D9] flex flex-col md:flex-row md:items-center justify-between gap-1.5 md:gap-3">
                   <div className="min-w-0 flex-1">
@@ -187,6 +164,26 @@ export const HeroBanner: React.FC = () => {
             </div>
           </div>
         </div>
+      </div>
+
+      {/* Side-Edge Carousel Controls: Flanking Left & Right Page Boundaries */}
+      <div className="pointer-events-none absolute inset-y-0 inset-x-2 sm:inset-x-4 md:inset-x-6 lg:inset-x-8 flex items-center justify-between z-30">
+        <button
+          type="button"
+          onClick={() => setCurrentSlideIdx((idx) => (idx === 0 ? totalSlides - 1 : idx - 1))}
+          className="pointer-events-auto w-11 h-11 min-w-[44px] min-h-[44px] rounded-full bg-white/80 hover:bg-white text-neutral-700 hover:text-black border border-[#DCD5C9] shadow-md backdrop-blur-md active:scale-95 transition-all cursor-pointer flex items-center justify-center focus-visible:ring-2 focus-visible:ring-[#541920] focus-visible:outline-none"
+          aria-label="Previous slide"
+        >
+          <ChevronLeft className="w-5 h-5" aria-hidden="true" />
+        </button>
+        <button
+          type="button"
+          onClick={() => setCurrentSlideIdx((idx) => (idx === totalSlides - 1 ? 0 : idx + 1))}
+          className="pointer-events-auto w-11 h-11 min-w-[44px] min-h-[44px] rounded-full bg-white/80 hover:bg-white text-neutral-700 hover:text-black border border-[#DCD5C9] shadow-md backdrop-blur-md active:scale-95 transition-all cursor-pointer flex items-center justify-center focus-visible:ring-2 focus-visible:ring-[#541920] focus-visible:outline-none"
+          aria-label="Next slide"
+        >
+          <ChevronRight className="w-5 h-5" aria-hidden="true" />
+        </button>
       </div>
     </section>
   );
