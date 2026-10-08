@@ -44,11 +44,17 @@ export default function ContactPage() {
                 <Phone className="w-4 h-4 text-[#541920] shrink-0 mt-0.5" />
                 <div>
                   <strong className="block text-neutral-900 font-semibold">WhatsApp & Phone Care</strong>
-                  <div className="space-y-0.5 mt-1">
-                    <a href="tel:+918498854323" className="text-[#541920] hover:underline block font-medium">
+                  <div className="space-y-1 mt-1">
+                    <a
+                      href="tel:+918498854323"
+                      className="min-h-[44px] py-1.5 text-[#541920] hover:underline flex items-center font-medium focus-visible:ring-2 focus-visible:ring-[#541920] focus-visible:outline-none"
+                    >
                       +91 84988 54323
                     </a>
-                    <a href="tel:+918106789789" className="text-[#541920] hover:underline block font-medium">
+                    <a
+                      href="tel:+918106789789"
+                      className="min-h-[44px] py-1.5 text-[#541920] hover:underline flex items-center font-medium focus-visible:ring-2 focus-visible:ring-[#541920] focus-visible:outline-none"
+                    >
                       +91 81067 89789
                     </a>
                   </div>

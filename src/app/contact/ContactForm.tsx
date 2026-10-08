@@ -50,7 +50,7 @@ export function ContactForm() {
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 placeholder="e.g. Radhika Sharma"
-                className="w-full px-3.5 py-2.5 text-xs border border-[#DCD5C9] rounded-xs bg-[#FAF7F2] focus:bg-white focus:outline-none focus:border-[#541920]"
+                className="w-full min-h-[44px] px-3.5 py-2.5 text-xs border border-[#DCD5C9] rounded-xs bg-[#FAF7F2] focus:bg-white focus:outline-none focus:border-[#541920]"
               />
             </div>
             <div>
@@ -64,7 +64,7 @@ export function ContactForm() {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="e.g. radhika@example.com"
-                className="w-full px-3.5 py-2.5 text-xs border border-[#DCD5C9] rounded-xs bg-[#FAF7F2] focus:bg-white focus:outline-none focus:border-[#541920]"
+                className="w-full min-h-[44px] px-3.5 py-2.5 text-xs border border-[#DCD5C9] rounded-xs bg-[#FAF7F2] focus:bg-white focus:outline-none focus:border-[#541920]"
               />
             </div>
             <div>
@@ -77,7 +77,7 @@ export function ContactForm() {
                 value={phone}
                 onChange={(e) => setPhone(e.target.value)}
                 placeholder="e.g. +91 98765 43210…"
-                className="w-full px-3.5 py-2.5 text-xs border border-[#DCD5C9] rounded-xs bg-[#FAF7F2] focus:bg-white focus:outline-none focus:border-[#541920]"
+                className="w-full min-h-[44px] px-3.5 py-2.5 text-xs border border-[#DCD5C9] rounded-xs bg-[#FAF7F2] focus:bg-white focus:outline-none focus:border-[#541920]"
               />
             </div>
           </div>
