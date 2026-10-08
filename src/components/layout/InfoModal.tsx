@@ -420,7 +420,7 @@ export const InfoModal: React.FC<InfoModalProps> = ({
               {activeTab === "story" && (
                 <div className="space-y-5">
                   <div>
-                    <span className="text-[10px] uppercase font-bold tracking-[0.25em] text-[#C5A575] block">
+                    <span className="text-[10px] uppercase font-bold tracking-[0.25em] text-[#7C5C26] block">
                       The Philosophy
                     </span>
                     <h3 className="font-serif text-2xl text-neutral-900 mt-0.5">Every Drape, A Little Magic</h3>
@@ -444,7 +444,7 @@ export const InfoModal: React.FC<InfoModalProps> = ({
               {activeTab === "craftsmanship" && (
                 <div className="space-y-5">
                   <div>
-                    <span className="text-[10px] uppercase font-bold tracking-[0.25em] text-[#C5A575] block">
+                    <span className="text-[10px] uppercase font-bold tracking-[0.25em] text-[#7C5C26] block">
                       Loom To Wardrobe
                     </span>
                     <h3 className="font-serif text-2xl text-neutral-900 mt-0.5">Artisan Clusters & Weaving Purity</h3>
