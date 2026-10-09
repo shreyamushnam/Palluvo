@@ -60,7 +60,7 @@ export const ShopTheLook: React.FC = () => {
           <div className="lg:col-span-6 relative">
             <Link
               href="/product/pal-001"
-              className="group relative block aspect-[3/4] rounded-sm overflow-hidden bg-neutral-100 shadow-sm hover:shadow-xl hover:-translate-y-1 border border-[#E8E2D9] transition-all duration-300 ease-out focus-visible:ring-2 focus-visible:ring-[#541920] focus-visible:outline-none"
+              className="group relative block aspect-[3/4] rounded-sm overflow-hidden bg-neutral-100 shadow-sm hover:shadow-xl hover:-translate-y-1 active:scale-[0.98] border border-[#E8E2D9] transition-all duration-200 ease-out focus-visible:ring-2 focus-visible:ring-[#541920] focus-visible:outline-none"
               aria-label="View featured Wine Tissue Silk Saree"
             >
               <Image

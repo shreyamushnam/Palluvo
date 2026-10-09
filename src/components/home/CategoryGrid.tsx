@@ -31,9 +31,9 @@ export const CategoryGrid: React.FC = () => {
             <Link
               key={cat.id}
               href={getCategoryHref(cat.canonicalQuery || cat.name)}
-              className="group flex flex-col items-center text-center p-1 rounded-sm transition-all duration-300 ease-out hover:-translate-y-1 focus-visible:ring-2 focus-visible:ring-[#541920] focus-visible:outline-none"
+              className="group flex flex-col items-center text-center p-1 rounded-sm transition-all duration-200 ease-out hover:-translate-y-1 active:scale-[0.97] active:shadow-xs focus-visible:ring-2 focus-visible:ring-[#541920] focus-visible:outline-none"
             >
-              <div className="relative aspect-[3/4] w-full rounded-sm overflow-hidden bg-neutral-100 shadow-xs group-hover:shadow-md transition-all duration-300 ease-out border border-[#E8E2D9]">
+              <div className="relative aspect-[3/4] w-full rounded-sm overflow-hidden bg-neutral-100 shadow-xs group-hover:shadow-md transition-all duration-200 ease-out border border-[#E8E2D9]">
                 <Image
                   src={cat.image}
                   alt=""

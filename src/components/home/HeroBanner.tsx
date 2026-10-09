@@ -121,7 +121,7 @@ export const HeroBanner: React.FC = () => {
             <div className="relative mx-auto max-w-[240px] sm:max-w-[280px] md:max-w-sm lg:max-w-none">
               <Link
                 href={slide.product.href}
-                className="group relative aspect-[4/5] md:aspect-[3/4] rounded-sm overflow-hidden shadow-2xl bg-neutral-100 border-2 sm:border-4 border-white block transition-all duration-300 hover:shadow-3xl focus-visible:ring-2 focus-visible:ring-[#541920] focus-visible:outline-none"
+                className="group relative aspect-[4/5] md:aspect-[3/4] rounded-sm overflow-hidden shadow-2xl bg-neutral-100 border-2 sm:border-4 border-white block transition-all duration-200 ease-out hover:shadow-3xl active:scale-[0.98] focus-visible:ring-2 focus-visible:ring-[#541920] focus-visible:outline-none"
                 aria-label={`View ${slide.product.name} - ${slide.product.price}`}
               >
                 <Image
