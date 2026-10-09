@@ -1142,7 +1142,14 @@ export default function CheckoutPage() {
                 <p>• 7-Day Hassle-Free Returns Guaranteed</p>
                 <p>• 100% Pure Silk Mark Verified</p>
                 <div className="pt-2 border-t border-[#E8E2D9] text-neutral-600">
-                  <p className="font-semibold text-neutral-800 mb-0.5">Need Help with Checkout?</p>
+                  <Link
+                    href="/checkout/help"
+                    className="inline-flex items-center gap-1 font-semibold text-neutral-800 hover:text-[#541920] hover:underline mb-1 transition-colors focus-visible:ring-2 focus-visible:ring-[#541920] focus-visible:outline-none rounded-2xs"
+                    aria-label="Need Help with Checkout? View checkout FAQs and guide"
+                  >
+                    <span>Need Help with Checkout?</span>
+                    <ArrowRight className="w-3 h-3 text-[#541920]" aria-hidden="true" />
+                  </Link>
                   <p>
                     Email: <a href="mailto:contact@palluvo.com" className="text-[#541920] hover:underline font-medium">contact@palluvo.com</a>
                   </p>
