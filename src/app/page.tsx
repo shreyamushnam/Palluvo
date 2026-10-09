@@ -1,4 +1,5 @@
 import React from "react";
+import type { Metadata } from "next";
 import { HeroBanner } from "@/components/home/HeroBanner";
 import { CategoryGrid } from "@/components/home/CategoryGrid";
 import { FeaturedCollectionSection } from "@/components/home/FeaturedCollectionSection";
@@ -6,6 +7,15 @@ import { ShopTheLook } from "@/components/home/ShopTheLook";
 import { CollectionBanner } from "@/components/home/CollectionBanner";
 import { TrustSection } from "@/components/home/TrustSection";
 import { InstagramGrid } from "@/components/home/InstagramGrid";
+
+export const metadata: Metadata = {
+  title: "PALLUVO | Buy Designer Sarees Online | Pure Silk, Handloom, & Bridal",
+  description:
+    "Shop premium Indian sarees online at PALLUVO. Discover handwoven Kanjeevaram silk, Banarasi brocades, lightweight organza, and festive party wear. Free shipping above ₹1999 & easy returns.",
+  alternates: {
+    canonical: "/",
+  },
+};
 
 export default function HomePage() {
   return (

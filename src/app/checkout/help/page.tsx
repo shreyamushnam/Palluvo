@@ -13,6 +13,13 @@ import {
 export const metadata: Metadata = {
   title: "Checkout Assistance & Payment Guide | PALLUVO",
   description: "Comprehensive assistance for payment security, insured shipping timelines, Silk Mark verification, and concierge support at PALLUVO.",
+  alternates: {
+    canonical: "/checkout/help",
+  },
+  robots: {
+    index: false,
+    follow: false,
+  },
 };
 
 const HELP_SECTIONS = [

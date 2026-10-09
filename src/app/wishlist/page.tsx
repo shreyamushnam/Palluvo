@@ -4,6 +4,9 @@ import { WishlistClient } from "./WishlistClient";
 export const metadata: Metadata = {
   title: "My Wishlist | Saved Handcrafted Heirlooms | PALLUVO",
   description: "View and manage your saved handcrafted sarees and bridal heirlooms.",
+  alternates: {
+    canonical: "/wishlist",
+  },
   robots: {
     index: false,
     follow: false,
