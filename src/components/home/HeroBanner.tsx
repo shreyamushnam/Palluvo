@@ -11,6 +11,9 @@ const SLIDES = [
     titleLine1: "Every drape,",
     titleLine2: "a little magic",
     description: "Discover sarees crafted for moments worth remembering.",
+    curationTag: "Bestseller",
+    categoryName: "Tissue Silk",
+    categoryHref: "/shop?category=Tissue+Silk",
     primaryCta: { label: "Shop Sarees", href: "/shop" },
     secondaryCta: { label: "New Arrivals", href: "/shop?sort=newest" },
     image: "/images/hero-saree.jpg",
@@ -28,6 +31,9 @@ const SLIDES = [
     titleLine1: "Royal heritage,",
     titleLine2: "timeless temple weaves",
     description: "Handcrafted pure silk Kanjeevarams woven with authentic gold zari motifs.",
+    curationTag: "Popular",
+    categoryName: "Kanjeevaram",
+    categoryHref: "/shop?category=Kanjeevaram",
     primaryCta: { label: "Shop Kanjeevaram", href: "/shop?category=Kanjeevaram" },
     secondaryCta: { label: "Bridal Edits", href: "/shop?category=Bridal" },
     image: "/images/products/royal-blue-kanjeevaram.jpg",
@@ -45,6 +51,9 @@ const SLIDES = [
     titleLine1: "Imperial elegance,",
     titleLine2: "pure Banarasi brocade",
     description: "Opulent crimson red Kadwa silk brocades curated for grand Indian weddings.",
+    curationTag: "Trending",
+    categoryName: "Banarasi",
+    categoryHref: "/shop?category=Banarasi",
     primaryCta: { label: "Shop Banarasi", href: "/shop?category=Banarasi" },
     secondaryCta: { label: "Explore Handloom", href: "/shop?category=Handloom" },
     image: "/images/products/red-banarasi-saree.jpg",
@@ -144,10 +153,10 @@ export const HeroBanner: React.FC = () => {
                   return (
                     <Link
                       key={item.id}
-                      href={item.product.href}
+                      href={item.categoryHref}
                       tabIndex={isActive ? 0 : -1}
                       aria-hidden={!isActive}
-                      aria-label={`View ${item.product.name} - ${item.product.price}`}
+                      aria-label={`Explore ${item.categoryName} Collection`}
                       className={`absolute inset-0 block transition-opacity duration-700 ease-in-out ${
                         isActive
                           ? "opacity-100 z-10 pointer-events-auto"
@@ -173,12 +182,12 @@ export const HeroBanner: React.FC = () => {
                   aria-hidden="true"
                 />
 
-                {/* Bottom Overlay: Bestsellers • Popular Badge & Pagination Dots */}
+                {/* Bottom Overlay: Slide-Specific Curation Badge & Pagination Dots */}
                 <div className="absolute bottom-3 sm:bottom-4 inset-x-0 z-30 flex flex-col items-center gap-2 sm:gap-2.5 px-4 pointer-events-none">
-                  {/* "Bestsellers • Popular" Curation Tag */}
+                  {/* Dynamic Slide-Specific Curation Tag */}
                   <span className="pointer-events-auto inline-flex items-center gap-1.5 bg-black/45 backdrop-blur-md text-white text-[10px] sm:text-xs font-medium tracking-wider uppercase px-3 py-1 rounded-full border border-white/20 shadow-sm transition-all hover:bg-black/60">
                     <span className="w-1.5 h-1.5 rounded-full bg-[#E5A93C] shrink-0" aria-hidden="true" />
-                    <span>Bestsellers • Popular</span>
+                    <span>{slide.curationTag}</span>
                   </span>
 
                   {/* Pagination Indicator Dots */}
