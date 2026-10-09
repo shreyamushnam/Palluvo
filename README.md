@@ -73,3 +73,8 @@ Open [http://localhost:3000](http://localhost:3000) to view the site.
 npm run build
 npm run start
 ```
+
+### Dependency Security & Audits
+- **Production Audit**: The production dependency tree is verified with zero vulnerabilities (`npm run audit:prod`).
+- **Toolchain Security**: Upstream development dependencies (`eslint-config-next`) are tracked without introducing major version rollbacks; all lint toolchains are isolated from the production bundle.
+
