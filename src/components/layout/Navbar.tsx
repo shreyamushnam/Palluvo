@@ -111,7 +111,7 @@ export const Navbar: React.FC = () => {
   const pathname = usePathname();
   const [isScrolled, setIsScrolled] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const { cartCount, wishlistCount, setIsCartOpen, isSearchOpen, setIsSearchOpen } = useStore();
+  const { cartCount, wishlistCount, setIsCartOpen, isSearchOpen, setIsSearchOpen, isLoggedIn } = useStore();
 
   const mobileDrawerRef = useFocusTrap<HTMLDivElement>({
     isOpen: mobileMenuOpen,
@@ -303,7 +303,7 @@ export const Navbar: React.FC = () => {
               aria-current={pathname === "/account" ? "page" : undefined}
               className="min-h-[44px] flex items-center gap-3 text-sm py-2 text-[#1C1A18] hover:text-[#541920] transition-colors"
             >
-              <User size={18} /> My Account & Orders
+              <User size={18} /> {isLoggedIn ? "My Account & Orders" : "Sign In / Register"}
             </Link>
             <Link
               href="/wishlist"

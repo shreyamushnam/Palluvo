@@ -8,14 +8,19 @@ import { useStore } from "@/context/StoreContext";
 
 export const MobileBottomNav: React.FC = () => {
   const pathname = usePathname();
-  const { cartCount, wishlistCount, setIsCartOpen } = useStore();
+  const { cartCount, wishlistCount, setIsCartOpen, isLoggedIn } = useStore();
 
   const items = [
     { label: "Home", href: "/", icon: Home },
     { label: "Shop", href: "/shop", icon: Grid },
     { label: "Wishlist", href: "/wishlist", icon: Heart, count: wishlistCount },
     { label: "Cart", href: "/cart", icon: ShoppingBag, count: cartCount, isCartDrawer: true },
-    { label: "Account", href: "/account", icon: User },
+    { 
+      label: isLoggedIn ? "Account" : "Sign In", 
+      href: "/account", 
+      icon: User,
+      ariaLabel: isLoggedIn ? "My Account & Orders" : "Sign In or Register"
+    },
   ];
 
   return (
@@ -31,9 +36,10 @@ export const MobileBottomNav: React.FC = () => {
         const Icon = item.icon;
 
         const ariaLabel =
-          item.count !== undefined && item.count > 0
+          item.ariaLabel ||
+          (item.count !== undefined && item.count > 0
             ? `${item.label} with ${item.count} items`
-            : item.label;
+            : item.label);
 
         if (item.isCartDrawer) {
           return (

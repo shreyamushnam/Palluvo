@@ -3,7 +3,7 @@
 import React, { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { Package, MapPin, User, Truck, CheckCircle2, ShieldCheck, Plus, X, Edit2, Trash2, Check, RotateCcw, LogOut, Sparkles, Award, Headphones, ArrowRight, Lock, Mail } from "lucide-react";
+import { Package, MapPin, User, Truck, CheckCircle2, ShieldCheck, Plus, X, Edit2, Trash2, Check, RotateCcw, LogOut, Sparkles, Award, Headphones, ArrowRight, Lock } from "lucide-react";
 import { useStore } from "@/context/StoreContext";
 import { SavedAddress } from "@/data/mockOrders";
 import { useFocusTrap } from "@/hooks/useFocusTrap";
@@ -193,13 +193,13 @@ export default function AccountPage() {
                 role="tab"
                 aria-selected={authTab === "signin"}
                 onClick={() => setAuthTab("signin")}
-                className={`py-3.5 sm:py-4 text-xs sm:text-sm font-semibold tracking-wider uppercase transition-all flex items-center justify-center gap-2 cursor-pointer focus-visible:ring-2 focus-visible:ring-[#541920] focus-visible:outline-none ${
+                className={`py-3 sm:py-3.5 px-2 text-[11px] sm:text-xs font-semibold tracking-wider uppercase transition-all flex items-center justify-center gap-1.5 sm:gap-2 whitespace-nowrap cursor-pointer focus-visible:ring-2 focus-visible:ring-[#541920] focus-visible:outline-none ${
                   authTab === "signin"
                     ? "bg-white text-[#541920] border-b-2 border-[#541920] shadow-2xs"
                     : "text-neutral-500 hover:text-neutral-900 hover:bg-white/60"
                 }`}
               >
-                <Lock className="w-4 h-4 text-[#541920]" />
+                <Lock className="w-3.5 h-3.5 text-[#541920] shrink-0" />
                 <span>Sign In</span>
               </button>
               <button
@@ -207,13 +207,13 @@ export default function AccountPage() {
                 role="tab"
                 aria-selected={authTab === "register"}
                 onClick={() => setAuthTab("register")}
-                className={`py-3.5 sm:py-4 text-xs sm:text-sm font-semibold tracking-wider uppercase transition-all flex items-center justify-center gap-2 cursor-pointer focus-visible:ring-2 focus-visible:ring-[#541920] focus-visible:outline-none ${
+                className={`py-3 sm:py-3.5 px-2 text-[11px] sm:text-xs font-semibold tracking-wider uppercase transition-all flex items-center justify-center gap-1.5 sm:gap-2 whitespace-nowrap cursor-pointer focus-visible:ring-2 focus-visible:ring-[#541920] focus-visible:outline-none ${
                   authTab === "register"
                     ? "bg-white text-[#541920] border-b-2 border-[#541920] shadow-2xs"
                     : "text-neutral-500 hover:text-neutral-900 hover:bg-white/60"
                 }`}
               >
-                <User className="w-4 h-4 text-[#541920]" />
+                <User className="w-3.5 h-3.5 text-[#541920] shrink-0" />
                 <span>Create Account</span>
               </button>
             </div>

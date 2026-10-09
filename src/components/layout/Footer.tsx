@@ -84,7 +84,7 @@ export const Footer: React.FC = () => {
                     />
                     <button
                       type="submit"
-                      className="min-h-[44px] h-11 px-4 bg-[#541920] hover:bg-[#7B1113] text-[#FAF7F2] text-xs uppercase tracking-wider font-medium transition-colors shrink-0 flex items-center justify-center focus-visible:ring-2 focus-visible:ring-[#C5A575] focus-visible:outline-none cursor-pointer"
+                      className="min-h-[44px] h-11 px-4 bg-[#541920] hover:bg-[#7B1113] text-[#FAF7F2] text-xs uppercase tracking-wider font-medium transition-all shrink-0 flex items-center justify-center border border-[#C5A575]/40 hover:border-[#C5A575] focus-visible:ring-2 focus-visible:ring-[#C5A575] focus-visible:outline-none cursor-pointer shadow-sm"
                     >
                       Subscribe
                     </button>

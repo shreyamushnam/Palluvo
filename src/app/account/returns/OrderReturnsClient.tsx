@@ -10,8 +10,6 @@ import {
   Truck, 
   CheckCircle, 
   Clock, 
-  Sparkles, 
-  HelpCircle,
   PackageCheck,
   AlertCircle
 } from "lucide-react";

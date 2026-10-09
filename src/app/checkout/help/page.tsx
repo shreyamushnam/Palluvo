@@ -2,10 +2,8 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { 
   ArrowLeft, 
-  ShieldCheck, 
   CreditCard, 
   Truck, 
-  CheckCircle, 
   Phone, 
   HelpCircle,
   Clock,
