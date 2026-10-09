@@ -3,7 +3,7 @@
 import React, { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { Package, MapPin, User, Truck, CheckCircle2, ShieldCheck, Plus, X, Edit2, Trash2, Check } from "lucide-react";
+import { Package, MapPin, User, Truck, CheckCircle2, ShieldCheck, Plus, X, Edit2, Trash2, Check, RotateCcw } from "lucide-react";
 import { useStore } from "@/context/StoreContext";
 import { SavedAddress } from "@/data/mockOrders";
 import { useFocusTrap } from "@/hooks/useFocusTrap";
@@ -160,6 +160,15 @@ export default function AccountPage() {
               <Package className="w-4 h-4 shrink-0" />
               <span>My Orders ({orders.length})</span>
             </button>
+
+            <Link
+              href="/account/returns"
+              className="w-full flex items-center justify-start gap-3 px-3.5 sm:px-4 py-2.5 sm:py-3 min-h-[44px] text-xs font-semibold rounded-xs transition-colors cursor-pointer text-neutral-700 hover:bg-[#F4EFE6] hover:text-[#541920] focus-visible:ring-2 focus-visible:ring-[#541920] focus-visible:outline-none"
+              aria-label="Order Returns and Exchanges"
+            >
+              <RotateCcw className="w-4 h-4 shrink-0 text-[#541920]" />
+              <span>Order Returns</span>
+            </Link>
 
             <button
               id="account-tab-addresses"
