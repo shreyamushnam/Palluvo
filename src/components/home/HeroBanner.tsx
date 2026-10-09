@@ -117,6 +117,7 @@ export const HeroBanner: React.FC = () => {
   };
 
   const handleTogglePause = () => {
+    if (prefersReducedMotion) return;
     setIsManuallyPaused((prev) => {
       const nextPaused = !prev;
       setLiveAnnouncement(
@@ -222,9 +223,9 @@ export const HeroBanner: React.FC = () => {
                   </span>
 
                   {/* Controls: Pagination Indicator Dots & Accessible Pause/Play Button */}
-                  <div className="pointer-events-auto flex items-center justify-center gap-2 sm:gap-2.5">
+                  <div className="pointer-events-auto flex items-center justify-center gap-1 sm:gap-2">
                     <div
-                      className="flex items-center justify-center gap-1.5 sm:gap-2"
+                      className="flex items-center justify-center"
                       role="tablist"
                       aria-label="Showcase slide indicators"
                     >
@@ -238,12 +239,16 @@ export const HeroBanner: React.FC = () => {
                             aria-selected={isActive}
                             aria-label={`Go to slide ${idx + 1}: ${item.product.name}`}
                             onClick={() => handleUserSelectSlide(idx)}
-                            className={`h-2 rounded-full transition-all duration-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white cursor-pointer ${
-                              isActive
-                                ? "w-5 sm:w-6 bg-white shadow-sm"
-                                : "w-2 bg-white/40 hover:bg-white/70"
-                            }`}
-                          />
+                            className="group relative flex items-center justify-center min-w-[44px] min-h-[44px] p-2 focus-visible:outline-none cursor-pointer"
+                          >
+                            <span
+                              className={`h-2.5 rounded-full transition-all duration-300 group-focus-visible:ring-2 group-focus-visible:ring-white group-focus-visible:ring-offset-2 group-focus-visible:ring-offset-black/50 ${
+                                isActive
+                                  ? "w-6 sm:w-7 bg-white shadow-sm"
+                                  : "w-2.5 bg-white/40 group-hover:bg-white/70"
+                              }`}
+                            />
+                          </button>
                         );
                       })}
                     </div>
@@ -252,19 +257,28 @@ export const HeroBanner: React.FC = () => {
                     <button
                       type="button"
                       onClick={handleTogglePause}
+                      disabled={prefersReducedMotion}
                       aria-label={
-                        isManuallyPaused
+                        prefersReducedMotion
+                          ? "Auto-rotation disabled by system reduced motion preference"
+                          : isManuallyPaused
                           ? "Resume auto-rotating carousel"
                           : "Pause auto-rotating carousel"
                       }
-                      aria-pressed={isManuallyPaused}
-                      className="p-1 sm:p-1.5 rounded-full bg-black/45 backdrop-blur-md text-white/90 hover:text-white hover:bg-black/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white transition-all cursor-pointer border border-white/20"
+                      aria-pressed={prefersReducedMotion || isManuallyPaused}
+                      className={`relative min-w-[44px] min-h-[44px] flex items-center justify-center rounded-full transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-black/50 ${
+                        prefersReducedMotion
+                          ? "opacity-60 cursor-not-allowed text-white/60"
+                          : "text-white/90 hover:text-white cursor-pointer"
+                      }`}
                     >
-                      {isManuallyPaused ? (
-                        <Play className="w-3 h-3 sm:w-3.5 sm:h-3.5 fill-current" aria-hidden="true" />
-                      ) : (
-                        <Pause className="w-3 h-3 sm:w-3.5 sm:h-3.5 fill-current" aria-hidden="true" />
-                      )}
+                      <span className="w-8 h-8 rounded-full bg-black/45 backdrop-blur-md hover:bg-black/60 flex items-center justify-center border border-white/20 shadow-sm transition-all">
+                        {prefersReducedMotion || isManuallyPaused ? (
+                          <Play className="w-3.5 h-3.5 fill-current" aria-hidden="true" />
+                        ) : (
+                          <Pause className="w-3.5 h-3.5 fill-current" aria-hidden="true" />
+                        )}
+                      </span>
                     </button>
                   </div>
                 </div>
