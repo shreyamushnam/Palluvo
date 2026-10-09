@@ -24,6 +24,7 @@ export const SearchOverlay: React.FC = () => {
   const [query, setQuery] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
   const dialogRef = useFocusTrap<HTMLDivElement>({ isOpen: isSearchOpen });
+  const touchStartRef = useRef<{ x: number; y: number } | null>(null);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -36,15 +37,45 @@ export const SearchOverlay: React.FC = () => {
       setTimeout(() => inputRef.current?.focus(), 100);
       document.body.style.overflow = "hidden";
       window.addEventListener("keydown", handleKeyDown);
+
+      // Support native mobile swipe-back / browser back gesture
+      window.history.pushState({ searchOverlay: true }, "");
+      const handlePopState = () => {
+        setIsSearchOpen(false);
+      };
+      window.addEventListener("popstate", handlePopState);
+
+      return () => {
+        document.body.style.overflow = "unset";
+        window.removeEventListener("keydown", handleKeyDown);
+        window.removeEventListener("popstate", handlePopState);
+      };
     } else {
       document.body.style.overflow = "unset";
     }
-
-    return () => {
-      document.body.style.overflow = "unset";
-      window.removeEventListener("keydown", handleKeyDown);
-    };
   }, [isSearchOpen, setIsSearchOpen]);
+
+  const handleTouchStart = (e: React.TouchEvent) => {
+    if (e.touches.length === 1) {
+      touchStartRef.current = {
+        x: e.touches[0].clientX,
+        y: e.touches[0].clientY,
+      };
+    }
+  };
+
+  const handleTouchEnd = (e: React.TouchEvent) => {
+    if (!touchStartRef.current || e.changedTouches.length === 0) return;
+    const deltaX = e.changedTouches[0].clientX - touchStartRef.current.x;
+    const deltaY = e.changedTouches[0].clientY - touchStartRef.current.y;
+    touchStartRef.current = null;
+
+    // Detect horizontal swipe-back (swipe right > 60px with limited vertical drift)
+    // or downward swipe dismiss (swipe down > 80px)
+    if ((deltaX > 60 && Math.abs(deltaY) < 100) || (deltaY > 80 && Math.abs(deltaX) < 100)) {
+      setIsSearchOpen(false);
+    }
+  };
 
   if (!isSearchOpen) return null;
 
@@ -71,6 +102,8 @@ export const SearchOverlay: React.FC = () => {
       aria-modal="true"
       aria-labelledby="search-dialog-title"
       aria-label="Search products"
+      onTouchStart={handleTouchStart}
+      onTouchEnd={handleTouchEnd}
     >
       {/* Backdrop */}
       <div
@@ -91,15 +124,8 @@ export const SearchOverlay: React.FC = () => {
             </div>
             <div className="flex items-center gap-2">
               <span className="hidden sm:inline-block text-[10px] uppercase tracking-wider text-neutral-600 bg-white px-2 py-0.5 rounded-xs border border-[#E8E2D9] font-mono">
-                Press ESC to close
+                Press ESC or Swipe to close
               </span>
-              <button
-                onClick={() => setIsSearchOpen(false)}
-                className="w-11 h-11 min-w-[44px] min-h-[44px] inline-flex items-center justify-center text-neutral-500 hover:text-black hover:bg-neutral-200/60 rounded-full transition-colors shrink-0"
-                aria-label="Close search"
-              >
-                <X className="w-4 h-4" />
-              </button>
             </div>
           </div>
 
@@ -131,15 +157,15 @@ export const SearchOverlay: React.FC = () => {
                 Clear
               </button>
             )}
-            <div className="flex items-center gap-2 sm:hidden">
-              <button
-                onClick={() => setIsSearchOpen(false)}
-                className="w-11 h-11 min-w-[44px] min-h-[44px] inline-flex items-center justify-center text-neutral-500 hover:text-black hover:bg-neutral-100 rounded-full transition-colors shrink-0"
-                aria-label="Close search"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
+            <button
+              type="button"
+              onClick={() => setIsSearchOpen(false)}
+              className="w-11 h-11 min-w-[44px] min-h-[44px] inline-flex items-center justify-center text-neutral-500 hover:text-black hover:bg-neutral-100 rounded-full transition-colors shrink-0 cursor-pointer focus-visible:ring-2 focus-visible:ring-[#541920] focus-visible:outline-none"
+              aria-label="Close search"
+              title="Close search"
+            >
+              <X className="w-5 h-5" />
+            </button>
           </div>
 
           {/* Body Content */}
