@@ -4,7 +4,7 @@ import React, { useState } from "react";
 import Link from "next/link";
 import dynamic from "next/dynamic";
 import { Check } from "lucide-react";
-import { InstagramIcon, FacebookIcon, PinterestIcon } from "@/components/icons/BrandIcons";
+import { InstagramIcon, FacebookIcon, PinterestIcon, YoutubeIcon } from "@/components/icons/BrandIcons";
 import type { InfoModalTab } from "@/components/layout/InfoModal";
 
 const InfoModal = dynamic(
@@ -234,6 +234,9 @@ export const Footer: React.FC = () => {
                 </a>
                 <a href="https://pinterest.com" target="_blank" rel="noreferrer" className="min-w-[44px] min-h-[44px] inline-flex items-center justify-center hover:text-[#C5A575] focus-visible:ring-2 focus-visible:ring-[#C5A575] focus-visible:outline-none rounded-xs" aria-label="Pinterest">
                   <PinterestIcon size={18} />
+                </a>
+                <a href="https://youtube.com" target="_blank" rel="noreferrer" className="min-w-[44px] min-h-[44px] inline-flex items-center justify-center hover:text-[#C5A575] focus-visible:ring-2 focus-visible:ring-[#C5A575] focus-visible:outline-none rounded-xs" aria-label="YouTube">
+                  <YoutubeIcon size={18} />
                 </a>
               </div>
             </div>
