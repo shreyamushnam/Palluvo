@@ -47,7 +47,7 @@ const SAMPLE_RETURNABLE_ITEMS: ReturnableSampleItem[] = [
     productName: "Mustard Cotton Silk Saree",
     fabric: "Chanderi Cotton Silk Weave",
     price: "₹2,899",
-    image: "/images/products/mustard-cotton-silk.jpg",
+    image: "/images/products/mustard-cotton-saree.jpg",
     status: "Window Expired",
     daysLeft: 0,
   },
