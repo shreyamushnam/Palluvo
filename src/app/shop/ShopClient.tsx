@@ -160,6 +160,11 @@ export function ShopContent() {
   const [selectedPriceRange, setSelectedPriceRange] = useState<number | null>(null);
   const [sortBy, setSortBy] = useState<string>(searchParams.get("sort") || "featured");
   const [isMobileFilterOpen, setIsMobileFilterOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState(initialQuery);
+
+  React.useEffect(() => {
+    setSearchQuery(initialQuery);
+  }, [initialQuery]);
 
   const mobileFilterRef = useFocusTrap<HTMLDivElement>({
     isOpen: isMobileFilterOpen,
@@ -177,15 +182,17 @@ export function ShopContent() {
     };
   }, [isMobileFilterOpen]);
 
+  const activeSearchTerm = searchQuery;
+
   // Products matching all filters except fabric
   const productsForFabricCounts = useMemo(() => {
     return PRODUCTS.filter((p) =>
       matchesCategory(p, selectedCategory) &&
       matchesOccasion(p, selectedOccasion) &&
       matchesPrice(p, selectedPriceRange) &&
-      matchesSearch(p, initialQuery)
+      matchesSearch(p, activeSearchTerm)
     );
-  }, [selectedCategory, selectedOccasion, selectedPriceRange, initialQuery]);
+  }, [selectedCategory, selectedOccasion, selectedPriceRange, activeSearchTerm]);
 
   // Products matching all filters except occasion
   const productsForOccasionCounts = useMemo(() => {
@@ -193,9 +200,9 @@ export function ShopContent() {
       matchesCategory(p, selectedCategory) &&
       matchesFabric(p, selectedFabric) &&
       matchesPrice(p, selectedPriceRange) &&
-      matchesSearch(p, initialQuery)
+      matchesSearch(p, activeSearchTerm)
     );
-  }, [selectedCategory, selectedFabric, selectedPriceRange, initialQuery]);
+  }, [selectedCategory, selectedFabric, selectedPriceRange, activeSearchTerm]);
 
   // Products matching all filters except category
   const productsForCategoryCounts = useMemo(() => {
@@ -203,9 +210,9 @@ export function ShopContent() {
       matchesFabric(p, selectedFabric) &&
       matchesOccasion(p, selectedOccasion) &&
       matchesPrice(p, selectedPriceRange) &&
-      matchesSearch(p, initialQuery)
+      matchesSearch(p, activeSearchTerm)
     );
-  }, [selectedFabric, selectedOccasion, selectedPriceRange, initialQuery]);
+  }, [selectedFabric, selectedOccasion, selectedPriceRange, activeSearchTerm]);
 
   const handleCategoryToggle = (cat: (typeof CATEGORIES)[number]) => {
     const isCurrent = isCategoryActive(selectedCategory, cat);
@@ -233,7 +240,7 @@ export function ShopContent() {
       if (!matchesFabric(product, selectedFabric)) return false;
       if (!matchesOccasion(product, selectedOccasion)) return false;
       if (!matchesPrice(product, selectedPriceRange)) return false;
-      if (!matchesSearch(product, initialQuery)) return false;
+      if (!matchesSearch(product, activeSearchTerm)) return false;
       return true;
     }).sort((a, b) => {
       if (sortBy === "price-low") return a.price - b.price;
@@ -244,7 +251,7 @@ export function ShopContent() {
       if (sortBy === "newest") return (b.isNewArrival ? 1 : 0) - (a.isNewArrival ? 1 : 0);
       return 0; // default featured
     });
-  }, [selectedCategory, selectedFabric, selectedOccasion, selectedPriceRange, sortBy, initialQuery]);
+  }, [selectedCategory, selectedFabric, selectedOccasion, selectedPriceRange, sortBy, activeSearchTerm]);
 
   const activeFiltersCount =
     (selectedCategory ? 1 : 0) +
@@ -258,6 +265,7 @@ export function ShopContent() {
     params.delete("q");
     const qStr = params.toString();
     router.push(qStr ? `/shop?${qStr}` : "/shop", { scroll: false });
+    setSearchQuery("");
     setSelectedFabric("");
     setSelectedOccasion("");
     setSelectedPriceRange(null);
@@ -293,61 +301,48 @@ export function ShopContent() {
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         
-        {/* Top Control Bar: Total count, Mobile filter button, Sort */}
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pb-6 border-b border-[#E8E2D9]">
-          <div className="flex items-center gap-3">
-            <button
-              onClick={() => setIsMobileFilterOpen(true)}
-              className="lg:hidden inline-flex items-center gap-2 px-3.5 py-2.5 min-h-[44px] bg-white border border-[#DCD5C9] rounded-xs text-xs font-semibold text-neutral-800 hover:bg-[#FAF7F2] transition-colors cursor-pointer focus-visible:ring-2 focus-visible:ring-[#541920] focus-visible:outline-none"
-            >
-              <SlidersHorizontal className="w-3.5 h-3.5" />
-              <span>Filters {activeFiltersCount > 0 && `(${activeFiltersCount})`}</span>
-            </button>
-
-            <span
-              className="text-xs text-neutral-600 font-sans"
-              role="status"
-              aria-live="polite"
-              aria-atomic="true"
-            >
-              Showing <strong className="text-neutral-900">{filteredProducts.length}</strong>{" "}
-              {selectedCategory && selectedCategory.toLowerCase().includes("saree")
-                ? filteredProducts.length === 1
-                  ? "saree"
-                  : "sarees"
-                : filteredProducts.length === 1
-                ? "product"
-                : "products"}
-            </span>
+        {/* Top Control Bar: Inline Search Bar with Right-Aligned Filters CTA */}
+        <div className="flex items-center gap-3 pb-6 border-b border-[#E8E2D9]">
+          {/* Inline Search Bar */}
+          <div className="relative flex-1 min-w-0">
+            <div className="relative flex items-center bg-white border border-[#DCD5C9] rounded-xs px-3.5 py-2 min-h-[44px] transition-colors focus-within:border-[#541920] focus-within:ring-1 focus-within:ring-[#541920]">
+              <Search className="w-4 h-4 text-neutral-400 shrink-0 mr-2.5" aria-hidden="true" />
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Search handcrafted sarees..."
+                aria-label="Search handcrafted sarees and products"
+                className="w-full text-xs sm:text-sm bg-transparent border-none outline-none text-neutral-900 placeholder:text-neutral-500 font-sans"
+              />
+              {searchQuery && (
+                <button
+                  type="button"
+                  onClick={() => setSearchQuery("")}
+                  className="p-1 text-neutral-400 hover:text-neutral-700 transition-colors shrink-0 focus-visible:ring-2 focus-visible:ring-[#541920] focus-visible:outline-none rounded-2xs cursor-pointer"
+                  aria-label="Clear search"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              )}
+            </div>
           </div>
 
-          {/* Sort By Dropdown */}
-          <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
-            <label htmlFor="sort" className="text-xs text-neutral-600 whitespace-nowrap font-medium">
-              Sort by:
-            </label>
-            <select
-              id="sort"
-              value={sortBy}
-              onChange={(e) => {
-                const newSort = e.target.value;
-                setSortBy(newSort);
-                const params = new URLSearchParams(searchParams.toString());
-                params.set("sort", newSort);
-                router.push(`/shop?${params.toString()}`, { scroll: false });
-              }}
-              className="bg-white border border-[#DCD5C9] text-neutral-800 text-xs rounded-xs px-3 py-2 min-h-[44px] focus:outline-none focus:border-[#541920] focus-visible:ring-2 focus-visible:ring-[#541920]"
-              aria-label="Sort products by"
-            >
-              <option value="featured">Featured Weaves</option>
-              <option value="newest">Newest Arrivals</option>
-              <option value="popular">Popular & Trending</option>
-              <option value="bestselling">Bestsellers</option>
-              <option value="price-low">Price: Low to High</option>
-              <option value="price-high">Price: High to Low</option>
-              <option value="rating">Highest Rated</option>
-            </select>
-          </div>
+          {/* Right-Aligned Filters CTA */}
+          <button
+            type="button"
+            onClick={() => setIsMobileFilterOpen(true)}
+            className="border border-[#DCD5C9] bg-white text-xs font-semibold px-4 py-2.5 min-h-[44px] flex items-center gap-2 rounded-xs hover:bg-[#FAF7F2] text-neutral-800 transition-colors shrink-0 cursor-pointer focus-visible:ring-2 focus-visible:ring-[#541920] focus-visible:outline-none shadow-xs"
+            aria-label="Open catalog filters"
+          >
+            <SlidersHorizontal className="w-4 h-4 text-[#541920]" />
+            <span>Filters</span>
+            {activeFiltersCount > 0 && (
+              <span className="w-5 h-5 rounded-full bg-[#541920] text-white text-[10px] font-bold flex items-center justify-center">
+                {activeFiltersCount}
+              </span>
+            )}
+          </button>
         </div>
 
         {/* Active Filter Pills */}
