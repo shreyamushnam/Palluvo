@@ -74,6 +74,7 @@ export const HeroBanner: React.FC = () => {
   const [isFocused, setIsFocused] = useState(false);
   const [isManuallyPaused, setIsManuallyPaused] = useState(false);
   const [prefersReducedMotion, setPrefersReducedMotion] = useState(false);
+  const [liveAnnouncement, setLiveAnnouncement] = useState("");
   const totalSlides = SLIDES.length;
   const slide = SLIDES[currentSlideIdx];
 
@@ -95,7 +96,7 @@ export const HeroBanner: React.FC = () => {
 
   const isPaused = isHovered || isFocused || isManuallyPaused || prefersReducedMotion;
 
-  // Auto-advance showcase slides every 4.5 seconds
+  // Auto-advance showcase slides every 4.5 seconds (does NOT trigger live announcements)
   useEffect(() => {
     if (isPaused) return;
 
@@ -105,6 +106,25 @@ export const HeroBanner: React.FC = () => {
 
     return () => clearInterval(timer);
   }, [isPaused, totalSlides]);
+
+  // Handler for explicit, user-initiated slide changes (e.g. keyboard or click navigation)
+  const handleUserSelectSlide = (idx: number) => {
+    setCurrentSlideIdx(idx);
+    const targetSlide = SLIDES[idx];
+    setLiveAnnouncement(
+      `Slide ${idx + 1} of ${totalSlides}: ${targetSlide.titleLine1} ${targetSlide.titleLine2} - featuring ${targetSlide.product.name}`
+    );
+  };
+
+  const handleTogglePause = () => {
+    setIsManuallyPaused((prev) => {
+      const nextPaused = !prev;
+      setLiveAnnouncement(
+        nextPaused ? "Carousel paused" : "Carousel auto-rotation resumed"
+      );
+      return nextPaused;
+    });
+  };
 
   return (
     <section
@@ -123,14 +143,14 @@ export const HeroBanner: React.FC = () => {
         }
       }}
     >
-      {/* Screen-reader live announcement for slide changes */}
+      {/* Screen-reader live announcement ONLY for user-initiated actions */}
       <div
         role="status"
         aria-live="polite"
         aria-atomic="true"
         className="sr-only"
       >
-        Slide {currentSlideIdx + 1} of {totalSlides}: {slide.titleLine1} {slide.titleLine2} - featuring {slide.product.name}
+        {liveAnnouncement}
       </div>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-2 pb-4 sm:py-6 md:py-10 lg:py-16">
@@ -217,7 +237,7 @@ export const HeroBanner: React.FC = () => {
                             role="tab"
                             aria-selected={isActive}
                             aria-label={`Go to slide ${idx + 1}: ${item.product.name}`}
-                            onClick={() => setCurrentSlideIdx(idx)}
+                            onClick={() => handleUserSelectSlide(idx)}
                             className={`h-2 rounded-full transition-all duration-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white cursor-pointer ${
                               isActive
                                 ? "w-5 sm:w-6 bg-white shadow-sm"
@@ -231,7 +251,7 @@ export const HeroBanner: React.FC = () => {
                     {/* Visible & Keyboard-Accessible Pause / Resume Carousel Control */}
                     <button
                       type="button"
-                      onClick={() => setIsManuallyPaused((prev) => !prev)}
+                      onClick={handleTogglePause}
                       aria-label={
                         isManuallyPaused
                           ? "Resume auto-rotating carousel"
