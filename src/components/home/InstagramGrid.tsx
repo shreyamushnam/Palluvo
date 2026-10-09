@@ -3,7 +3,6 @@
 import React from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { InstagramIcon } from "@/components/icons/BrandIcons";
 import { ShoppingBag, ArrowRight } from "lucide-react";
 
 const COMMUNITY_POSTS = [
@@ -58,10 +57,6 @@ export const InstagramGrid: React.FC = () => {
         
         {/* Header */}
         <div className="text-center max-w-xl mx-auto mb-8 space-y-2">
-          <div className="flex items-center justify-center gap-1.5 text-xs uppercase tracking-widest text-[#541920] font-semibold">
-            <InstagramIcon className="w-4 h-4" />
-            <span>#PalluvoDrapes</span>
-          </div>
           <h2 className="text-2xl sm:text-3xl font-serif font-normal text-neutral-900">
             Styled by PALLUVO
           </h2>
