@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
-import { Search, User, Heart, ShoppingBag, Menu, X } from "lucide-react";
+import { Search, User, Heart, ShoppingBag, Menu, X, Bell } from "lucide-react";
 import { useStore } from "@/context/StoreContext";
 import { useFocusTrap } from "@/hooks/useFocusTrap";
 
@@ -221,38 +221,19 @@ export const Navbar: React.FC = () => {
               <User size={20} strokeWidth={1.8} />
             </Link>
 
-            {/* Wishlist */}
+            {/* Notifications */}
             <Link
-              href="/wishlist"
-              aria-current={pathname === "/wishlist" ? "page" : undefined}
-              className="min-h-[44px] min-w-[44px] p-2 text-[#1C1A18] hover:text-[#541920] transition-colors relative flex items-center justify-center focus-visible:ring-2 focus-visible:ring-[#541920] focus-visible:outline-none"
-              aria-label={`Wishlist with ${wishlistCount} items`}
-              title="Wishlist"
-            >
-              <Heart size={20} strokeWidth={1.8} />
-              {wishlistCount > 0 && (
-                <span className="absolute top-1.5 right-1.5 bg-[#8E371F] text-[#FAF7F2] text-[9px] font-bold w-4 h-4 rounded-full flex items-center justify-center">
-                  {wishlistCount}
-                </span>
-              )}
-            </Link>
-
-            {/* Cart / Bag Trigger */}
-            <button
-              onClick={() => setIsCartOpen(true)}
-              className="min-h-[44px] min-w-[44px] p-2 text-[#1C1A18] hover:text-[#541920] transition-colors relative flex items-center justify-center gap-1 focus-visible:ring-2 focus-visible:ring-[#541920] focus-visible:outline-none cursor-pointer"
-              aria-label={`Shopping bag with ${cartCount} items`}
-              title="Shopping Cart"
+              href="/notifications"
+              aria-current={pathname === "/notifications" ? "page" : undefined}
+              className="min-h-[44px] min-w-[44px] p-2 text-[#1C1A18] hover:text-[#541920] transition-colors relative flex items-center justify-center focus-visible:ring-2 focus-visible:ring-[#541920] focus-visible:outline-none rounded-xs"
+              aria-label="Notifications"
+              title="Notifications"
             >
               <div className="relative">
-                <ShoppingBag size={20} strokeWidth={1.8} />
-                {cartCount > 0 && (
-                  <span className="absolute -top-1 -right-1 bg-[#541920] text-[#FAF7F2] text-[9px] font-bold w-4 h-4 rounded-full flex items-center justify-center">
-                    {cartCount}
-                  </span>
-                )}
+                <Bell size={20} strokeWidth={1.8} />
+                <span className="absolute -top-0.5 -right-0.5 w-2 h-2 bg-[#541920] rounded-full ring-2 ring-[#FAF7F2]" />
               </div>
-            </button>
+            </Link>
           </div>
 
         </div>
