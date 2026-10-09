@@ -119,7 +119,11 @@ export const HeroBanner: React.FC = () => {
           {/* Right Column: High Quality Saree Hero Image Showcase */}
           <div className="lg:col-span-6 relative mt-1 lg:mt-0">
             <div className="relative mx-auto max-w-[240px] sm:max-w-[280px] md:max-w-sm lg:max-w-none">
-              <div className="relative aspect-[4/5] md:aspect-[3/4] rounded-sm overflow-hidden shadow-2xl bg-neutral-100 border-2 sm:border-4 border-white">
+              <Link
+                href={slide.product.href}
+                className="group relative aspect-[4/5] md:aspect-[3/4] rounded-sm overflow-hidden shadow-2xl bg-neutral-100 border-2 sm:border-4 border-white block transition-all duration-300 hover:shadow-3xl focus-visible:ring-2 focus-visible:ring-[#541920] focus-visible:outline-none"
+                aria-label={`View ${slide.product.name} - ${slide.product.price}`}
+              >
                 <Image
                   key={slide.image}
                   src={slide.image}
@@ -128,39 +132,30 @@ export const HeroBanner: React.FC = () => {
                   priority
                   loading="eager"
                   sizes="(max-width: 639px) 240px, (max-width: 767px) 280px, (max-width: 1023px) 384px, (min-width: 1280px) 584px, 45vw"
-                  className="object-cover object-top transition-opacity duration-300"
+                  className="object-cover object-top transition-transform duration-500 group-hover:scale-105"
                 />
 
                 {/* Floating Product Highlight Card */}
-                <div className="absolute bottom-2 left-2 right-2 sm:bottom-3 sm:left-3 sm:right-3 md:bottom-4 md:left-4 md:right-4 bg-white/95 backdrop-blur-md p-2 sm:p-2.5 md:p-3.5 rounded-xs shadow-lg border border-[#E8E2D9] flex flex-col md:flex-row md:items-center justify-between gap-1.5 md:gap-3">
-                  <div className="min-w-0 flex-1">
-                    <div className="flex items-center justify-between gap-2 mb-0.5">
-                      <span className="text-[10px] font-bold uppercase tracking-widest text-[#541920] block">
-                        {slide.product.badge}
-                      </span>
-                      <span className="text-[10px] text-[#15803D] font-bold bg-[#15803D]/10 px-1.5 py-0.5 rounded-2xs shrink-0 whitespace-nowrap">
-                        {slide.product.discount}
-                      </span>
-                    </div>
-
-                    <h2 className="text-xs sm:text-sm font-serif font-medium text-neutral-900 leading-snug">
-                      {slide.product.name}
-                    </h2>
-
-                    <div className="flex items-baseline gap-1.5 sm:gap-2 mt-0.5 tabular-nums">
-                      <span className="text-xs sm:text-sm font-bold text-[#541920] tabular-nums">{slide.product.price}</span>
-                      <span className="text-[11px] text-neutral-600 line-through tabular-nums">{slide.product.originalPrice}</span>
-                    </div>
+                <div className="absolute bottom-2 left-2 right-2 sm:bottom-3 sm:left-3 sm:right-3 md:bottom-4 md:left-4 md:right-4 bg-white/95 backdrop-blur-md p-2.5 sm:p-3 md:p-3.5 rounded-xs shadow-lg border border-[#E8E2D9] transition-colors group-hover:bg-white">
+                  <div className="flex items-center justify-between gap-2 mb-1">
+                    <span className="text-[10px] font-bold uppercase tracking-widest text-[#541920] block">
+                      {slide.product.badge}
+                    </span>
+                    <span className="text-[10px] text-[#15803D] font-bold bg-[#15803D]/10 px-1.5 py-0.5 rounded-2xs shrink-0 whitespace-nowrap">
+                      {slide.product.discount}
+                    </span>
                   </div>
 
-                  <Link
-                    href={slide.product.href}
-                    className="w-full md:w-auto min-h-[44px] px-3 py-2 bg-[#541920] hover:bg-[#3D1217] text-white text-[10px] sm:text-[11px] uppercase tracking-wider font-semibold rounded-xs shadow-xs transition-colors shrink-0 flex items-center justify-center focus-visible:ring-2 focus-visible:ring-[#541920] focus-visible:outline-none"
-                  >
-                    View Saree
-                  </Link>
+                  <h2 className="text-xs sm:text-sm font-serif font-medium text-neutral-900 leading-snug group-hover:text-[#541920] transition-colors">
+                    {slide.product.name}
+                  </h2>
+
+                  <div className="flex items-baseline gap-1.5 sm:gap-2 mt-1 tabular-nums">
+                    <span className="text-xs sm:text-sm font-bold text-[#541920] tabular-nums">{slide.product.price}</span>
+                    <span className="text-[11px] text-neutral-600 line-through tabular-nums">{slide.product.originalPrice}</span>
+                  </div>
                 </div>
-              </div>
+              </Link>
             </div>
           </div>
         </div>
