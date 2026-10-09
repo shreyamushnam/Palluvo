@@ -37,6 +37,8 @@ export default function CheckoutPage() {
     placeOrder,
     showToast,
     addresses,
+    isLoggedIn,
+    user,
   } = useStore();
 
   const [step, setStep] = useState<1 | 2 | 3>(1);
@@ -61,24 +63,24 @@ export default function CheckoutPage() {
     return () => clearTimeout(timer);
   }, [step]);
 
-  const defaultAddr = addresses.find((a) => a.isDefault) || addresses[0];
+  const defaultAddr = isLoggedIn && addresses.length > 0 ? (addresses.find((a) => a.isDefault) || addresses[0]) : null;
   const [selectedAddressId, setSelectedAddressId] = useState<string>(defaultAddr ? defaultAddr.id : "");
 
-  // Address Form State
+  // Address Form State — Dynamic based on auth state (empty for guest checkout)
   const [shippingAddress, setShippingAddress] = useState({
-    fullName: defaultAddr ? defaultAddr.name : "Radhika Sharma",
-    phone: defaultAddr ? defaultAddr.phone.replace("+91 ", "").replace(/\s/g, "") : "9876543210",
-    email: "radhika.sharma@example.com",
-    addressLine1: defaultAddr ? defaultAddr.addressLine : "Flat 402, Royal Palms Residency",
-    landmark: "Near Lotus Temple Road",
-    city: defaultAddr ? defaultAddr.city : "New Delhi",
-    state: defaultAddr ? defaultAddr.state : "Delhi",
-    pincode: defaultAddr ? defaultAddr.pincode : "110019",
+    fullName: defaultAddr ? defaultAddr.name : (isLoggedIn && user?.name ? user.name : ""),
+    phone: defaultAddr ? defaultAddr.phone.replace("+91 ", "").replace(/\s/g, "") : "",
+    email: isLoggedIn && user?.email ? user.email : "",
+    addressLine1: defaultAddr ? defaultAddr.addressLine : "",
+    landmark: "",
+    city: defaultAddr ? defaultAddr.city : "",
+    state: defaultAddr ? defaultAddr.state : "",
+    pincode: defaultAddr ? defaultAddr.pincode : "",
   });
 
-  // Keep form synchronized with StoreContext saved addresses
+  // Keep form synchronized with StoreContext saved addresses when logged in
   useEffect(() => {
-    if (addresses.length > 0) {
+    if (isLoggedIn && addresses.length > 0) {
       const active = addresses.find((a) => a.id === selectedAddressId) || addresses.find((a) => a.isDefault) || addresses[0];
       if (active) {
         if (selectedAddressId !== active.id) {
@@ -88,6 +90,7 @@ export default function CheckoutPage() {
           ...prev,
           fullName: active.name,
           phone: active.phone.replace("+91 ", "").replace(/\s/g, ""),
+          email: prev.email || user?.email || "",
           addressLine1: active.addressLine,
           city: active.city,
           state: active.state,
@@ -95,12 +98,12 @@ export default function CheckoutPage() {
         }));
       }
     }
-  }, [addresses, selectedAddressId]);
+  }, [isLoggedIn, addresses, selectedAddressId, user?.email]);
 
   // Delivery & Payment selection
   const [deliveryMethod, setDeliveryMethod] = useState<"standard" | "express">("standard");
   const [paymentMethod, setPaymentMethod] = useState<"upi" | "card" | "netbanking" | "cod">("upi");
-  const [upiId, setUpiId] = useState("radhika@okhdfcbank");
+  const [upiId, setUpiId] = useState(isLoggedIn ? "radhika@okhdfcbank" : "");
   const [upiError, setUpiError] = useState("");
 
   // Card details state & validation

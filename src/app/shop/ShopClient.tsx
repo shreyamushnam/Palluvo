@@ -3,11 +3,21 @@
 import React, { useState, useMemo } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Filter, X, SlidersHorizontal, Check, Search } from "lucide-react";
+import { Filter, X, SlidersHorizontal, Check, Search, ArrowUpDown } from "lucide-react";
 import { PRODUCTS, type Product } from "@/data/products";
 import { CATEGORIES } from "@/data/categories";
 import { ProductCard } from "@/components/ecommerce/ProductCard";
 import { useFocusTrap } from "@/hooks/useFocusTrap";
+
+const SORT_OPTIONS = [
+  { value: "featured", label: "Featured Weaves" },
+  { value: "newest", label: "Newest Arrivals" },
+  { value: "popular", label: "Popular & Trending" },
+  { value: "bestselling", label: "Bestsellers" },
+  { value: "price-low", label: "Price: Low to High" },
+  { value: "price-high", label: "Price: High to Low" },
+  { value: "rating", label: "Highest Rated" },
+];
 
 const FABRICS = [
   "Pure Silk",
@@ -165,6 +175,23 @@ export function ShopContent() {
   React.useEffect(() => {
     setSearchQuery(initialQuery);
   }, [initialQuery]);
+
+  React.useEffect(() => {
+    const sortParam = searchParams.get("sort") || "featured";
+    setSortBy(sortParam);
+  }, [searchParams]);
+
+  const handleSortChange = (newSort: string) => {
+    setSortBy(newSort);
+    const params = new URLSearchParams(searchParams.toString());
+    if (newSort === "featured") {
+      params.delete("sort");
+    } else {
+      params.set("sort", newSort);
+    }
+    const newQuery = params.toString();
+    router.push(newQuery ? `/shop?${newQuery}` : "/shop", { scroll: false });
+  };
 
   const mobileFilterRef = useFocusTrap<HTMLDivElement>({
     isOpen: isMobileFilterOpen,
@@ -439,8 +466,38 @@ export function ShopContent() {
                 )}
               </div>
 
-              {/* Categories */}
+              {/* Sort By Section */}
               <div>
+                <h4 className="text-xs font-semibold uppercase tracking-wider text-neutral-800 mb-2.5 flex items-center gap-1.5">
+                  <ArrowUpDown className="w-3.5 h-3.5 text-[#541920]" />
+                  <span>Sort By</span>
+                </h4>
+                <div className="space-y-1">
+                  {SORT_OPTIONS.map((opt) => {
+                    const isSelected = sortBy === opt.value;
+                    return (
+                      <button
+                        key={opt.value}
+                        type="button"
+                        role="radio"
+                        aria-checked={isSelected}
+                        onClick={() => handleSortChange(opt.value)}
+                        className={`w-full min-h-[42px] px-2.5 py-1.5 flex items-center justify-between text-xs text-left rounded-xs transition-colors cursor-pointer focus-visible:ring-2 focus-visible:ring-[#541920] focus-visible:outline-none ${
+                          isSelected
+                            ? "text-[#541920] font-bold bg-[#541920]/5"
+                            : "text-neutral-800 hover:text-black hover:bg-[#FAF7F2]"
+                        }`}
+                      >
+                        <span>{opt.label}</span>
+                        {isSelected && <Check className="w-3.5 h-3.5 text-[#541920]" />}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Categories */}
+              <div className="border-t border-[#E8E2D9] pt-4">
                 <h4 className="text-xs font-semibold uppercase tracking-wider text-neutral-800 mb-2.5">
                   Category
                 </h4>
@@ -648,8 +705,41 @@ export function ShopContent() {
               </div>
 
               <div className="p-5 overflow-y-auto space-y-6 flex-1">
-                {/* Category */}
+                {/* Sort By Section */}
                 <div>
+                  <h4 className="text-xs font-semibold uppercase tracking-wider text-neutral-800 mb-2.5 flex items-center gap-1.5">
+                    <ArrowUpDown className="w-3.5 h-3.5 text-[#541920]" />
+                    <span>Sort By</span>
+                  </h4>
+                  <div className="space-y-1">
+                    {SORT_OPTIONS.map((opt) => {
+                      const isSelected = sortBy === opt.value;
+                      return (
+                        <button
+                          key={opt.value}
+                          type="button"
+                          role="radio"
+                          aria-checked={isSelected}
+                          onClick={() => {
+                            handleSortChange(opt.value);
+                            setIsMobileFilterOpen(false);
+                          }}
+                          className={`w-full min-h-[44px] px-2.5 py-2 flex items-center justify-between text-xs text-left rounded-xs transition-colors cursor-pointer focus-visible:ring-2 focus-visible:ring-[#541920] focus-visible:outline-none ${
+                            isSelected
+                              ? "text-[#541920] font-bold bg-[#541920]/5"
+                              : "text-neutral-800 hover:text-black hover:bg-[#FAF7F2]"
+                          }`}
+                        >
+                          <span>{opt.label}</span>
+                          {isSelected && <Check className="w-3.5 h-3.5 text-[#541920]" />}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* Category */}
+                <div className="border-t border-[#E8E2D9] pt-4">
                   <h4 className="text-xs font-semibold uppercase tracking-wider text-neutral-800 mb-2">
                     Category
                   </h4>
