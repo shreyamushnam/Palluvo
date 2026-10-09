@@ -1,9 +1,9 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { ArrowRight, ChevronLeft, ChevronRight } from "lucide-react";
+import { ArrowRight } from "lucide-react";
 
 const SLIDES = [
   {
@@ -61,14 +61,30 @@ const SLIDES = [
 
 export const HeroBanner: React.FC = () => {
   const [currentSlideIdx, setCurrentSlideIdx] = useState(0);
-  const slide = SLIDES[currentSlideIdx];
+  const [isPaused, setIsPaused] = useState(false);
   const totalSlides = SLIDES.length;
+  const slide = SLIDES[currentSlideIdx];
+
+  // Auto-advance showcase slides every 4.5 seconds
+  useEffect(() => {
+    if (isPaused) return;
+
+    const timer = setInterval(() => {
+      setCurrentSlideIdx((prev) => (prev + 1) % totalSlides);
+    }, 4500);
+
+    return () => clearInterval(timer);
+  }, [isPaused, totalSlides]);
 
   return (
     <section
       className="relative bg-[#FAF7F2] overflow-hidden border-b border-[#E8E2D9]"
       aria-roledescription="carousel"
       aria-label="Featured Collections Carousel"
+      onMouseEnter={() => setIsPaused(true)}
+      onMouseLeave={() => setIsPaused(false)}
+      onTouchStart={() => setIsPaused(true)}
+      onTouchEnd={() => setIsPaused(false)}
     >
       {/* Screen-reader live announcement for slide changes */}
       <div
@@ -85,7 +101,7 @@ export const HeroBanner: React.FC = () => {
           role="group"
           aria-roledescription="slide"
           aria-label={`Slide ${currentSlideIdx + 1} of ${totalSlides}: ${slide.titleLine1} ${slide.titleLine2}`}
-          className="grid grid-cols-1 lg:grid-cols-12 gap-2 sm:gap-4 md:gap-8 lg:gap-12 items-center"
+          className="grid grid-cols-1 lg:grid-cols-12 gap-4 sm:gap-6 md:gap-8 lg:gap-12 items-center"
         >
           {/* Left Column: Brand Copy & Direct CTAs */}
           <div className="lg:col-span-6 space-y-2 sm:space-y-3.5 md:space-y-6 text-center lg:text-left">
@@ -116,12 +132,12 @@ export const HeroBanner: React.FC = () => {
             </div>
           </div>
 
-          {/* Right Column: High Quality Saree Hero Image Showcase */}
-          <div className="lg:col-span-6 relative mt-1 lg:mt-0">
-            <div className="relative mx-auto max-w-[240px] sm:max-w-[280px] md:max-w-sm lg:max-w-none">
+          {/* Right Column: Full-Width Clean Saree Hero Image Showcase */}
+          <div className="lg:col-span-6 relative mt-1 lg:mt-0 w-full">
+            <div className="relative w-full">
               <Link
                 href={slide.product.href}
-                className="group relative aspect-[4/5] md:aspect-[3/4] rounded-sm overflow-hidden shadow-2xl bg-neutral-100 border-2 sm:border-4 border-white block transition-all duration-200 ease-out hover:shadow-3xl active:scale-[0.98] focus-visible:ring-2 focus-visible:ring-[#541920] focus-visible:outline-none"
+                className="group relative w-full aspect-[4/5] md:aspect-[3/4] rounded-sm overflow-hidden shadow-2xl bg-neutral-100 border-2 sm:border-4 border-white block transition-all duration-300 ease-out hover:shadow-3xl active:scale-[0.99] focus-visible:ring-2 focus-visible:ring-[#541920] focus-visible:outline-none"
                 aria-label={`View ${slide.product.name} - ${slide.product.price}`}
               >
                 <Image
@@ -131,54 +147,13 @@ export const HeroBanner: React.FC = () => {
                   fill
                   priority
                   loading="eager"
-                  sizes="(max-width: 639px) 240px, (max-width: 767px) 280px, (max-width: 1023px) 384px, (min-width: 1280px) 584px, 45vw"
-                  className="object-cover object-top transition-transform duration-500 group-hover:scale-105"
+                  sizes="(max-width: 639px) 100vw, (max-width: 1023px) 50vw, 600px"
+                  className="object-cover object-top transition-transform duration-700 ease-out group-hover:scale-105"
                 />
-
-                {/* Floating Product Highlight Card */}
-                <div className="absolute bottom-2 left-2 right-2 sm:bottom-3 sm:left-3 sm:right-3 md:bottom-4 md:left-4 md:right-4 bg-white/95 backdrop-blur-md p-2.5 sm:p-3 md:p-3.5 rounded-xs shadow-lg border border-[#E8E2D9] transition-colors group-hover:bg-white">
-                  <div className="flex items-center justify-between gap-2 mb-1">
-                    <span className="text-[10px] font-bold uppercase tracking-widest text-[#541920] block">
-                      {slide.product.badge}
-                    </span>
-                    <span className="text-[10px] text-[#15803D] font-bold bg-[#15803D]/10 px-1.5 py-0.5 rounded-2xs shrink-0 whitespace-nowrap">
-                      {slide.product.discount}
-                    </span>
-                  </div>
-
-                  <h2 className="text-xs sm:text-sm font-serif font-medium text-neutral-900 leading-snug group-hover:text-[#541920] transition-colors">
-                    {slide.product.name}
-                  </h2>
-
-                  <div className="flex items-baseline gap-1.5 sm:gap-2 mt-1 tabular-nums">
-                    <span className="text-xs sm:text-sm font-bold text-[#541920] tabular-nums">{slide.product.price}</span>
-                    <span className="text-[11px] text-neutral-600 line-through tabular-nums">{slide.product.originalPrice}</span>
-                  </div>
-                </div>
               </Link>
             </div>
           </div>
         </div>
-      </div>
-
-      {/* Side-Edge Carousel Controls: Flanking Left & Right Page Boundaries */}
-      <div className="pointer-events-none absolute inset-y-0 inset-x-2 sm:inset-x-4 md:inset-x-6 lg:inset-x-8 flex items-center justify-between z-30">
-        <button
-          type="button"
-          onClick={() => setCurrentSlideIdx((idx) => (idx === 0 ? totalSlides - 1 : idx - 1))}
-          className="pointer-events-auto w-11 h-11 min-w-[44px] min-h-[44px] rounded-full bg-white/80 hover:bg-white text-neutral-700 hover:text-black border border-[#DCD5C9] shadow-md backdrop-blur-md active:scale-95 transition-all cursor-pointer flex items-center justify-center focus-visible:ring-2 focus-visible:ring-[#541920] focus-visible:outline-none"
-          aria-label="Previous slide"
-        >
-          <ChevronLeft className="w-5 h-5" aria-hidden="true" />
-        </button>
-        <button
-          type="button"
-          onClick={() => setCurrentSlideIdx((idx) => (idx === totalSlides - 1 ? 0 : idx + 1))}
-          className="pointer-events-auto w-11 h-11 min-w-[44px] min-h-[44px] rounded-full bg-white/80 hover:bg-white text-neutral-700 hover:text-black border border-[#DCD5C9] shadow-md backdrop-blur-md active:scale-95 transition-all cursor-pointer flex items-center justify-center focus-visible:ring-2 focus-visible:ring-[#541920] focus-visible:outline-none"
-          aria-label="Next slide"
-        >
-          <ChevronRight className="w-5 h-5" aria-hidden="true" />
-        </button>
       </div>
     </section>
   );
