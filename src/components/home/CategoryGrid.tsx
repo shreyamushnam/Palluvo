@@ -25,8 +25,8 @@ export const CategoryGrid: React.FC = () => {
           </Link>
         </div>
 
-        {/* 8 Categories in a clean row / grid */}
-        <div className="grid grid-cols-4 sm:grid-cols-4 lg:grid-cols-8 gap-3 sm:gap-4">
+        {/* 8 Categories in an enlarged, responsive grid */}
+        <div className="grid grid-cols-2 min-[480px]:grid-cols-4 lg:grid-cols-8 gap-3.5 sm:gap-4 lg:gap-5">
           {CATEGORIES.map((cat) => (
             <Link
               key={cat.id}
@@ -38,11 +38,11 @@ export const CategoryGrid: React.FC = () => {
                   src={cat.image}
                   alt=""
                   fill
-                  sizes="(max-width: 640px) 25vw, (max-width: 1024px) 15vw, 120px"
+                  sizes="(max-width: 479px) 50vw, (max-width: 1023px) 25vw, 150px"
                   className="object-cover object-top group-hover:scale-105 transition-transform duration-500"
                 />
               </div>
-              <h3 className="text-[11px] sm:text-xs font-serif font-medium text-neutral-800 mt-1.5 sm:mt-2 group-hover:text-[#541920] transition-colors line-clamp-2 leading-tight text-center min-h-[2rem] sm:min-h-[2.25rem] flex items-center justify-center">
+              <h3 className="text-xs sm:text-sm font-serif font-medium text-neutral-900 mt-2 sm:mt-2.5 group-hover:text-[#541920] transition-colors line-clamp-2 leading-snug text-center min-h-[2.25rem] sm:min-h-[2.5rem] flex items-center justify-center">
                 {cat.name}
               </h3>
             </Link>
