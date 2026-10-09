@@ -40,7 +40,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
 
   return (
     <div
-      className="group relative flex flex-col justify-between bg-[#FAF7F2] transition-all duration-300"
+      className="group relative flex flex-col justify-between bg-[#FAF7F2] rounded-sm p-2 sm:p-2.5 border border-transparent hover:border-[#DCD5C9] hover:bg-white hover:shadow-lg hover:-translate-y-1 transition-all duration-300 ease-out"
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
     >

@@ -71,7 +71,7 @@ export const InstagramGrid: React.FC = () => {
             <Link
               key={post.id}
               href={`/product/${post.productId}`}
-              className="group relative aspect-square sm:aspect-[4/5] rounded-sm overflow-hidden bg-neutral-100 block shadow-xs hover:shadow-lg transition-all duration-300 border border-[#E8E2D9]"
+              className="group relative aspect-square sm:aspect-[4/5] rounded-sm overflow-hidden bg-neutral-100 block shadow-xs hover:shadow-lg hover:-translate-y-1 transition-all duration-300 ease-out border border-[#E8E2D9]"
             >
               <Image
                 src={post.image}
