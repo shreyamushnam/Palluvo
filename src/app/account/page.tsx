@@ -3,7 +3,7 @@
 import React, { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { Package, MapPin, User, Truck, CheckCircle2, ShieldCheck, Plus, X, Edit2, Trash2, Check, RotateCcw } from "lucide-react";
+import { Package, MapPin, User, Truck, CheckCircle2, ShieldCheck, Plus, X, Edit2, Trash2, Check, RotateCcw, LogOut, Sparkles, Award, Headphones, ArrowRight, Lock, Mail } from "lucide-react";
 import { useStore } from "@/context/StoreContext";
 import { SavedAddress } from "@/data/mockOrders";
 import { useFocusTrap } from "@/hooks/useFocusTrap";
@@ -18,8 +18,22 @@ export default function AccountPage() {
     updateAddress,
     deleteAddress,
     setDefaultAddress,
+    isLoggedIn,
+    user,
+    login,
+    logout,
   } = useStore();
   const [activeTab, setActiveTab] = useState<"orders" | "addresses" | "profile">("orders");
+
+  // Unauthenticated Auth Card state
+  const [authTab, setAuthTab] = useState<"signin" | "register">("signin");
+  const [loginIdentifier, setLoginIdentifier] = useState("");
+  const [loginPassword, setLoginPassword] = useState("");
+  const [regFullName, setRegFullName] = useState("");
+  const [regMobile, setRegMobile] = useState("");
+  const [regEmail, setRegEmail] = useState("");
+  const [regPassword, setRegPassword] = useState("");
+  const [regConnoisseur, setRegConnoisseur] = useState(true);
 
   // Saved Addresses modal and form state
   const [isAddressModalOpen, setIsAddressModalOpen] = useState(false);
@@ -42,12 +56,49 @@ export default function AccountPage() {
 
   // Profile & Settings state
   const [profile, setProfile] = useState({
-    fullName: "Radhika Sharma",
-    email: "radhika.sharma@example.com",
+    fullName: user?.name || "Radhika Sharma",
+    email: user?.email || "radhika.sharma@example.com",
     mobile: "+91 98765 43210",
     preferredDrape: "Nivi Style / Bengali Festive",
   });
   const [profileSuccessMessage, setProfileSuccessMessage] = useState(false);
+
+  // Sync profile when auth user updates
+  React.useEffect(() => {
+    if (user?.name || user?.email) {
+      setProfile((prev) => ({
+        ...prev,
+        fullName: user.name || prev.fullName,
+        email: user.email || prev.email,
+      }));
+    }
+  }, [user]);
+
+  const handleSignInSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    const name = loginIdentifier ? loginIdentifier.split("@")[0] : "Radhika Sharma";
+    const email = loginIdentifier.includes("@") ? loginIdentifier : `${loginIdentifier || "radhika"}@palluvo.com`;
+    login({ name: name.charAt(0).toUpperCase() + name.slice(1), email });
+    showToast("Signed in successfully to your Palluvo account!");
+  };
+
+  const handleDemoSignIn = () => {
+    login({ name: "Radhika Sharma", email: "radhika.sharma@example.com" });
+    showToast("Signed in as Radhika Sharma (Demo Account)");
+  };
+
+  const handleRegisterSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    const name = regFullName.trim() || "Valued Connoisseur";
+    const email = regEmail.trim() || "member@palluvo.com";
+    login({ name, email });
+    showToast("Welcome to Palluvo! Your connoisseur account has been created.");
+  };
+
+  const handleSignOut = () => {
+    logout();
+    showToast("Signed out of your Palluvo account.", "info");
+  };
 
   // Address Actions
   const handleOpenAddAddress = () => {
@@ -108,6 +159,248 @@ export default function AccountPage() {
     }, 4000);
   };
 
+  if (!isLoggedIn) {
+    return (
+      <div className="min-h-screen bg-[#FAF7F2] pb-24 lg:pb-16">
+        {/* Editorial Brand Header */}
+        <div className="bg-[#F4EFE6] border-b border-[#E8E2D9] py-8 sm:py-12">
+          <div className="max-w-4xl mx-auto px-4 sm:px-6 text-center">
+            <nav aria-label="Breadcrumb" className="text-xs text-neutral-600 mb-3 flex items-center justify-center gap-1.5 font-sans">
+              <Link href="/" className="hover:text-black transition-colors">Home</Link>
+              <span>/</span>
+              <span className="text-neutral-900 font-medium">Account Access</span>
+            </nav>
+            <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-white border border-[#E8E2D9] rounded-full text-[11px] sm:text-xs font-semibold text-[#541920] uppercase tracking-wider mb-3">
+              <Sparkles className="w-3.5 h-3.5 text-[#C5A575]" />
+              <span>PALLUVO Royal Drape Club</span>
+            </span>
+            <h1 className="text-3xl sm:text-4xl md:text-5xl font-serif font-normal text-neutral-900 tracking-tight">
+              Welcome to Palluvo
+            </h1>
+            <p className="text-xs sm:text-sm md:text-base text-neutral-600 mt-2.5 max-w-xl mx-auto font-sans leading-relaxed">
+              Sign in to track handloom orders, manage delivery addresses, and access exclusive heirloom releases.
+            </p>
+          </div>
+        </div>
+
+        {/* Auth Card Container */}
+        <div className="max-w-xl mx-auto px-4 sm:px-6 -mt-4 sm:-mt-6">
+          <div className="bg-white rounded-sm border border-[#E8E2D9] shadow-lg overflow-hidden">
+            {/* Tabbed Switch */}
+            <div className="grid grid-cols-2 border-b border-[#E8E2D9] bg-[#FAF7F2]/60" role="tablist" aria-label="Authentication Options">
+              <button
+                type="button"
+                role="tab"
+                aria-selected={authTab === "signin"}
+                onClick={() => setAuthTab("signin")}
+                className={`py-3.5 sm:py-4 text-xs sm:text-sm font-semibold tracking-wider uppercase transition-all flex items-center justify-center gap-2 cursor-pointer focus-visible:ring-2 focus-visible:ring-[#541920] focus-visible:outline-none ${
+                  authTab === "signin"
+                    ? "bg-white text-[#541920] border-b-2 border-[#541920] shadow-2xs"
+                    : "text-neutral-500 hover:text-neutral-900 hover:bg-white/60"
+                }`}
+              >
+                <Lock className="w-4 h-4 text-[#541920]" />
+                <span>Sign In</span>
+              </button>
+              <button
+                type="button"
+                role="tab"
+                aria-selected={authTab === "register"}
+                onClick={() => setAuthTab("register")}
+                className={`py-3.5 sm:py-4 text-xs sm:text-sm font-semibold tracking-wider uppercase transition-all flex items-center justify-center gap-2 cursor-pointer focus-visible:ring-2 focus-visible:ring-[#541920] focus-visible:outline-none ${
+                  authTab === "register"
+                    ? "bg-white text-[#541920] border-b-2 border-[#541920] shadow-2xs"
+                    : "text-neutral-500 hover:text-neutral-900 hover:bg-white/60"
+                }`}
+              >
+                <User className="w-4 h-4 text-[#541920]" />
+                <span>Create Account</span>
+              </button>
+            </div>
+
+            {/* Auth Forms */}
+            <div className="p-6 sm:p-8">
+              {authTab === "signin" ? (
+                <form onSubmit={handleSignInSubmit} className="space-y-4">
+                  <div>
+                    <label htmlFor="signin-identifier" className="block text-xs font-semibold text-neutral-800 uppercase tracking-wider mb-1.5">
+                      Mobile Number or Email Address <span className="text-[#541920]">*</span>
+                    </label>
+                    <div className="relative">
+                      <input
+                        id="signin-identifier"
+                        type="text"
+                        required
+                        value={loginIdentifier}
+                        onChange={(e) => setLoginIdentifier(e.target.value)}
+                        placeholder="e.g. radhika.sharma@example.com or +91 98765 43210"
+                        className="w-full min-h-[44px] px-3.5 py-2.5 bg-[#FAF7F2]/50 border border-[#DCD5C9] rounded-xs text-xs sm:text-sm text-neutral-900 focus:outline-none focus:border-[#541920] focus-visible:ring-2 focus-visible:ring-[#541920]"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <div className="flex items-center justify-between mb-1.5">
+                      <label htmlFor="signin-password" className="block text-xs font-semibold text-neutral-800 uppercase tracking-wider">
+                        Password / OTP <span className="text-[#541920]">*</span>
+                      </label>
+                      <button
+                        type="button"
+                        onClick={() => showToast("Password reset link sent to registered email.", "info")}
+                        className="text-[11px] text-[#541920] hover:underline font-medium cursor-pointer"
+                      >
+                        Forgot Password?
+                      </button>
+                    </div>
+                    <input
+                      id="signin-password"
+                      type="password"
+                      required
+                      value={loginPassword}
+                      onChange={(e) => setLoginPassword(e.target.value)}
+                      placeholder="Enter your secret password or OTP"
+                      className="w-full min-h-[44px] px-3.5 py-2.5 bg-[#FAF7F2]/50 border border-[#DCD5C9] rounded-xs text-xs sm:text-sm text-neutral-900 focus:outline-none focus:border-[#541920] focus-visible:ring-2 focus-visible:ring-[#541920]"
+                    />
+                  </div>
+
+                  <div className="pt-2">
+                    <button
+                      type="submit"
+                      className="w-full min-h-[46px] px-6 py-3 bg-[#541920] hover:bg-[#3D1217] text-white text-xs uppercase tracking-widest font-semibold rounded-xs shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer focus-visible:ring-2 focus-visible:ring-[#541920] focus-visible:outline-none"
+                    >
+                      <span>SIGN IN TO MY ACCOUNT</span>
+                      <ArrowRight className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+
+                  {/* Sample / Demo One-Click Sign In */}
+                  <div className="pt-2 text-center border-t border-[#E8E2D9] mt-5">
+                    <p className="text-[11px] text-neutral-500 mb-2 font-sans">
+                      Testing the storefront experience?
+                    </p>
+                    <button
+                      type="button"
+                      onClick={handleDemoSignIn}
+                      className="w-full min-h-[42px] px-4 py-2 border border-[#C5A575] bg-[#FAF7F2] hover:bg-[#F4EFE6] text-[#541920] text-xs font-semibold rounded-xs transition-colors flex items-center justify-center gap-1.5 cursor-pointer"
+                    >
+                      <Sparkles className="w-3.5 h-3.5 text-[#C5A575]" />
+                      <span>Demo Sign In (Radhika Sharma)</span>
+                    </button>
+                  </div>
+                </form>
+              ) : (
+                <form onSubmit={handleRegisterSubmit} className="space-y-4">
+                  <div>
+                    <label htmlFor="reg-name" className="block text-xs font-semibold text-neutral-800 uppercase tracking-wider mb-1.5">
+                      Full Name <span className="text-[#541920]">*</span>
+                    </label>
+                    <input
+                      id="reg-name"
+                      type="text"
+                      required
+                      value={regFullName}
+                      onChange={(e) => setRegFullName(e.target.value)}
+                      placeholder="e.g. Radhika Sharma"
+                      className="w-full min-h-[44px] px-3.5 py-2.5 bg-[#FAF7F2]/50 border border-[#DCD5C9] rounded-xs text-xs sm:text-sm text-neutral-900 focus:outline-none focus:border-[#541920] focus-visible:ring-2 focus-visible:ring-[#541920]"
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                    <div>
+                      <label htmlFor="reg-mobile" className="block text-xs font-semibold text-neutral-800 uppercase tracking-wider mb-1.5">
+                        Mobile Number <span className="text-[#541920]">*</span>
+                      </label>
+                      <input
+                        id="reg-mobile"
+                        type="tel"
+                        required
+                        value={regMobile}
+                        onChange={(e) => setRegMobile(e.target.value)}
+                        placeholder="+91 98765 43210"
+                        className="w-full min-h-[44px] px-3.5 py-2.5 bg-[#FAF7F2]/50 border border-[#DCD5C9] rounded-xs text-xs sm:text-sm text-neutral-900 focus:outline-none focus:border-[#541920] focus-visible:ring-2 focus-visible:ring-[#541920]"
+                      />
+                    </div>
+                    <div>
+                      <label htmlFor="reg-email" className="block text-xs font-semibold text-neutral-800 uppercase tracking-wider mb-1.5">
+                        Email Address <span className="text-[#541920]">*</span>
+                      </label>
+                      <input
+                        id="reg-email"
+                        type="email"
+                        required
+                        value={regEmail}
+                        onChange={(e) => setRegEmail(e.target.value)}
+                        placeholder="you@example.com"
+                        className="w-full min-h-[44px] px-3.5 py-2.5 bg-[#FAF7F2]/50 border border-[#DCD5C9] rounded-xs text-xs sm:text-sm text-neutral-900 focus:outline-none focus:border-[#541920] focus-visible:ring-2 focus-visible:ring-[#541920]"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label htmlFor="reg-password" className="block text-xs font-semibold text-neutral-800 uppercase tracking-wider mb-1.5">
+                      Create Password <span className="text-[#541920]">*</span>
+                    </label>
+                    <input
+                      id="reg-password"
+                      type="password"
+                      required
+                      value={regPassword}
+                      onChange={(e) => setRegPassword(e.target.value)}
+                      placeholder="Minimum 8 characters"
+                      className="w-full min-h-[44px] px-3.5 py-2.5 bg-[#FAF7F2]/50 border border-[#DCD5C9] rounded-xs text-xs sm:text-sm text-neutral-900 focus:outline-none focus:border-[#541920] focus-visible:ring-2 focus-visible:ring-[#541920]"
+                    />
+                  </div>
+
+                  <div className="pt-1">
+                    <label htmlFor="reg-connoisseur" className="flex items-start gap-2.5 cursor-pointer text-xs text-neutral-700 leading-normal">
+                      <input
+                        id="reg-connoisseur"
+                        type="checkbox"
+                        checked={regConnoisseur}
+                        onChange={(e) => setRegConnoisseur(e.target.checked)}
+                        className="w-4 h-4 rounded-xs text-[#541920] focus:ring-[#541920] mt-0.5 shrink-0"
+                      />
+                      <span>Join the Palluvo Connoisseur Circle for early access to private handloom drops and bridal previews.</span>
+                    </label>
+                  </div>
+
+                  <div className="pt-2">
+                    <button
+                      type="submit"
+                      className="w-full min-h-[46px] px-6 py-3 bg-[#541920] hover:bg-[#3D1217] text-white text-xs uppercase tracking-widest font-semibold rounded-xs shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer focus-visible:ring-2 focus-visible:ring-[#541920] focus-visible:outline-none"
+                    >
+                      <span>CREATE ACCOUNT</span>
+                      <ArrowRight className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                </form>
+              )}
+            </div>
+          </div>
+
+          {/* Trust Pillars / Perks of Joining */}
+          <div className="mt-8 grid grid-cols-1 sm:grid-cols-3 gap-3.5">
+            <div className="bg-white p-4 rounded-sm border border-[#E8E2D9] text-center flex flex-col items-center">
+              <Award className="w-5 h-5 text-[#C5A575] mb-2" />
+              <h3 className="text-xs font-semibold text-neutral-900 mb-0.5 font-serif">Silk Mark Authenticity</h3>
+              <p className="text-[11px] text-neutral-600 leading-relaxed font-sans">Every saree certified 100% pure silk with government hallmarks.</p>
+            </div>
+            <div className="bg-white p-4 rounded-sm border border-[#E8E2D9] text-center flex flex-col items-center">
+              <RotateCcw className="w-5 h-5 text-[#C5A575] mb-2" />
+              <h3 className="text-xs font-semibold text-neutral-900 mb-0.5 font-serif">Complimentary Returns</h3>
+              <p className="text-[11px] text-neutral-600 leading-relaxed font-sans">Hassle-free 7-day doorstep reverse pickups and swift exchanges.</p>
+            </div>
+            <div className="bg-white p-4 rounded-sm border border-[#E8E2D9] text-center flex flex-col items-center">
+              <Headphones className="w-5 h-5 text-[#C5A575] mb-2" />
+              <h3 className="text-xs font-semibold text-neutral-900 mb-0.5 font-serif">Stylist Concierge</h3>
+              <p className="text-[11px] text-neutral-600 leading-relaxed font-sans">Dedicated bridal and drape consultants available on WhatsApp.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-[#FAF7F2] pb-24 lg:pb-12">
       {/* Header */}
@@ -127,9 +420,20 @@ export default function AccountPage() {
                 {profile.email} • Member since 2024
               </p>
             </div>
-            <div className="inline-flex items-center gap-2 px-3 py-1 bg-white border border-[#E8E2D9] rounded-full text-xs font-semibold text-[#541920]">
-              <ShieldCheck className="w-3.5 h-3.5 text-[#C5A575]" />
-              <span>PALLUVO Royal Drape Club</span>
+            <div className="flex items-center gap-3">
+              <div className="inline-flex items-center gap-2 px-3 py-1 bg-white border border-[#E8E2D9] rounded-full text-xs font-semibold text-[#541920]">
+                <ShieldCheck className="w-3.5 h-3.5 text-[#C5A575]" />
+                <span>PALLUVO Royal Drape Club</span>
+              </div>
+              <button
+                type="button"
+                onClick={handleSignOut}
+                className="inline-flex items-center gap-1.5 px-3 py-1 bg-white hover:bg-neutral-100 text-neutral-700 hover:text-black border border-[#DCD5C9] rounded-full text-xs font-semibold transition-colors cursor-pointer"
+                title="Sign out of your account"
+              >
+                <LogOut className="w-3.5 h-3.5 text-neutral-500" />
+                <span>Sign Out</span>
+              </button>
             </div>
           </div>
         </div>
@@ -202,6 +506,15 @@ export default function AccountPage() {
             >
               <User className="w-4 h-4 shrink-0" />
               <span>Profile & Settings</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={handleSignOut}
+              className="w-full flex items-center justify-start gap-3 px-3.5 sm:px-4 py-2.5 sm:py-3 min-h-[44px] text-xs font-semibold rounded-xs transition-colors cursor-pointer text-red-700 hover:bg-red-50 focus-visible:ring-2 focus-visible:ring-red-600 focus-visible:outline-none border-t border-[#E8E2D9] mt-2 pt-3"
+            >
+              <LogOut className="w-4 h-4 shrink-0 text-red-600" />
+              <span>Sign Out</span>
             </button>
           </div>
 

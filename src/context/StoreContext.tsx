@@ -35,6 +35,10 @@ interface StoreContextType {
   finalTotal: number;
   cartCount: number;
   wishlistCount: number;
+  isLoggedIn: boolean;
+  user: { name: string; email: string } | null;
+  login: (user?: { name: string; email: string }) => void;
+  logout: () => void;
   addToCart: (product: Product, quantity?: number, selectedColor?: string, blouseOption?: string) => void;
   removeFromCart: (productId: string, selectedColor?: string) => void;
   updateQuantity: (productId: string, quantity: number, selectedColor?: string) => void;
@@ -69,10 +73,18 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const [quickViewProduct, setQuickViewProduct] = useState<Product | null>(null);
   const [appliedCoupon, setAppliedCoupon] = useState<string | null>(null);
   const [toast, setToast] = useState<ToastInfo | null>(null);
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [user, setUser] = useState<{ name: string; email: string } | null>(null);
 
   // Load from localStorage on client mount
   useEffect(() => {
     try {
+      const savedAuth = localStorage.getItem("palluvo_ecommerce_auth");
+      if (savedAuth) {
+        const parsedAuth = JSON.parse(savedAuth);
+        setIsLoggedIn(!!parsedAuth.isLoggedIn);
+        setUser(parsedAuth.user || null);
+      }
       const savedCart = localStorage.getItem("palluvo_ecommerce_cart");
       if (savedCart) {
         setCart(JSON.parse(savedCart));
@@ -98,6 +110,24 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       isHydratedRef.current = true;
       setIsHydrated(true);
     }
+  }, []);
+
+  // Save changes - guarded against initial hydration race/overwrite
+  useEffect(() => {
+    if (!isHydratedRef.current) return;
+    try {
+      localStorage.setItem("palluvo_ecommerce_auth", JSON.stringify({ isLoggedIn, user }));
+    } catch {}
+  }, [isLoggedIn, user, isHydrated]);
+
+  const login = useCallback((userData?: { name: string; email: string }) => {
+    setIsLoggedIn(true);
+    setUser(userData || { name: "Radhika Sharma", email: "radhika.sharma@example.com" });
+  }, []);
+
+  const logout = useCallback(() => {
+    setIsLoggedIn(false);
+    setUser(null);
   }, []);
 
   // Save changes - guarded against initial hydration race/overwrite
@@ -384,6 +414,10 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       finalTotal,
       cartCount,
       wishlistCount,
+      isLoggedIn,
+      user,
+      login,
+      logout,
       addToCart,
       removeFromCart,
       updateQuantity,
@@ -421,6 +455,10 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       finalTotal,
       cartCount,
       wishlistCount,
+      isLoggedIn,
+      user,
+      login,
+      logout,
       addToCart,
       removeFromCart,
       updateQuantity,
