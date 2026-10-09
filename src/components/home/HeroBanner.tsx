@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from "react";
 import Image from "next/image";
 import Link from "next/link";
+import { Pause, Play } from "lucide-react";
 
 const SLIDES = [
   {
@@ -69,9 +70,30 @@ const SLIDES = [
 
 export const HeroBanner: React.FC = () => {
   const [currentSlideIdx, setCurrentSlideIdx] = useState(0);
-  const [isPaused, setIsPaused] = useState(false);
+  const [isHovered, setIsHovered] = useState(false);
+  const [isFocused, setIsFocused] = useState(false);
+  const [isManuallyPaused, setIsManuallyPaused] = useState(false);
+  const [prefersReducedMotion, setPrefersReducedMotion] = useState(false);
   const totalSlides = SLIDES.length;
   const slide = SLIDES[currentSlideIdx];
+
+  // Detect user preference for reduced motion
+  useEffect(() => {
+    if (typeof window === "undefined" || !window.matchMedia) return;
+    const mediaQuery = window.matchMedia("(prefers-reduced-motion: reduce)");
+    setPrefersReducedMotion(mediaQuery.matches);
+
+    const handleChange = (e: MediaQueryListEvent) => {
+      setPrefersReducedMotion(e.matches);
+    };
+
+    mediaQuery.addEventListener?.("change", handleChange);
+    return () => {
+      mediaQuery.removeEventListener?.("change", handleChange);
+    };
+  }, []);
+
+  const isPaused = isHovered || isFocused || isManuallyPaused || prefersReducedMotion;
 
   // Auto-advance showcase slides every 4.5 seconds
   useEffect(() => {
@@ -89,10 +111,17 @@ export const HeroBanner: React.FC = () => {
       className="relative bg-[#FAF7F2] overflow-hidden border-b border-[#E8E2D9]"
       aria-roledescription="carousel"
       aria-label="Featured Collections Carousel"
-      onMouseEnter={() => setIsPaused(true)}
-      onMouseLeave={() => setIsPaused(false)}
-      onTouchStart={() => setIsPaused(true)}
-      onTouchEnd={() => setIsPaused(false)}
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
+      onTouchStart={() => setIsHovered(true)}
+      onTouchEnd={() => setIsHovered(false)}
+      onFocus={() => setIsFocused(true)}
+      onBlur={(e) => {
+        // Pause while focus is inside the carousel section
+        if (!e.currentTarget.contains(e.relatedTarget as Node | null)) {
+          setIsFocused(false);
+        }
+      }}
     >
       {/* Screen-reader live announcement for slide changes */}
       <div
@@ -172,30 +201,51 @@ export const HeroBanner: React.FC = () => {
                     <span>{slide.curationTag}</span>
                   </span>
 
-                  {/* Pagination Indicator Dots */}
-                  <div
-                    className="pointer-events-auto flex items-center justify-center gap-1.5 sm:gap-2"
-                    role="tablist"
-                    aria-label="Showcase slide indicators"
-                  >
-                    {SLIDES.map((item, idx) => {
-                      const isActive = idx === currentSlideIdx;
-                      return (
-                        <button
-                          key={item.id}
-                          type="button"
-                          role="tab"
-                          aria-selected={isActive}
-                          aria-label={`Go to slide ${idx + 1}: ${item.product.name}`}
-                          onClick={() => setCurrentSlideIdx(idx)}
-                          className={`h-2 rounded-full transition-all duration-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white cursor-pointer ${
-                            isActive
-                              ? "w-5 sm:w-6 bg-white shadow-sm"
-                              : "w-2 bg-white/40 hover:bg-white/70"
-                          }`}
-                        />
-                      );
-                    })}
+                  {/* Controls: Pagination Indicator Dots & Accessible Pause/Play Button */}
+                  <div className="pointer-events-auto flex items-center justify-center gap-2 sm:gap-2.5">
+                    <div
+                      className="flex items-center justify-center gap-1.5 sm:gap-2"
+                      role="tablist"
+                      aria-label="Showcase slide indicators"
+                    >
+                      {SLIDES.map((item, idx) => {
+                        const isActive = idx === currentSlideIdx;
+                        return (
+                          <button
+                            key={item.id}
+                            type="button"
+                            role="tab"
+                            aria-selected={isActive}
+                            aria-label={`Go to slide ${idx + 1}: ${item.product.name}`}
+                            onClick={() => setCurrentSlideIdx(idx)}
+                            className={`h-2 rounded-full transition-all duration-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white cursor-pointer ${
+                              isActive
+                                ? "w-5 sm:w-6 bg-white shadow-sm"
+                                : "w-2 bg-white/40 hover:bg-white/70"
+                            }`}
+                          />
+                        );
+                      })}
+                    </div>
+
+                    {/* Visible & Keyboard-Accessible Pause / Resume Carousel Control */}
+                    <button
+                      type="button"
+                      onClick={() => setIsManuallyPaused((prev) => !prev)}
+                      aria-label={
+                        isManuallyPaused
+                          ? "Resume auto-rotating carousel"
+                          : "Pause auto-rotating carousel"
+                      }
+                      aria-pressed={isManuallyPaused}
+                      className="p-1 sm:p-1.5 rounded-full bg-black/45 backdrop-blur-md text-white/90 hover:text-white hover:bg-black/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white transition-all cursor-pointer border border-white/20"
+                    >
+                      {isManuallyPaused ? (
+                        <Play className="w-3 h-3 sm:w-3.5 sm:h-3.5 fill-current" aria-hidden="true" />
+                      ) : (
+                        <Pause className="w-3 h-3 sm:w-3.5 sm:h-3.5 fill-current" aria-hidden="true" />
+                      )}
+                    </button>
                   </div>
                 </div>
               </div>
