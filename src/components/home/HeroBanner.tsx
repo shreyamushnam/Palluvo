@@ -135,22 +135,79 @@ export const HeroBanner: React.FC = () => {
           {/* Right Column: Full-Width Clean Saree Hero Image Showcase */}
           <div className="lg:col-span-6 relative mt-1 lg:mt-0 w-full">
             <div className="relative w-full">
-              <Link
-                href={slide.product.href}
-                className="group relative w-full aspect-[4/5] md:aspect-[3/4] rounded-sm overflow-hidden shadow-2xl bg-neutral-100 border-2 sm:border-4 border-white block transition-all duration-300 ease-out hover:shadow-3xl active:scale-[0.99] focus-visible:ring-2 focus-visible:ring-[#541920] focus-visible:outline-none"
-                aria-label={`View ${slide.product.name} - ${slide.product.price}`}
+              <div
+                className="group relative w-full aspect-[4/5] md:aspect-[3/4] rounded-sm overflow-hidden shadow-2xl bg-neutral-900 border-2 sm:border-4 border-white block transition-all duration-300 ease-out hover:shadow-3xl focus-within:ring-2 focus-within:ring-[#541920]"
               >
-                <Image
-                  key={slide.image}
-                  src={slide.image}
-                  alt={slide.product.name}
-                  fill
-                  priority
-                  loading="eager"
-                  sizes="(max-width: 639px) 100vw, (max-width: 1023px) 50vw, 600px"
-                  className="object-cover object-top transition-transform duration-700 ease-out group-hover:scale-105"
+                {/* Layered Cross-Fade Slide Images & Links */}
+                {SLIDES.map((item, idx) => {
+                  const isActive = idx === currentSlideIdx;
+                  return (
+                    <Link
+                      key={item.id}
+                      href={item.product.href}
+                      tabIndex={isActive ? 0 : -1}
+                      aria-hidden={!isActive}
+                      aria-label={`View ${item.product.name} - ${item.product.price}`}
+                      className={`absolute inset-0 block transition-opacity duration-700 ease-in-out ${
+                        isActive
+                          ? "opacity-100 z-10 pointer-events-auto"
+                          : "opacity-0 z-0 pointer-events-none"
+                      }`}
+                    >
+                      <Image
+                        src={item.image}
+                        alt={item.product.name}
+                        fill
+                        priority={idx === 0}
+                        loading={idx === 0 ? "eager" : "lazy"}
+                        sizes="(max-width: 639px) 100vw, (max-width: 1023px) 50vw, 600px"
+                        className="object-cover object-top transition-transform duration-700 ease-out group-hover:scale-105"
+                      />
+                    </Link>
+                  );
+                })}
+
+                {/* Subtle Gradient Scrim at Bottom for Badge & Dot Contrast */}
+                <div
+                  className="pointer-events-none absolute inset-x-0 bottom-0 h-28 bg-gradient-to-t from-black/60 via-black/20 to-transparent z-20"
+                  aria-hidden="true"
                 />
-              </Link>
+
+                {/* Bottom Overlay: Bestsellers • Popular Badge & Pagination Dots */}
+                <div className="absolute bottom-3 sm:bottom-4 inset-x-0 z-30 flex flex-col items-center gap-2 sm:gap-2.5 px-4 pointer-events-none">
+                  {/* "Bestsellers • Popular" Curation Tag */}
+                  <span className="pointer-events-auto inline-flex items-center gap-1.5 bg-black/45 backdrop-blur-md text-white text-[10px] sm:text-xs font-medium tracking-wider uppercase px-3 py-1 rounded-full border border-white/20 shadow-sm transition-all hover:bg-black/60">
+                    <span className="w-1.5 h-1.5 rounded-full bg-[#E5A93C] shrink-0" aria-hidden="true" />
+                    <span>Bestsellers • Popular</span>
+                  </span>
+
+                  {/* Pagination Indicator Dots */}
+                  <div
+                    className="pointer-events-auto flex items-center justify-center gap-1.5 sm:gap-2"
+                    role="tablist"
+                    aria-label="Showcase slide indicators"
+                  >
+                    {SLIDES.map((item, idx) => {
+                      const isActive = idx === currentSlideIdx;
+                      return (
+                        <button
+                          key={item.id}
+                          type="button"
+                          role="tab"
+                          aria-selected={isActive}
+                          aria-label={`Go to slide ${idx + 1}: ${item.product.name}`}
+                          onClick={() => setCurrentSlideIdx(idx)}
+                          className={`h-2 rounded-full transition-all duration-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white cursor-pointer ${
+                            isActive
+                              ? "w-5 sm:w-6 bg-white shadow-sm"
+                              : "w-2 bg-white/40 hover:bg-white/70"
+                          }`}
+                        />
+                      );
+                    })}
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         </div>
