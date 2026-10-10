@@ -3,11 +3,13 @@
 import React, { useState } from "react";
 import Link from "next/link";
 import { Sparkles, X } from "lucide-react";
+import { useStore } from "@/context/StoreContext";
 
 export const AnnouncementBar: React.FC = () => {
   const [isDismissed, setIsDismissed] = useState(false);
+  const { isLoggedIn } = useStore();
 
-  if (isDismissed) {
+  if (!isLoggedIn || isDismissed) {
     return null;
   }
 

@@ -122,10 +122,19 @@ export const SearchOverlay: React.FC = () => {
                 Search Products
               </h2>
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 sm:gap-3">
               <span className="hidden sm:inline-block text-[10px] uppercase tracking-wider text-neutral-600 bg-white px-2 py-0.5 rounded-xs border border-[#E8E2D9] font-mono">
                 Press ESC or Swipe to close
               </span>
+              <button
+                type="button"
+                onClick={() => setIsSearchOpen(false)}
+                className="w-8 h-8 sm:w-9 sm:h-9 min-w-[32px] min-h-[32px] inline-flex items-center justify-center text-neutral-600 hover:text-black hover:bg-neutral-200/60 rounded-full transition-colors cursor-pointer focus-visible:ring-2 focus-visible:ring-[#541920] focus-visible:outline-none"
+                aria-label="Close search"
+                title="Close search"
+              >
+                <X className="w-4 h-4 sm:w-5 sm:h-5" aria-hidden="true" />
+              </button>
             </div>
           </div>
 
@@ -151,21 +160,13 @@ export const SearchOverlay: React.FC = () => {
               <button
                 type="button"
                 onClick={() => setQuery("")}
-                className="min-h-[44px] px-3 inline-flex items-center justify-center text-xs text-neutral-600 hover:text-black uppercase font-semibold cursor-pointer rounded-xs transition-colors shrink-0 focus-visible:ring-2 focus-visible:ring-[#541920] focus-visible:outline-none"
+                className="w-8 h-8 min-w-[32px] min-h-[32px] inline-flex items-center justify-center text-neutral-500 hover:text-[#541920] hover:bg-neutral-100 rounded-full transition-colors shrink-0 cursor-pointer focus-visible:ring-2 focus-visible:ring-[#541920] focus-visible:outline-none"
                 aria-label="Clear search query"
+                title="Clear query"
               >
-                Clear
+                <X className="w-4 h-4" aria-hidden="true" />
               </button>
             )}
-            <button
-              type="button"
-              onClick={() => setIsSearchOpen(false)}
-              className="w-11 h-11 min-w-[44px] min-h-[44px] inline-flex items-center justify-center text-neutral-500 hover:text-black hover:bg-neutral-100 rounded-full transition-colors shrink-0 cursor-pointer focus-visible:ring-2 focus-visible:ring-[#541920] focus-visible:outline-none"
-              aria-label="Close search"
-              title="Close search"
-            >
-              <X className="w-5 h-5" />
-            </button>
           </div>
 
           {/* Body Content */}
