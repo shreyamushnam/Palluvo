@@ -153,3 +153,9 @@
   -ms-overflow-style: none;
   scrollbar-width: none;
 }
+
+/* Signed-in-only UI: html[data-auth] is set by an inline script before first paint (see layout.tsx)
+   and kept in sync by StoreContext, so these elements never cause post-hydration layout shift. */
+html:not([data-auth="in"]) .auth-only {
+  display: none !important;
+}

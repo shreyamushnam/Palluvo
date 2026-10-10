@@ -222,20 +222,18 @@ export const Navbar: React.FC = () => {
             </Link>
 
             {/* Notifications */}
-            {isLoggedIn && (
-              <Link
-                href="/notifications"
-                aria-current={pathname === "/notifications" ? "page" : undefined}
-                className="min-h-[44px] min-w-[44px] p-2 text-[#1C1A18] hover:text-[#541920] transition-colors relative flex items-center justify-center focus-visible:ring-2 focus-visible:ring-[#541920] focus-visible:outline-none rounded-xs"
-                aria-label="Notifications"
-                title="Notifications"
-              >
-                <div className="relative">
-                  <Bell size={20} strokeWidth={1.8} />
-                  <span className="absolute -top-0.5 -right-0.5 w-2 h-2 bg-[#541920] rounded-full ring-2 ring-[#FAF7F2]" />
-                </div>
-              </Link>
-            )}
+            <Link
+              href="/notifications"
+              aria-current={pathname === "/notifications" ? "page" : undefined}
+              className="auth-only min-h-[44px] min-w-[44px] p-2 text-[#1C1A18] hover:text-[#541920] transition-colors relative flex items-center justify-center focus-visible:ring-2 focus-visible:ring-[#541920] focus-visible:outline-none rounded-xs"
+              aria-label="Notifications"
+              title="Notifications"
+            >
+              <div className="relative">
+                <Bell size={20} strokeWidth={1.8} />
+                <span className="absolute -top-0.5 -right-0.5 w-2 h-2 bg-[#541920] rounded-full ring-2 ring-[#FAF7F2]" />
+              </div>
+            </Link>
 
             {/* Shopping Bag / Cart Button */}
             <button

@@ -120,6 +120,12 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     } catch {}
   }, [isLoggedIn, user, isHydrated]);
 
+  // Keep html[data-auth] (initially set by an inline pre-paint script) in sync with auth state
+  useEffect(() => {
+    if (!isHydrated) return;
+    document.documentElement.setAttribute("data-auth", isLoggedIn ? "in" : "out");
+  }, [isLoggedIn, isHydrated]);
+
   const login = useCallback((userData?: { name: string; email: string }) => {
     setIsLoggedIn(true);
     setUser(userData || { name: "Radhika Sharma", email: "radhika.sharma@example.com" });

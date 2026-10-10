@@ -130,8 +130,15 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className={`${cormorant.variable} ${montserrat.variable} scroll-smooth`}>
+    <html lang="en" suppressHydrationWarning className={`${cormorant.variable} ${montserrat.variable} scroll-smooth`}>
       <body className="min-h-screen flex flex-col font-sans-body bg-[#FAF7F2] text-[#1C1A18] antialiased selection:bg-[#541920] selection:text-[#FAF7F2] pb-20 lg:pb-0">
+        {/* Sets html[data-auth] before first paint so signed-in-only header UI (announcement bar, bell)
+            is shown/hidden via CSS without shifting layout after hydration. */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `try{var a=JSON.parse(localStorage.getItem("palluvo_ecommerce_auth")||"null");document.documentElement.setAttribute("data-auth",a&&a.isLoggedIn?"in":"out")}catch(e){document.documentElement.setAttribute("data-auth","out")}`,
+          }}
+        />
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{

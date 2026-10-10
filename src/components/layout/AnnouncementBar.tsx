@@ -3,20 +3,20 @@
 import React, { useState } from "react";
 import Link from "next/link";
 import { Sparkles, X } from "lucide-react";
-import { useStore } from "@/context/StoreContext";
 
 export const AnnouncementBar: React.FC = () => {
   const [isDismissed, setIsDismissed] = useState(false);
-  const { isLoggedIn } = useStore();
 
-  if (!isLoggedIn || isDismissed) {
+  if (isDismissed) {
     return null;
   }
 
+  // Always rendered; visibility for signed-out visitors is handled by the `auth-only` CSS rule
+  // (driven by html[data-auth]) so the layout does not shift after auth state hydrates.
   return (
     <section
       aria-label="Promotional offer"
-      className="bg-[#1C1A18] text-[#FAF7F2] text-[10px] sm:text-xs py-1 sm:py-2 px-8 sm:px-10 text-center font-medium tracking-normal sm:tracking-[0.14em] uppercase flex items-center justify-center gap-1.5 sm:gap-2 border-b border-[#3B0E14]/30 z-50 relative"
+      className="auth-only bg-[#1C1A18] text-[#FAF7F2] text-[10px] sm:text-xs py-1 sm:py-2 px-8 sm:px-10 text-center font-medium tracking-normal sm:tracking-[0.14em] uppercase flex items-center justify-center gap-1.5 sm:gap-2 border-b border-[#3B0E14]/30 z-50 relative"
     >
       <Sparkles size={12} className="text-[#C5A575] shrink-0" />
       <span className="leading-tight">
