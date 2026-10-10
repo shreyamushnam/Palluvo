@@ -71,7 +71,6 @@ const SLIDES = [
 export const HeroBanner: React.FC = () => {
   const [currentSlideIdx, setCurrentSlideIdx] = useState(0);
   const [isHovered, setIsHovered] = useState(false);
-  const [isFocused, setIsFocused] = useState(false);
   const [isManuallyPaused, setIsManuallyPaused] = useState(false);
   const [prefersReducedMotion, setPrefersReducedMotion] = useState(false);
   const [liveAnnouncement, setLiveAnnouncement] = useState("");
@@ -94,7 +93,7 @@ export const HeroBanner: React.FC = () => {
     };
   }, []);
 
-  const isPaused = isHovered || isFocused || isManuallyPaused || prefersReducedMotion;
+  const isPaused = isHovered || isManuallyPaused || prefersReducedMotion;
 
   // Auto-advance showcase slides every 4.5 seconds (does NOT trigger live announcements)
   useEffect(() => {
@@ -136,12 +135,10 @@ export const HeroBanner: React.FC = () => {
       onMouseLeave={() => setIsHovered(false)}
       onTouchStart={() => setIsHovered(true)}
       onTouchEnd={() => setIsHovered(false)}
-      onFocus={() => setIsFocused(true)}
-      onBlur={(e) => {
-        // Pause while focus is inside the carousel section
-        if (!e.currentTarget.contains(e.relatedTarget as Node | null)) {
-          setIsFocused(false);
-        }
+      onFocus={() => {
+        // WAI Carousel Pattern: When carousel receives focus, rotation stops persistently
+        // until explicitly restarted by the user.
+        setIsManuallyPaused(true);
       }}
     >
       {/* Screen-reader live announcement ONLY for user-initiated actions */}
