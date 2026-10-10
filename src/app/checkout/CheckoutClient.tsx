@@ -197,6 +197,10 @@ export default function CheckoutPage() {
       trackingNumber: `EXP${Math.floor(10000000 + Math.random() * 90000000)}`,
     });
 
+    // Immediately discard any entered card form state so sensitive test values are not retained
+    setCardDetails({ cardNumber: "", cardholderName: "", expiry: "", cvv: "" });
+    setCardErrors({ cardNumber: "", cardholderName: "", expiry: "", cvv: "" });
+
     setCompletedOrder(newOrder);
   };
 
@@ -817,9 +821,9 @@ export default function CheckoutPage() {
                             </label>
                             <input
                               id="cardholderName"
-                              name="cardholderName"
+                              name="demoCardholderName"
                               type="text"
-                              autoComplete="cc-name"
+                              autoComplete="off"
                               placeholder="e.g. Radhika Sharma"
                               value={cardDetails.cardholderName}
                               onChange={(e) => {
@@ -849,11 +853,11 @@ export default function CheckoutPage() {
                             </label>
                             <input
                               id="cardNumber"
-                              name="cardNumber"
+                              name="demoCardNumber"
                               type="text"
                               inputMode="numeric"
                               pattern="[0-9 ]*"
-                              autoComplete="cc-number"
+                              autoComplete="off"
                               maxLength={19}
                               placeholder="4123 4567 8901 2345"
                               value={cardDetails.cardNumber}
@@ -887,11 +891,11 @@ export default function CheckoutPage() {
                               </label>
                               <input
                                 id="cardExpiry"
-                                name="cardExpiry"
+                                name="demoCardExpiry"
                                 type="text"
                                 inputMode="numeric"
                                 pattern="[0-9/]*"
-                                autoComplete="cc-exp"
+                                autoComplete="off"
                                 maxLength={5}
                                 placeholder="MM/YY"
                                 value={cardDetails.expiry}
@@ -923,11 +927,11 @@ export default function CheckoutPage() {
                               </label>
                               <input
                                 id="cardCvv"
-                                name="cardCvv"
+                                name="demoCardCvv"
                                 type="password"
                                 inputMode="numeric"
                                 pattern="[0-9]*"
-                                autoComplete="cc-csc"
+                                autoComplete="off"
                                 maxLength={4}
                                 placeholder="•••"
                                 value={cardDetails.cvv}

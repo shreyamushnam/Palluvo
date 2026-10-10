@@ -200,10 +200,20 @@ export default function AccountPage() {
             {/* Tabbed Switch */}
             <div className="grid grid-cols-2 border-b border-[#E8E2D9] bg-[#FAF7F2]/60" role="tablist" aria-label="Authentication Options">
               <button
+                id="auth-tab-signin"
                 type="button"
                 role="tab"
                 aria-selected={authTab === "signin"}
+                aria-controls="auth-panel-signin"
+                tabIndex={authTab === "signin" ? 0 : -1}
                 onClick={() => setAuthTab("signin")}
+                onKeyDown={(e) => {
+                  if (e.key === "ArrowRight" || e.key === "ArrowLeft") {
+                    e.preventDefault();
+                    setAuthTab("register");
+                    document.getElementById("auth-tab-register")?.focus();
+                  }
+                }}
                 className={`py-3 sm:py-3.5 px-2 text-[11px] sm:text-xs font-semibold tracking-wider uppercase transition-all flex items-center justify-center gap-1.5 sm:gap-2 whitespace-nowrap cursor-pointer focus-visible:ring-2 focus-visible:ring-[#541920] focus-visible:outline-none ${
                   authTab === "signin"
                     ? "bg-white text-[#541920] border-b-2 border-[#541920] shadow-2xs"
@@ -214,10 +224,20 @@ export default function AccountPage() {
                 <span>Simulated Sign In</span>
               </button>
               <button
+                id="auth-tab-register"
                 type="button"
                 role="tab"
                 aria-selected={authTab === "register"}
+                aria-controls="auth-panel-register"
+                tabIndex={authTab === "register" ? 0 : -1}
                 onClick={() => setAuthTab("register")}
+                onKeyDown={(e) => {
+                  if (e.key === "ArrowRight" || e.key === "ArrowLeft") {
+                    e.preventDefault();
+                    setAuthTab("signin");
+                    document.getElementById("auth-tab-signin")?.focus();
+                  }
+                }}
                 className={`py-3 sm:py-3.5 px-2 text-[11px] sm:text-xs font-semibold tracking-wider uppercase transition-all flex items-center justify-center gap-1.5 sm:gap-2 whitespace-nowrap cursor-pointer focus-visible:ring-2 focus-visible:ring-[#541920] focus-visible:outline-none ${
                   authTab === "register"
                     ? "bg-white text-[#541920] border-b-2 border-[#541920] shadow-2xs"
@@ -231,7 +251,12 @@ export default function AccountPage() {
 
             {/* Auth Forms */}
             <div className="p-6 sm:p-8">
-              {authTab === "signin" ? (
+              <div
+                id="auth-panel-signin"
+                role="tabpanel"
+                aria-labelledby="auth-tab-signin"
+                hidden={authTab !== "signin"}
+              >
                 <form onSubmit={handleSignInSubmit} className="space-y-4">
                   <div>
                     <label htmlFor="signin-identifier" className="block text-xs font-semibold text-neutral-800 uppercase tracking-wider mb-1.5">
@@ -299,7 +324,14 @@ export default function AccountPage() {
                     </button>
                   </div>
                 </form>
-              ) : (
+              </div>
+
+              <div
+                id="auth-panel-register"
+                role="tabpanel"
+                aria-labelledby="auth-tab-register"
+                hidden={authTab !== "register"}
+              >
                 <form onSubmit={handleRegisterSubmit} className="space-y-4">
                   <div>
                     <label htmlFor="reg-name" className="block text-xs font-semibold text-neutral-800 uppercase tracking-wider mb-1.5">
@@ -385,7 +417,7 @@ export default function AccountPage() {
                     </button>
                   </div>
                 </form>
-              )}
+              </div>
             </div>
           </div>
 
