@@ -257,7 +257,7 @@ export default function AccountPage() {
                       </label>
                       <button
                         type="button"
-                        onClick={() => showToast("Password reset link sent to registered email.", "info")}
+                        onClick={() => showToast("Password reset is unavailable in this prototype demonstration.", "info")}
                         className="text-[11px] text-[#541920] hover:underline font-medium cursor-pointer"
                       >
                         Forgot Password?

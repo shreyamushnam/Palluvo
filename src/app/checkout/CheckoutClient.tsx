@@ -955,8 +955,8 @@ export default function CheckoutPage() {
                           </div>
 
                           <div className="flex items-center gap-2 pt-1 text-[11px] text-neutral-600">
-                            <ShieldCheck className="w-4 h-4 text-[#15803D] shrink-0" />
-                            <span>128-bit SSL encrypted. Supports Visa, MasterCard, RuPay &amp; Maestro.</span>
+                            <Info className="w-4 h-4 text-[#541920] shrink-0" />
+                            <span>Demonstration form only: card details are checked client-side and never transmitted to payment networks.</span>
                           </div>
                         </div>
                       )}
