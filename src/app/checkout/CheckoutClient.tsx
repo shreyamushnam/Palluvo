@@ -134,7 +134,7 @@ export default function CheckoutPage() {
   };
 
   const handlePlaceOrder = () => {
-    if (paymentMethod === "upi" && !upiId.trim()) {
+    if (paymentMethod === "upi" && !/^[a-zA-Z0-9._-]{2,256}@[a-zA-Z][a-zA-Z0-9]{1,63}$/.test(upiId.trim())) {
       setUpiError("Please enter a valid UPI ID (e.g. mobile@upi).");
       showToast("Please enter a valid UPI ID before placing your order.", "info");
       const input = document.getElementById("upiId");
@@ -148,10 +148,20 @@ export default function CheckoutPage() {
     if (paymentMethod === "card") {
       const rawNum = cardDetails.cardNumber.replace(/\s/g, "");
       const rawExp = cardDetails.expiry.replace(/\D/g, "");
+      const expMonth = parseInt(rawExp.slice(0, 2), 10);
+      const expYear = 2000 + parseInt(rawExp.slice(2, 4), 10);
+      const now = new Date();
+      const currentYear = now.getFullYear();
+      const currentMonth = now.getMonth() + 1;
+      const expiryValid =
+        rawExp.length === 4 &&
+        expMonth >= 1 &&
+        expMonth <= 12 &&
+        (expYear > currentYear || (expYear === currentYear && expMonth >= currentMonth));
       const newErrors = {
         cardNumber: rawNum.length < 15 ? "Please enter a valid 16-digit card number." : "",
         cardholderName: !cardDetails.cardholderName.trim() ? "Please enter the cardholder name." : "",
-        expiry: rawExp.length < 4 ? "Please enter a valid expiry date (MM/YY)." : "",
+        expiry: !expiryValid ? "Please enter a valid, unexpired expiry date (MM/YY)." : "",
         cvv: cardDetails.cvv.length < 3 ? "Please enter a valid CVV." : "",
       };
 
