@@ -3,6 +3,7 @@ import React from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { ArrowRight, Sparkles } from "lucide-react";
+import { BackToTopButton } from "@/components/common/BackToTopButton";
 
 export const metadata: Metadata = {
   title: "Curated Saree Collections & Heritage Edits | PALLUVO",
@@ -81,7 +82,10 @@ const CURATED_COLLECTIONS = [
 
 export default function CollectionsPage() {
   return (
-    <div className="min-h-screen bg-[#FAF7F2]">
+    <div className="min-h-screen bg-[#FAF7F2] pb-20 sm:pb-12">
+      {/* Floating Back to Top Button */}
+      <BackToTopButton />
+
       {/* Header */}
       <div className="bg-[#F4EFE6] border-b border-[#E8E2D9] py-10 sm:py-14">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center sm:text-left">

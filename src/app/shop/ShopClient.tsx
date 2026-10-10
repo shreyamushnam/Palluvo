@@ -7,6 +7,7 @@ import { Filter, X, SlidersHorizontal, Check, Search, ArrowUpDown } from "lucide
 import { PRODUCTS, type Product } from "@/data/products";
 import { CATEGORIES } from "@/data/categories";
 import { ProductCard } from "@/components/ecommerce/ProductCard";
+import { BackToTopButton } from "@/components/common/BackToTopButton";
 import { useFocusTrap } from "@/hooks/useFocusTrap";
 
 const SORT_OPTIONS = [
@@ -300,6 +301,9 @@ export function ShopContent() {
 
   return (
     <div className="min-h-screen bg-[#FAF7F2] pb-24 lg:pb-12">
+      {/* Floating Back to Top Button */}
+      <BackToTopButton />
+
       {/* Breadcrumb & Header */}
       <div className="bg-[#F4EFE6] border-b border-[#E8E2D9] py-8">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">

@@ -27,9 +27,27 @@ export const CartDrawer: React.FC = () => {
 
   const [inputCoupon, setInputCoupon] = useState("");
   const [couponError, setCouponError] = useState<string | null>(null);
+  const [touchStart, setTouchStart] = useState<{ x: number; y: number } | null>(null);
 
   const closeCart = useCallback(() => setIsCartOpen(false), [setIsCartOpen]);
   const drawerRef = useFocusTrap<HTMLDivElement>({ isOpen: isCartOpen, onClose: closeCart });
+
+  const handleTouchStart = (e: React.TouchEvent) => {
+    if (e.touches.length === 1) {
+      setTouchStart({ x: e.touches[0].clientX, y: e.touches[0].clientY });
+    }
+  };
+
+  const handleTouchEnd = (e: React.TouchEvent) => {
+    if (!touchStart || e.changedTouches.length === 0) return;
+    const deltaX = e.changedTouches[0].clientX - touchStart.x;
+    const deltaY = e.changedTouches[0].clientY - touchStart.y;
+    // Dismiss drawer on horizontal swipe-right (> 70px) or downward swipe (> 70px)
+    if (deltaX > 70 || deltaY > 70) {
+      closeCart();
+    }
+    setTouchStart(null);
+  };
 
   if (!isCartOpen) return null;
 
@@ -49,11 +67,20 @@ export const CartDrawer: React.FC = () => {
   };
 
   return (
-    <div ref={drawerRef} tabIndex={-1} className="fixed inset-0 z-50 overflow-hidden outline-none" aria-labelledby="slide-over-title" role="dialog" aria-modal="true">
+    <div
+      ref={drawerRef}
+      tabIndex={-1}
+      className="fixed inset-0 z-50 overflow-hidden outline-none"
+      aria-labelledby="slide-over-title"
+      role="dialog"
+      aria-modal="true"
+      onTouchStart={handleTouchStart}
+      onTouchEnd={handleTouchEnd}
+    >
       {/* Backdrop */}
       <div
         className="fixed inset-0 bg-black/60 backdrop-blur-xs transition-opacity"
-        onClick={() => setIsCartOpen(false)}
+        onClick={closeCart}
       />
 
       <div className="fixed inset-y-0 right-0 max-w-full flex pl-10">
