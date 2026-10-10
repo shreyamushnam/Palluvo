@@ -12,8 +12,8 @@ import { useFocusTrap } from "@/hooks/useFocusTrap";
 function getSafeRedirectUrl(target: string | null | undefined): string {
   if (!target || typeof target !== "string") return "/";
   const trimmed = target.trim();
-  // Must start with '/' and strictly disallow protocol-relative paths ('//', '/\', '\\')
-  if (!trimmed.startsWith("/") || trimmed.startsWith("//") || trimmed.startsWith("/\\") || trimmed.startsWith("\\")) {
+  // Pre-check: Must start with '/' and not start with protocol-relative '//', '/\', or contain '\'
+  if (!trimmed.startsWith("/") || trimmed.startsWith("//") || trimmed.startsWith("/\\") || trimmed.includes("\\")) {
     return "/";
   }
   // Reject control characters
@@ -22,16 +22,23 @@ function getSafeRedirectUrl(target: string | null | undefined): string {
   }
   try {
     const parsed = new URL(trimmed, "http://localhost");
-    // Ensure origin remains dummy localhost and pathname starts with '/'
-    if (parsed.origin !== "http://localhost" || !parsed.pathname.startsWith("/")) {
+    // Ensure origin remains dummy localhost
+    if (parsed.origin !== "http://localhost") {
       return "/";
     }
-    // Disallow colon in path component to block scheme smuggling
-    const pathOnly = trimmed.split("?")[0].split("#")[0];
-    if (pathOnly.includes(":")) {
+    const pathname = parsed.pathname;
+    // Post-normalization check:
+    // Reject paths that normalized to protocol-relative ('//...'), contain backslashes, or contain colons
+    if (
+      !pathname.startsWith("/") ||
+      pathname.startsWith("//") ||
+      pathname.startsWith("/\\") ||
+      pathname.includes("\\") ||
+      pathname.includes(":")
+    ) {
       return "/";
     }
-    return `${parsed.pathname}${parsed.search}${parsed.hash}`;
+    return `${pathname}${parsed.search}${parsed.hash}`;
   } catch {
     return "/";
   }
