@@ -53,7 +53,7 @@ export function ContactForm() {
             href="https://wa.me/918498854323"
             target="_blank"
             rel="noopener noreferrer"
-            className="underline font-medium text-[#128C7E] hover:text-[#075E54]"
+            className="underline font-medium text-[#075E54] hover:text-[#054C44]"
           >
             WhatsApp
           </a>

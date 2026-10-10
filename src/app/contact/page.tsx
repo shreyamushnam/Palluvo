@@ -59,7 +59,7 @@ export default function ContactPage() {
                         href="https://wa.me/918498854323"
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="min-h-[44px] px-2 py-1 text-[#128C7E] hover:underline inline-flex items-center font-medium focus-visible:ring-2 focus-visible:ring-[#128C7E] focus-visible:outline-none"
+                        className="min-h-[44px] px-2 py-1 text-[#075E54] hover:underline inline-flex items-center font-medium focus-visible:ring-2 focus-visible:ring-[#075E54] focus-visible:outline-none"
                       >
                         WhatsApp
                       </a>
@@ -78,7 +78,7 @@ export default function ContactPage() {
                         href="https://wa.me/918106789789"
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="min-h-[44px] px-2 py-1 text-[#128C7E] hover:underline inline-flex items-center font-medium focus-visible:ring-2 focus-visible:ring-[#128C7E] focus-visible:outline-none"
+                        className="min-h-[44px] px-2 py-1 text-[#075E54] hover:underline inline-flex items-center font-medium focus-visible:ring-2 focus-visible:ring-[#075E54] focus-visible:outline-none"
                       >
                         WhatsApp
                       </a>

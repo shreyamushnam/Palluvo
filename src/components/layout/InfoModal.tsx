@@ -187,13 +187,16 @@ export const InfoModal: React.FC<InfoModalProps> = ({
 
                     <div className="p-3.5 bg-white border border-[#E8E2D9] rounded-xs flex items-start gap-3">
                       <Phone className="w-4 h-4 text-[#541920] shrink-0 mt-0.5" />
-                      <div>
+                      <div className="w-full">
                         <strong className="block text-neutral-900">WhatsApp & Phone Care</strong>
-                        <div className="space-y-1 mt-1">
+                        <div className="space-y-2 mt-1.5">
                           <div className="flex items-center gap-2 flex-wrap">
                             <span className="font-medium text-neutral-900">+91 84988 54323</span>
                             <span className="text-neutral-300">|</span>
-                            <a href="tel:+918498854323" className="text-[#541920] hover:underline font-medium">
+                            <a
+                              href="tel:+918498854323"
+                              className="min-h-[44px] px-2.5 py-1 text-[#541920] hover:underline inline-flex items-center font-medium focus-visible:ring-2 focus-visible:ring-[#541920] focus-visible:outline-none"
+                            >
                               Call
                             </a>
                             <span className="text-neutral-300">·</span>
@@ -201,7 +204,7 @@ export const InfoModal: React.FC<InfoModalProps> = ({
                               href="https://wa.me/918498854323"
                               target="_blank"
                               rel="noopener noreferrer"
-                              className="text-[#128C7E] hover:underline font-medium"
+                              className="min-h-[44px] px-2.5 py-1 text-[#075E54] hover:underline inline-flex items-center font-medium focus-visible:ring-2 focus-visible:ring-[#075E54] focus-visible:outline-none"
                             >
                               WhatsApp
                             </a>
@@ -209,7 +212,10 @@ export const InfoModal: React.FC<InfoModalProps> = ({
                           <div className="flex items-center gap-2 flex-wrap">
                             <span className="font-medium text-neutral-900">+91 81067 89789</span>
                             <span className="text-neutral-300">|</span>
-                            <a href="tel:+918106789789" className="text-[#541920] hover:underline font-medium">
+                            <a
+                              href="tel:+918106789789"
+                              className="min-h-[44px] px-2.5 py-1 text-[#541920] hover:underline inline-flex items-center font-medium focus-visible:ring-2 focus-visible:ring-[#541920] focus-visible:outline-none"
+                            >
                               Call
                             </a>
                             <span className="text-neutral-300">·</span>
@@ -217,7 +223,7 @@ export const InfoModal: React.FC<InfoModalProps> = ({
                               href="https://wa.me/918106789789"
                               target="_blank"
                               rel="noopener noreferrer"
-                              className="text-[#128C7E] hover:underline font-medium"
+                              className="min-h-[44px] px-2.5 py-1 text-[#075E54] hover:underline inline-flex items-center font-medium focus-visible:ring-2 focus-visible:ring-[#075E54] focus-visible:outline-none"
                             >
                               WhatsApp
                             </a>
