@@ -297,7 +297,7 @@ export const ProductDetailView: React.FC<ProductDetailViewProps> = ({
                     <Star className="w-3.5 h-3.5 fill-current" />
                     <span className="text-xs font-bold text-neutral-900 ml-1">{product.rating}</span>
                     <span className="text-[11px] text-neutral-600 font-sans ml-0.5">
-                      ({product.reviewsCount || 120})
+                      ({product.reviewsCount ?? product.reviewCount ?? 0})
                     </span>
                   </div>
                   <button

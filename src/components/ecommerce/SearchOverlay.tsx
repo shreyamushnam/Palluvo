@@ -129,11 +129,11 @@ export const SearchOverlay: React.FC = () => {
               <button
                 type="button"
                 onClick={() => setIsSearchOpen(false)}
-                className="w-8 h-8 sm:w-9 sm:h-9 min-w-[32px] min-h-[32px] inline-flex items-center justify-center text-neutral-600 hover:text-black hover:bg-neutral-200/60 rounded-full transition-colors cursor-pointer focus-visible:ring-2 focus-visible:ring-[#541920] focus-visible:outline-none"
+                className="w-11 h-11 min-w-[44px] min-h-[44px] inline-flex items-center justify-center text-neutral-600 hover:text-black hover:bg-neutral-200/60 rounded-full transition-colors cursor-pointer focus-visible:ring-2 focus-visible:ring-[#541920] focus-visible:outline-none"
                 aria-label="Close search"
                 title="Close search"
               >
-                <X className="w-4 h-4 sm:w-5 sm:h-5" aria-hidden="true" />
+                <X className="w-5 h-5" aria-hidden="true" />
               </button>
             </div>
           </div>
@@ -160,7 +160,7 @@ export const SearchOverlay: React.FC = () => {
               <button
                 type="button"
                 onClick={() => setQuery("")}
-                className="w-8 h-8 min-w-[32px] min-h-[32px] inline-flex items-center justify-center text-neutral-500 hover:text-[#541920] hover:bg-neutral-100 rounded-full transition-colors shrink-0 cursor-pointer focus-visible:ring-2 focus-visible:ring-[#541920] focus-visible:outline-none"
+                className="w-11 h-11 min-w-[44px] min-h-[44px] inline-flex items-center justify-center text-neutral-500 hover:text-[#541920] hover:bg-neutral-100 rounded-full transition-colors shrink-0 cursor-pointer focus-visible:ring-2 focus-visible:ring-[#541920] focus-visible:outline-none"
                 aria-label="Clear search query"
                 title="Clear query"
               >

@@ -102,12 +102,12 @@ export default async function ProductDetailPage({ params }: ProductPageProps) {
             name: "PALLUVO",
           },
         },
-        ...(product.rating
+        ...(product.rating && (product.reviewsCount ?? product.reviewCount ?? 0) > 0
           ? {
               aggregateRating: {
                 "@type": "AggregateRating",
                 ratingValue: product.rating,
-                reviewCount: product.reviewsCount || 120,
+                reviewCount: product.reviewsCount ?? product.reviewCount ?? 0,
                 bestRating: 5,
                 worstRating: 1,
               },

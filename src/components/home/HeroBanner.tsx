@@ -3,7 +3,6 @@
 import React, { useState, useEffect } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { Pause, Play } from "lucide-react";
 
 const SLIDES = [
   {
@@ -72,7 +71,6 @@ export const HeroBanner: React.FC = () => {
   const [currentSlideIdx, setCurrentSlideIdx] = useState(0);
   const [isHovered, setIsHovered] = useState(false);
   const [isFocused, setIsFocused] = useState(false);
-  const [isManuallyPaused, setIsManuallyPaused] = useState(false);
   const [prefersReducedMotion, setPrefersReducedMotion] = useState(false);
   const [liveAnnouncement, setLiveAnnouncement] = useState("");
   const totalSlides = SLIDES.length;
@@ -94,7 +92,7 @@ export const HeroBanner: React.FC = () => {
     };
   }, []);
 
-  const isPaused = isHovered || isFocused || isManuallyPaused || prefersReducedMotion;
+  const isPaused = isHovered || isFocused || prefersReducedMotion;
 
   // Auto-advance showcase slides every 4.5 seconds (does NOT trigger live announcements)
   useEffect(() => {
@@ -114,17 +112,6 @@ export const HeroBanner: React.FC = () => {
     setLiveAnnouncement(
       `Slide ${idx + 1} of ${totalSlides}: ${targetSlide.titleLine1} ${targetSlide.titleLine2} - featuring ${targetSlide.product.name}`
     );
-  };
-
-  const handleTogglePause = () => {
-    if (prefersReducedMotion) return;
-    setIsManuallyPaused((prev) => {
-      const nextPaused = !prev;
-      setLiveAnnouncement(
-        nextPaused ? "Carousel paused" : "Carousel auto-rotation resumed"
-      );
-      return nextPaused;
-    });
   };
 
   return (
@@ -222,8 +209,8 @@ export const HeroBanner: React.FC = () => {
                     <span>{slide.curationTag}</span>
                   </span>
 
-                  {/* Controls: Pagination Indicator Dots & Accessible Pause/Play Button */}
-                  <div className="pointer-events-auto flex items-center justify-center gap-1 sm:gap-2">
+                  {/* Controls: Pagination Indicator Dots */}
+                  <div className="pointer-events-auto flex items-center justify-center">
                     <div
                       className="flex items-center justify-center"
                       role="tablist"
@@ -252,34 +239,6 @@ export const HeroBanner: React.FC = () => {
                         );
                       })}
                     </div>
-
-                    {/* Visible & Keyboard-Accessible Pause / Resume Carousel Control */}
-                    <button
-                      type="button"
-                      onClick={handleTogglePause}
-                      disabled={prefersReducedMotion}
-                      aria-label={
-                        prefersReducedMotion
-                          ? "Auto-rotation disabled by system reduced motion preference"
-                          : isManuallyPaused
-                          ? "Resume auto-rotating carousel"
-                          : "Pause auto-rotating carousel"
-                      }
-                      aria-pressed={prefersReducedMotion || isManuallyPaused}
-                      className={`relative min-w-[44px] min-h-[44px] flex items-center justify-center rounded-full transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-black/50 ${
-                        prefersReducedMotion
-                          ? "opacity-60 cursor-not-allowed text-white/60"
-                          : "text-white/90 hover:text-white cursor-pointer"
-                      }`}
-                    >
-                      <span className="w-8 h-8 rounded-full bg-black/45 backdrop-blur-md hover:bg-black/60 flex items-center justify-center border border-white/20 shadow-sm transition-all">
-                        {prefersReducedMotion || isManuallyPaused ? (
-                          <Play className="w-3.5 h-3.5 fill-current" aria-hidden="true" />
-                        ) : (
-                          <Pause className="w-3.5 h-3.5 fill-current" aria-hidden="true" />
-                        )}
-                      </span>
-                    </button>
                   </div>
                 </div>
               </div>
