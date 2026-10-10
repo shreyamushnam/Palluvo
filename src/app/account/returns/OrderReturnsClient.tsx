@@ -11,7 +11,8 @@ import {
   CheckCircle, 
   Clock, 
   PackageCheck,
-  AlertCircle
+  AlertCircle,
+  Info
 } from "lucide-react";
 
 interface ReturnableSampleItem {
@@ -75,9 +76,12 @@ const RETURN_STEPS = [
 export const OrderReturnsClient: React.FC = () => {
   const [requestedOrders, setRequestedOrders] = useState<string[]>([]);
 
-  const handleRequestReturn = (orderId: string, productName: string) => {
-    setRequestedOrders((prev) => [...prev, orderId]);
-    alert(`Return request submitted for Order #${orderId} (${productName}). A concierge agent will confirm pickup details via SMS & WhatsApp.`);
+  const handleRequestReturn = (orderId: string) => {
+    setRequestedOrders((prev) => (prev.includes(orderId) ? prev : [...prev, orderId]));
+  };
+
+  const handleResetReturn = (orderId: string) => {
+    setRequestedOrders((prev) => prev.filter((id) => id !== orderId));
   };
 
   return (
@@ -162,13 +166,23 @@ export const OrderReturnsClient: React.FC = () => {
 
         {/* Returnable Items Section */}
         <div className="space-y-4 mb-10">
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1">
             <h2 className="text-xs uppercase tracking-widest text-neutral-700 font-semibold">
               Recent Delivered Orders Eligible for Return
             </h2>
             <span className="text-[11px] text-neutral-500 font-sans">
-              Showing recent shipments
+              Showing recent shipments (Demo workflow)
             </span>
+          </div>
+
+          <div className="p-3.5 bg-[#F4EFE6] border border-[#C5A575]/40 rounded-xs text-xs text-neutral-800 flex items-start gap-2.5">
+            <Info className="w-4 h-4 text-[#541920] shrink-0 mt-0.5" aria-hidden="true" />
+            <div className="space-y-0.5">
+              <span className="font-semibold text-neutral-900 block">Demonstration Workflow</span>
+              <p className="text-neutral-600 text-[11px] leading-relaxed">
+                The sample orders below demonstrate the return request experience. Actions here are local simulations and are not submitted to a live returns queue. To process a real return or exchange, contact our concierge team directly.
+              </p>
+            </div>
           </div>
 
           <div className="space-y-3.5">
@@ -177,75 +191,119 @@ export const OrderReturnsClient: React.FC = () => {
               return (
                 <div
                   key={idx}
-                  className="bg-white rounded-sm border border-[#E8E2D9] p-4 sm:p-5 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-4"
+                  className="bg-white rounded-sm border border-[#E8E2D9] p-4 sm:p-5 shadow-xs"
                 >
-                  <div className="flex items-start gap-3.5 flex-1 min-w-0">
-                    <div className="relative w-16 h-20 sm:w-20 sm:h-24 rounded-xs overflow-hidden bg-neutral-100 shrink-0 border border-[#E8E2D9]">
-                      <Image
-                        src={item.image}
-                        alt={item.productName}
-                        fill
-                        sizes="80px"
-                        className="object-cover object-top"
-                      />
-                    </div>
-
-                    <div className="flex-1 min-w-0">
-                      <div className="flex flex-wrap items-center gap-2 mb-1">
-                        <span className="text-[10px] font-mono font-semibold text-neutral-600 bg-[#FAF7F2] px-2 py-0.5 rounded-2xs border border-[#E8E2D9]">
-                          Order #{item.orderId}
-                        </span>
-                        {item.status === "Eligible" ? (
-                          <span className="text-[10px] font-semibold text-[#15803D] bg-[#15803D]/10 px-2 py-0.5 rounded-2xs inline-flex items-center gap-1">
-                            <Clock className="w-3 h-3" />
-                            <span>{item.daysLeft} days left to return</span>
-                          </span>
-                        ) : (
-                          <span className="text-[10px] font-semibold text-neutral-500 bg-neutral-100 px-2 py-0.5 rounded-2xs inline-flex items-center gap-1">
-                            <AlertCircle className="w-3 h-3" />
-                            <span>7-day window closed</span>
-                          </span>
-                        )}
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                    <div className="flex items-start gap-3.5 flex-1 min-w-0">
+                      <div className="relative w-16 h-20 sm:w-20 sm:h-24 rounded-xs overflow-hidden bg-neutral-100 shrink-0 border border-[#E8E2D9]">
+                        <Image
+                          src={item.image}
+                          alt={item.productName}
+                          fill
+                          sizes="80px"
+                          className="object-cover object-top"
+                        />
                       </div>
 
-                      <h3 className="text-sm sm:text-base font-serif font-medium text-neutral-900 leading-snug">
-                        {item.productName}
-                      </h3>
-                      <p className="text-xs text-neutral-600 font-sans mt-0.5">
-                        {item.fabric} • Delivered on {item.deliveredDate}
-                      </p>
-                      <p className="text-xs font-bold text-[#541920] mt-1 tabular-nums">
-                        {item.price}
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="flex sm:flex-col items-center sm:items-end justify-between sm:justify-center border-t sm:border-t-0 pt-3 sm:pt-0 border-[#E8E2D9] shrink-0">
-                    {item.status === "Eligible" ? (
-                      isRequested ? (
-                        <div className="min-h-[44px] px-4 py-2 bg-[#15803D]/10 text-[#15803D] text-xs uppercase tracking-wider font-semibold rounded-xs inline-flex items-center gap-1.5">
-                          <CheckCircle className="w-4 h-4" />
-                          <span>Request In Review</span>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex flex-wrap items-center gap-2 mb-1">
+                          <span className="text-[10px] font-mono font-semibold text-neutral-600 bg-[#FAF7F2] px-2 py-0.5 rounded-2xs border border-[#E8E2D9]">
+                            Order #{item.orderId}
+                          </span>
+                          {item.status === "Eligible" ? (
+                            <span className="text-[10px] font-semibold text-[#15803D] bg-[#15803D]/10 px-2 py-0.5 rounded-2xs inline-flex items-center gap-1">
+                              <Clock className="w-3 h-3" />
+                              <span>{item.daysLeft} days left to return</span>
+                            </span>
+                          ) : (
+                            <span className="text-[10px] font-semibold text-neutral-500 bg-neutral-100 px-2 py-0.5 rounded-2xs inline-flex items-center gap-1">
+                              <AlertCircle className="w-3 h-3" />
+                              <span>7-day window closed</span>
+                            </span>
+                          )}
                         </div>
+
+                        <h3 className="text-sm sm:text-base font-serif font-medium text-neutral-900 leading-snug">
+                          {item.productName}
+                        </h3>
+                        <p className="text-xs text-neutral-600 font-sans mt-0.5">
+                          {item.fabric} • Delivered on {item.deliveredDate}
+                        </p>
+                        <p className="text-xs font-bold text-[#541920] mt-1 tabular-nums">
+                          {item.price}
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="flex sm:flex-col items-center sm:items-end justify-between sm:justify-center border-t sm:border-t-0 pt-3 sm:pt-0 border-[#E8E2D9] shrink-0 gap-2">
+                      {item.status === "Eligible" ? (
+                        isRequested ? (
+                          <div className="flex flex-col items-end gap-1.5">
+                            <div className="min-h-[44px] px-3.5 py-2 bg-[#541920]/10 text-[#541920] text-xs uppercase tracking-wider font-semibold rounded-xs inline-flex items-center gap-1.5">
+                              <CheckCircle className="w-4 h-4 text-[#541920]" aria-hidden="true" />
+                              <span>Demo Simulated</span>
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => handleResetReturn(item.orderId)}
+                              className="min-h-[44px] px-2 py-1 text-[11px] font-semibold text-[#541920] hover:underline uppercase tracking-wider cursor-pointer inline-flex items-center focus-visible:ring-2 focus-visible:ring-[#541920] focus-visible:outline-none rounded-2xs"
+                            >
+                              Reset Demo
+                            </button>
+                          </div>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={() => handleRequestReturn(item.orderId)}
+                            className="min-h-[44px] px-4 py-2 bg-[#541920] hover:bg-[#3D1217] text-white text-xs uppercase tracking-wider font-semibold rounded-xs shadow-xs transition-colors cursor-pointer focus-visible:ring-2 focus-visible:ring-[#541920] focus-visible:outline-none"
+                          >
+                            Simulate Return Request
+                          </button>
+                        )
                       ) : (
                         <button
                           type="button"
-                          onClick={() => handleRequestReturn(item.orderId, item.productName)}
-                          className="min-h-[44px] px-4 py-2 bg-[#541920] hover:bg-[#3D1217] text-white text-xs uppercase tracking-wider font-semibold rounded-xs shadow-xs transition-colors cursor-pointer focus-visible:ring-2 focus-visible:ring-[#541920] focus-visible:outline-none"
+                          disabled
+                          className="min-h-[44px] px-4 py-2 bg-neutral-100 text-neutral-400 text-xs uppercase tracking-wider font-semibold rounded-xs cursor-not-allowed"
                         >
-                          Request Return / Exchange
+                          Return Closed
                         </button>
-                      )
-                    ) : (
-                      <button
-                        type="button"
-                        disabled
-                        className="min-h-[44px] px-4 py-2 bg-neutral-100 text-neutral-400 text-xs uppercase tracking-wider font-semibold rounded-xs cursor-not-allowed"
-                      >
-                        Return Closed
-                      </button>
-                    )}
+                      )}
+                    </div>
                   </div>
+
+                  {isRequested && (
+                    <div
+                      role="status"
+                      aria-live="polite"
+                      className="mt-3 p-3 bg-[#FAF7F2] border border-[#E8E2D9] rounded-xs text-xs text-neutral-900 space-y-1"
+                    >
+                      <div className="flex items-center gap-1.5 font-semibold text-[#541920]">
+                        <Info className="w-3.5 h-3.5 shrink-0" aria-hidden="true" />
+                        <span>Demo Return Simulation for Order #{item.orderId}</span>
+                      </div>
+                      <p className="text-neutral-600 text-[11px] leading-relaxed">
+                        This is a demo store; no return request was transmitted or saved. For genuine return or exchange assistance, please email{" "}
+                        <a href="mailto:info@palluvo.store" className="underline text-[#541920] font-medium">
+                          info@palluvo.store
+                        </a>
+                        , call{" "}
+                        <a href="tel:+918498854323" className="underline text-[#541920] font-medium">
+                          +91 84988 54323
+                        </a>
+                        , or message on{" "}
+                        <a
+                          href="https://wa.me/918498854323"
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="underline text-[#075E54] hover:text-[#054C44] font-medium"
+                        >
+                          WhatsApp
+                        </a>
+                        .
+                      </p>
+                    </div>
+                  )}
                 </div>
               );
             })}

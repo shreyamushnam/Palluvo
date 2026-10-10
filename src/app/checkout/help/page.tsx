@@ -178,10 +178,10 @@ export default function CheckoutHelpPage() {
             <span>Ready to complete your order?</span>
           </div>
           <h2 className="text-lg sm:text-xl font-serif font-medium text-neutral-900">
-            Your Cart Items Are Reserved
+            Cart Items Are Not Reserved
           </h2>
           <p className="text-xs sm:text-sm text-neutral-600 max-w-md mx-auto leading-relaxed">
-            Return to the checkout window to verify your address, select payment, and place your order.
+            Items in your shopping bag are not held or reserved until checkout is completed. Return to checkout to finalize your order before pieces sell out.
           </p>
           <div className="pt-2">
             <Link
