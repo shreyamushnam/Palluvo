@@ -95,11 +95,6 @@ const organizationAndWebsiteJsonLd = {
       "url": "https://palluvo.com",
       "logo": "https://palluvo.com/images/logo.png",
       "description": "Premium Indian sarees online. Authentic handlooms, pure silk, and modern silhouettes.",
-      "sameAs": [
-        "https://instagram.com",
-        "https://facebook.com",
-        "https://pinterest.com",
-      ],
       "contactPoint": {
         "@type": "ContactPoint",
         "telephone": "+918498854323",

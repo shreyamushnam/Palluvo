@@ -4,7 +4,6 @@ import React, { useState } from "react";
 import Link from "next/link";
 import dynamic from "next/dynamic";
 import { Check } from "lucide-react";
-import { InstagramIcon, FacebookIcon, PinterestIcon, YoutubeIcon } from "@/components/icons/BrandIcons";
 import type { InfoModalTab } from "@/components/layout/InfoModal";
 
 const InfoModal = dynamic(
@@ -221,24 +220,6 @@ export const Footer: React.FC = () => {
                   </Link>
                 </li>
               </ul>
-
-              <p className="text-xs uppercase tracking-[0.2em] text-[#C5A575] font-semibold mb-1">
-                Follow Us
-              </p>
-              <div className="flex items-center gap-1 text-[#FAF7F2]/80 -ml-2">
-                <a href="https://instagram.com" target="_blank" rel="noreferrer" className="min-w-[44px] min-h-[44px] inline-flex items-center justify-center hover:text-[#C5A575] focus-visible:ring-2 focus-visible:ring-[#C5A575] focus-visible:outline-none rounded-xs" aria-label="Instagram">
-                  <InstagramIcon size={18} />
-                </a>
-                <a href="https://facebook.com" target="_blank" rel="noreferrer" className="min-w-[44px] min-h-[44px] inline-flex items-center justify-center hover:text-[#C5A575] focus-visible:ring-2 focus-visible:ring-[#C5A575] focus-visible:outline-none rounded-xs" aria-label="Facebook">
-                  <FacebookIcon size={18} />
-                </a>
-                <a href="https://pinterest.com" target="_blank" rel="noreferrer" className="min-w-[44px] min-h-[44px] inline-flex items-center justify-center hover:text-[#C5A575] focus-visible:ring-2 focus-visible:ring-[#C5A575] focus-visible:outline-none rounded-xs" aria-label="Pinterest">
-                  <PinterestIcon size={18} />
-                </a>
-                <a href="https://youtube.com" target="_blank" rel="noreferrer" className="min-w-[44px] min-h-[44px] inline-flex items-center justify-center hover:text-[#C5A575] focus-visible:ring-2 focus-visible:ring-[#C5A575] focus-visible:outline-none rounded-xs" aria-label="YouTube">
-                  <YoutubeIcon size={18} />
-                </a>
-              </div>
             </div>
 
           </div>
