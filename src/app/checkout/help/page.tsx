@@ -83,7 +83,7 @@ const HELP_SECTIONS = [
       },
       {
         question: "Direct Support Channels",
-        answer: "Reach our concierge team directly at contact@palluvo.com, call +91 84988 54323 / +91 81067 89789, or chat via WhatsApp for priority checkout help."
+        answer: "Reach our concierge team directly at contact@palluvo.com, call +91 88977 76984 / +91 84988 54323 / +91 81067 89789, or chat via WhatsApp for priority checkout help."
       }
     ]
   }

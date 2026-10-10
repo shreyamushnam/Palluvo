@@ -263,7 +263,7 @@ export default function CheckoutPage() {
                   Email: <a href="mailto:contact@palluvo.com" className="text-[#541920] font-medium hover:underline">contact@palluvo.com</a>
                 </p>
                 <p>
-                  Phone: <a href="tel:+918498854323" className="text-[#541920] font-medium hover:underline">+91 84988 54323</a> / <a href="tel:+918106789789" className="text-[#541920] font-medium hover:underline">+91 81067 89789</a> · <a href="https://wa.me/918498854323" target="_blank" rel="noopener noreferrer" className="text-[#075E54] hover:underline font-medium">WhatsApp</a>
+                  Phone: <a href="tel:+918897776984" className="text-[#541920] font-medium hover:underline">+91 88977 76984</a> / <a href="tel:+918498854323" className="text-[#541920] font-medium hover:underline">+91 84988 54323</a> / <a href="tel:+918106789789" className="text-[#541920] font-medium hover:underline">+91 81067 89789</a> · <a href="https://wa.me/918897776984" target="_blank" rel="noopener noreferrer" className="text-[#075E54] hover:underline font-medium">WhatsApp</a>
                 </p>
               </div>
             </div>
@@ -1181,7 +1181,7 @@ export default function CheckoutPage() {
                     Email: <a href="mailto:contact@palluvo.com" className="text-[#541920] hover:underline font-medium">contact@palluvo.com</a>
                   </p>
                   <p>
-                    Phone: <a href="tel:+918498854323" className="text-[#541920] hover:underline font-medium">+91 84988 54323</a> / <a href="tel:+918106789789" className="text-[#541920] hover:underline font-medium">+91 81067 89789</a> · <a href="https://wa.me/918498854323" target="_blank" rel="noopener noreferrer" className="text-[#075E54] hover:underline font-medium">WhatsApp</a>
+                    Phone: <a href="tel:+918897776984" className="text-[#541920] hover:underline font-medium">+91 88977 76984</a> / <a href="tel:+918498854323" className="text-[#541920] hover:underline font-medium">+91 84988 54323</a> / <a href="tel:+918106789789" className="text-[#541920] hover:underline font-medium">+91 81067 89789</a> · <a href="https://wa.me/918897776984" target="_blank" rel="noopener noreferrer" className="text-[#075E54] hover:underline font-medium">WhatsApp</a>
                   </p>
                 </div>
               </div>

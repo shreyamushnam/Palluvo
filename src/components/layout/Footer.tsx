@@ -170,6 +170,11 @@ export const Footer: React.FC = () => {
                   </a>
                 </li>
                 <li>
+                  <a href="tel:+918897776984" className="min-h-[44px] inline-flex items-center hover:text-[#C5A575] transition-colors focus-visible:ring-2 focus-visible:ring-[#C5A575] focus-visible:outline-none rounded-2xs">
+                    +91 88977 76984
+                  </a>
+                </li>
+                <li>
                   <a href="tel:+918498854323" className="min-h-[44px] inline-flex items-center hover:text-[#C5A575] transition-colors focus-visible:ring-2 focus-visible:ring-[#C5A575] focus-visible:outline-none rounded-2xs">
                     +91 84988 54323
                   </a>
