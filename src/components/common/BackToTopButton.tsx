@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import { ChevronUp } from "lucide-react";
+import { scrollToTop } from "@/utils/scroll";
 
 export const BackToTopButton: React.FC = () => {
   const [isVisible, setIsVisible] = useState(false);
@@ -21,18 +22,6 @@ export const BackToTopButton: React.FC = () => {
       window.removeEventListener("scroll", handleScroll);
     };
   }, []);
-
-  const scrollToTop = () => {
-    if (typeof window !== "undefined") {
-      const prefersReducedMotion = window.matchMedia?.(
-        "(prefers-reduced-motion: reduce)"
-      )?.matches;
-      window.scrollTo({
-        top: 0,
-        behavior: prefersReducedMotion ? "auto" : "smooth",
-      });
-    }
-  };
 
   return (
     <div

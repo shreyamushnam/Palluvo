@@ -5,6 +5,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Home, Grid, Heart, ShoppingBag, User } from "lucide-react";
 import { useStore } from "@/context/StoreContext";
+import { scrollToTop } from "@/utils/scroll";
 
 export const MobileBottomNav: React.FC = () => {
   const pathname = usePathname();
@@ -47,7 +48,7 @@ export const MobileBottomNav: React.FC = () => {
               key={item.label}
               onClick={() => {
                 if (pathname === "/cart") {
-                  window.scrollTo({ top: 0, behavior: "smooth" });
+                  scrollToTop();
                 } else {
                   setIsCartOpen(true);
                 }
