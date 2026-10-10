@@ -217,7 +217,7 @@ export const Footer: React.FC = () => {
                         PALLUVO Textile Studio, Road No. 36, Jubilee Hills, Hyderabad, Telangana 500033
                       </p>
                       <a
-                        href="https://www.google.com/maps/search/?api=1&query=PALLUVO+Textile+Studio,+Road+No.+36,+Jubilee+Hills,+Hyderabad,+Telangana+500033"
+                        href="https://maps.app.goo.gl/wkcLwsNgHp39z4pe7"
                         target="_blank"
                         rel="noopener noreferrer"
                         aria-label="Get directions to PALLUVO Atelier in Google Maps (opens in a new tab)"
