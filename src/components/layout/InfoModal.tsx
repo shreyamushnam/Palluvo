@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { X, Mail, Phone, Truck, RotateCcw, HelpCircle, BookOpen, Sparkles, CheckCircle2, ChevronDown, ChevronUp, Clock, Gift, ClipboardList, CreditCard } from "lucide-react";
+import { X, Mail, Phone, Truck, RotateCcw, HelpCircle, BookOpen, Sparkles, ChevronDown, ChevronUp, Clock, Gift, ClipboardList, CreditCard, Info } from "lucide-react";
 import { useFocusTrap } from "@/hooks/useFocusTrap";
 
 export type InfoModalTab = "contact" | "shipping" | "returns" | "faqs" | "story" | "craftsmanship";
@@ -74,13 +74,6 @@ export const InfoModal: React.FC<InfoModalProps> = ({
   const handleContactSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setContactFormSubmitted(true);
-    setTimeout(() => {
-      setContactFormSubmitted(false);
-      setContactName("");
-      setContactEmail("");
-      setContactPhone("");
-      setContactMessage("");
-    }, 4000);
   };
 
   return (
@@ -211,13 +204,40 @@ export const InfoModal: React.FC<InfoModalProps> = ({
 
                   {/* Quick message form */}
                   <div className="bg-white p-5 rounded-xs border border-[#E8E2D9]">
-                    <h4 className="font-serif text-sm font-semibold text-neutral-900 mb-3">
-                      Send Us a Message
-                    </h4>
+                    <div className="flex items-center justify-between gap-2 mb-1">
+                      <h4 className="font-serif text-sm font-semibold text-neutral-900">
+                        Send Us a Message
+                      </h4>
+                      <span className="text-[9px] uppercase font-semibold tracking-wider px-1.5 py-0.5 rounded bg-neutral-100 text-neutral-600 border border-neutral-200">
+                        Demo Control
+                      </span>
+                    </div>
+                    <p className="text-[11px] text-neutral-500 mb-3">
+                      This is a demonstration form for interface testing; messages are not transmitted. For assistance, call{" "}
+                      <a href="tel:+918045678900" className="underline font-medium text-[#541920]">
+                        +91 (80) 4567 8900
+                      </a>
+                      .
+                    </p>
                     {contactFormSubmitted ? (
-                      <div role="status" aria-live="polite" className="p-4 bg-green-50 border border-green-200 text-green-800 rounded-xs flex items-center gap-2 text-xs">
-                        <CheckCircle2 className="w-4 h-4 text-green-600 shrink-0" />
-                        <span>Thank you! Your message has been received. Our concierge will get back to you shortly.</span>
+                      <div role="status" aria-live="polite" className="p-3.5 bg-[#F4EFE6] border border-[#C5A575]/40 text-neutral-900 rounded-xs space-y-2 text-xs">
+                        <div className="flex items-start gap-2">
+                          <Info className="w-4 h-4 text-[#541920] shrink-0 mt-0.5" />
+                          <span>Demo simulation complete: No message was transmitted. For real customer inquiries, please call or email us directly.</span>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setContactFormSubmitted(false);
+                            setContactName("");
+                            setContactEmail("");
+                            setContactPhone("");
+                            setContactMessage("");
+                          }}
+                          className="text-[10px] font-semibold text-[#541920] hover:underline uppercase tracking-wider cursor-pointer"
+                        >
+                          ← Send another demo message
+                        </button>
                       </div>
                     ) : (
                       <form onSubmit={handleContactSubmit} className="space-y-3">

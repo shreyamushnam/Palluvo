@@ -53,16 +53,30 @@ export const Footer: React.FC = () => {
 
               {/* Newsletter Box */}
               <div className="mt-6">
-                <p className="text-xs uppercase tracking-wider text-[#C5A575] font-semibold mb-2">
-                  Get the latest from PALLUVO
+                <div className="flex items-center gap-2 mb-1">
+                  <p className="text-xs uppercase tracking-wider text-[#C5A575] font-semibold">
+                    Get the latest from PALLUVO
+                  </p>
+                  <span className="text-[9px] uppercase tracking-wider px-1.5 py-0.5 rounded bg-white/10 text-[#FAF7F2]/60 border border-white/10">
+                    Demo Control
+                  </span>
+                </div>
+                <p className="text-[11px] text-[#FAF7F2]/60 mb-2">
+                  Demo subscription form (no emails are collected or transmitted).
                 </p>
                 {subscribed ? (
                   <div
                     role="status"
                     aria-live="polite"
-                    className="flex items-center gap-2 text-xs text-[#A8D5BA] min-h-[44px]"
+                    className="flex flex-col gap-1 text-xs text-[#A8D5BA] min-h-[44px] justify-center"
                   >
-                    <Check size={16} /> Thank you for subscribing! Check your inbox for 10% off.
+                    <div className="flex items-center gap-1.5 font-medium">
+                      <Check size={14} className="shrink-0" />
+                      <span>Demo subscription simulated (no email sent).</span>
+                    </div>
+                    <span className="text-[11px] text-[#FAF7F2]/80">
+                      Use coupon code <strong className="text-[#C5A575] tracking-wide">PALLUVO10</strong> at checkout for 10% off!
+                    </span>
                   </div>
                 ) : (
                   <form onSubmit={handleSubscribe} className="flex max-w-sm gap-2">

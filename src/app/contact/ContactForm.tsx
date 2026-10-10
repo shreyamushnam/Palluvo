@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
-import { CheckCircle2, Send } from "lucide-react";
+import { Info, Send } from "lucide-react";
 
 export function ContactForm() {
   const [submitted, setSubmitted] = useState(false);
@@ -13,32 +13,71 @@ export function ContactForm() {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setSubmitted(true);
-    setTimeout(() => {
-      setSubmitted(false);
-      setName("");
-      setEmail("");
-      setPhone("");
-      setMessage("");
-    }, 4000);
+  };
+
+  const handleReset = () => {
+    setSubmitted(false);
+    setName("");
+    setEmail("");
+    setPhone("");
+    setMessage("");
   };
 
   return (
     <div className="bg-white p-6 sm:p-8 rounded-sm border border-[#E8E2D9] space-y-6">
       <div className="border-b border-[#E8E2D9] pb-3">
-        <h2 className="font-serif text-xl text-neutral-900">Send an Inquiry</h2>
+        <div className="flex items-center justify-between gap-2 flex-wrap">
+          <h2 className="font-serif text-xl text-neutral-900">Send an Inquiry</h2>
+          <span className="text-[10px] uppercase font-semibold tracking-wider px-2 py-0.5 rounded bg-neutral-100 text-neutral-600 border border-neutral-200">
+            Demo Control
+          </span>
+        </div>
         <p className="text-xs text-neutral-500 font-sans mt-0.5">
           Reach our dedicated saree stylists for bespoke orders, bridal trousseau curation, or shipment updates.
         </p>
+      </div>
+
+      <div className="p-3 bg-amber-50/80 border border-amber-200 text-amber-900 rounded-xs flex items-start gap-2.5 text-xs">
+        <Info className="w-4 h-4 text-amber-700 shrink-0 mt-0.5" aria-hidden="true" />
+        <div className="leading-relaxed">
+          <strong className="font-medium">Demonstration Notice:</strong> This prototype inquiry form is for interface testing only and does not transmit or store messages. For real customer assistance, reach us directly at{" "}
+          <a href="mailto:care@palluvo.com" className="underline font-medium hover:text-[#541920]">
+            care@palluvo.com
+          </a>{" "}
+          or{" "}
+          <a href="tel:+918045678900" className="underline font-medium hover:text-[#541920]">
+            +91 (80) 4567 8900
+          </a>
+          .
+        </div>
       </div>
 
       {submitted ? (
         <div
           role="status"
           aria-live="polite"
-          className="p-4 bg-[#F4EFE6] border border-[#C5A575]/40 text-neutral-900 rounded-xs flex items-center gap-2.5 text-xs"
+          className="p-4 bg-[#F4EFE6] border border-[#C5A575]/40 text-neutral-900 rounded-xs space-y-3 text-xs"
         >
-          <CheckCircle2 className="w-4 h-4 text-[#541920] shrink-0" />
-          <span>Thank you! Your message has been received. Our concierge will get back to you shortly.</span>
+          <div className="flex items-start gap-2.5">
+            <Info className="w-4 h-4 text-[#541920] shrink-0 mt-0.5" />
+            <div className="space-y-1">
+              <p className="font-semibold text-neutral-900">Demo Inquiry Simulated</p>
+              <p className="text-neutral-600">
+                This is a demo store; no inquiry was transmitted or saved. For real support, please email us directly at{" "}
+                <a href="mailto:care@palluvo.com" className="underline text-[#541920] font-medium">
+                  care@palluvo.com
+                </a>
+                .
+              </p>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={handleReset}
+            className="text-[11px] font-semibold text-[#541920] hover:underline uppercase tracking-wider cursor-pointer inline-block"
+          >
+            ← Send another demo inquiry
+          </button>
         </div>
       ) : (
         <form onSubmit={handleSubmit} className="space-y-4">

@@ -23,20 +23,17 @@ export const BackToTopButton: React.FC = () => {
     };
   }, []);
 
+  if (!isVisible) {
+    return null;
+  }
+
   return (
-    <div
-      className={`fixed left-1/2 -translate-x-1/2 bottom-20 sm:bottom-8 z-40 transition-all duration-300 ${
-        isVisible
-          ? "opacity-100 translate-y-0 pointer-events-auto"
-          : "opacity-0 translate-y-4 pointer-events-none"
-      }`}
-    >
+    <div className="fixed left-1/2 -translate-x-1/2 bottom-20 sm:bottom-8 z-40 animate-fade-in pointer-events-auto">
       <button
         type="button"
         onClick={scrollToTop}
         aria-label="Back to top"
         title="Back to top"
-        tabIndex={isVisible ? 0 : -1}
         className="w-11 h-11 min-w-[44px] min-h-[44px] rounded-full bg-white hover:bg-neutral-100 text-black shadow-lg hover:shadow-xl border border-neutral-200/80 transition-all duration-200 inline-flex items-center justify-center cursor-pointer focus-visible:ring-2 focus-visible:ring-black focus-visible:outline-none group"
       >
         <ChevronUp
