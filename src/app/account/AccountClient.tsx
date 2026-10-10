@@ -9,6 +9,34 @@ import { useStore } from "@/context/StoreContext";
 import { SavedAddress } from "@/data/mockOrders";
 import { useFocusTrap } from "@/hooks/useFocusTrap";
 
+function getSafeRedirectUrl(target: string | null | undefined): string {
+  if (!target || typeof target !== "string") return "/";
+  const trimmed = target.trim();
+  // Must start with '/' and strictly disallow protocol-relative paths ('//', '/\', '\\')
+  if (!trimmed.startsWith("/") || trimmed.startsWith("//") || trimmed.startsWith("/\\") || trimmed.startsWith("\\")) {
+    return "/";
+  }
+  // Reject control characters
+  if (/[\x00-\x1F\x7F]/.test(trimmed)) {
+    return "/";
+  }
+  try {
+    const parsed = new URL(trimmed, "http://localhost");
+    // Ensure origin remains dummy localhost and pathname starts with '/'
+    if (parsed.origin !== "http://localhost" || !parsed.pathname.startsWith("/")) {
+      return "/";
+    }
+    // Disallow colon in path component to block scheme smuggling
+    const pathOnly = trimmed.split("?")[0].split("#")[0];
+    if (pathOnly.includes(":")) {
+      return "/";
+    }
+    return `${parsed.pathname}${parsed.search}${parsed.hash}`;
+  } catch {
+    return "/";
+  }
+}
+
 export default function AccountPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -85,14 +113,14 @@ export default function AccountPage() {
     const email = loginIdentifier.includes("@") ? loginIdentifier : `${loginIdentifier || "radhika"}@palluvo.com`;
     login({ name: name.charAt(0).toUpperCase() + name.slice(1), email });
     showToast("Signed in to prototype session (local demo mode).");
-    const targetRedirect = redirectUrl || "/";
+    const targetRedirect = getSafeRedirectUrl(redirectUrl);
     router.push(targetRedirect);
   };
 
   const handleDemoSignIn = () => {
     login({ name: "Radhika Sharma", email: "radhika.sharma@example.com" });
     showToast("Signed in as Radhika Sharma (Demo Account)");
-    const targetRedirect = redirectUrl || "/";
+    const targetRedirect = getSafeRedirectUrl(redirectUrl);
     router.push(targetRedirect);
   };
 
@@ -102,7 +130,7 @@ export default function AccountPage() {
     const email = regEmail.trim() || "member@palluvo.com";
     login({ name, email });
     showToast("Prototype profile created in local session.");
-    const targetRedirect = redirectUrl || "/";
+    const targetRedirect = getSafeRedirectUrl(redirectUrl);
     router.push(targetRedirect);
   };
 

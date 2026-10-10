@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useCallback } from "react";
+import React, { useState, useCallback, useRef } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { X, Trash2, Plus, Minus, ShoppingBag, ArrowRight, ShieldCheck, Tag, Sparkles } from "lucide-react";
@@ -27,14 +27,23 @@ export const CartDrawer: React.FC = () => {
 
   const [inputCoupon, setInputCoupon] = useState("");
   const [couponError, setCouponError] = useState<string | null>(null);
-  const [touchStart, setTouchStart] = useState<{ x: number; y: number } | null>(null);
+  const itemListRef = useRef<HTMLDivElement>(null);
+  const [touchStart, setTouchStart] = useState<{
+    x: number;
+    y: number;
+    initialScrollTop: number;
+  } | null>(null);
 
   const closeCart = useCallback(() => setIsCartOpen(false), [setIsCartOpen]);
   const drawerRef = useFocusTrap<HTMLDivElement>({ isOpen: isCartOpen, onClose: closeCart });
 
   const handleTouchStart = (e: React.TouchEvent) => {
     if (e.touches.length === 1) {
-      setTouchStart({ x: e.touches[0].clientX, y: e.touches[0].clientY });
+      setTouchStart({
+        x: e.touches[0].clientX,
+        y: e.touches[0].clientY,
+        initialScrollTop: itemListRef.current ? itemListRef.current.scrollTop : 0,
+      });
     }
   };
 
@@ -42,8 +51,20 @@ export const CartDrawer: React.FC = () => {
     if (!touchStart || e.changedTouches.length === 0) return;
     const deltaX = e.changedTouches[0].clientX - touchStart.x;
     const deltaY = e.changedTouches[0].clientY - touchStart.y;
-    // Dismiss drawer on horizontal swipe-right (> 70px) or downward swipe (> 70px)
-    if (deltaX > 70 || deltaY > 70) {
+    const currentScrollTop = itemListRef.current ? itemListRef.current.scrollTop : 0;
+
+    // Horizontal swipe-to-dismiss (swipe right > 70px with limited vertical drift)
+    const isHorizontalDismiss = deltaX > 70 && Math.abs(deltaY) < 55;
+
+    // Downward swipe-to-dismiss: ONLY permitted when the list started at scrollTop 0,
+    // remains at scrollTop 0, and the gesture is predominantly vertical (> 70px with limited horizontal drift)
+    const isDownwardDismiss =
+      deltaY > 70 &&
+      Math.abs(deltaX) < 55 &&
+      touchStart.initialScrollTop <= 0 &&
+      currentScrollTop <= 0;
+
+    if (isHorizontalDismiss || isDownwardDismiss) {
       closeCart();
     }
     setTouchStart(null);
@@ -140,7 +161,7 @@ export const CartDrawer: React.FC = () => {
           </div>
 
           {/* Items List */}
-          <div className="flex-1 overflow-y-auto px-6 py-4 space-y-4 divide-y divide-[#EFEAE1]">
+          <div ref={itemListRef} className="flex-1 overflow-y-auto px-6 py-4 space-y-4 divide-y divide-[#EFEAE1]">
             {cart.length === 0 ? (
               <div className="py-16 text-center space-y-4">
                 <div className="w-16 h-16 mx-auto rounded-full bg-[#F4EFE6] flex items-center justify-center text-[#541920]">
