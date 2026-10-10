@@ -616,10 +616,10 @@ export const InfoModal: React.FC<InfoModalProps> = ({
 
           {/* Modal Footer */}
           <div className="px-6 py-3 bg-[#F4EFE6] border-t border-[#E8E2D9] flex items-center justify-between text-xs text-neutral-600">
-            <span>PALLUVO Client Concierge • Available 7 Days a Week</span>
+            <span>PALLUVO Client Concierge • Mon – Sat, 10 AM – 7 PM IST</span>
             <button
               onClick={onClose}
-              className="px-4 py-1.5 bg-[#541920] hover:bg-[#3D1217] text-white text-[11px] uppercase tracking-wider font-semibold rounded-xs transition-colors"
+              className="px-4 py-1.5 bg-[#541920] hover:bg-[#3D1217] text-white text-[11px] uppercase tracking-wider font-semibold rounded-xs transition-colors cursor-pointer"
             >
               Close Window
             </button>
