@@ -3,12 +3,17 @@
 import React, { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Package, MapPin, User, Truck, CheckCircle2, ShieldCheck, Plus, X, Edit2, Trash2, Check, RotateCcw, LogOut, Sparkles, Award, Headphones, ArrowRight, Lock, Info } from "lucide-react";
 import { useStore } from "@/context/StoreContext";
 import { SavedAddress } from "@/data/mockOrders";
 import { useFocusTrap } from "@/hooks/useFocusTrap";
 
 export default function AccountPage() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const redirectUrl = searchParams.get("redirect");
+
   const {
     orders,
     formatPrice,
@@ -80,11 +85,15 @@ export default function AccountPage() {
     const email = loginIdentifier.includes("@") ? loginIdentifier : `${loginIdentifier || "radhika"}@palluvo.com`;
     login({ name: name.charAt(0).toUpperCase() + name.slice(1), email });
     showToast("Signed in to prototype session (local demo mode).");
+    const targetRedirect = redirectUrl || "/";
+    router.push(targetRedirect);
   };
 
   const handleDemoSignIn = () => {
     login({ name: "Radhika Sharma", email: "radhika.sharma@example.com" });
     showToast("Signed in as Radhika Sharma (Demo Account)");
+    const targetRedirect = redirectUrl || "/";
+    router.push(targetRedirect);
   };
 
   const handleRegisterSubmit = (e: React.FormEvent) => {
@@ -93,6 +102,8 @@ export default function AccountPage() {
     const email = regEmail.trim() || "member@palluvo.com";
     login({ name, email });
     showToast("Prototype profile created in local session.");
+    const targetRedirect = redirectUrl || "/";
+    router.push(targetRedirect);
   };
 
   const handleSignOut = () => {

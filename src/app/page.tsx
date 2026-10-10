@@ -7,6 +7,7 @@ import { ShopTheLook } from "@/components/home/ShopTheLook";
 import { CollectionBanner } from "@/components/home/CollectionBanner";
 import { TrustSection } from "@/components/home/TrustSection";
 import { InstagramGrid } from "@/components/home/InstagramGrid";
+import { OfferWelcomeModal } from "@/components/home/OfferWelcomeModal";
 
 export const metadata: Metadata = {
   title: "PALLUVO | Buy Designer Sarees Online | Pure Silk, Handloom, & Bridal",
@@ -20,6 +21,9 @@ export const metadata: Metadata = {
 export default function HomePage() {
   return (
     <div className="min-h-screen bg-[#FAF7F2]">
+      {/* Welcome 10% Offer Modal for Signed-In Members */}
+      <OfferWelcomeModal />
+
       {/* E-Commerce Hero Banner with CTAs & Live Badges */}
       <HeroBanner />
 
