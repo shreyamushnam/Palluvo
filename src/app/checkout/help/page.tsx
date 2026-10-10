@@ -32,8 +32,12 @@ const HELP_SECTIONS = [
         answer: "This prototype does not connect to a live payment gateway, so no real payment methods are processed. The checkout form is a simulation for demonstration only."
       },
       {
-        question: "Is my payment transaction secure?",
-        answer: "No real transactions take place in this prototype. Please do not enter real card or banking details; no live gateway is connected and no actual charge occurs."
+        question: "Is my payment transaction and personal data secure?",
+        answer: "No real payment transactions take place in this prototype. Please do not enter real card, banking, or sensitive personal shipping details. In this demo storefront, simulated orders and entered shipping addresses are stored locally in your browser (localStorage). They are accessible on this device profile and can be cleared at any time from your account or checkout confirmation screen."
+      },
+      {
+        question: "How are my entered shipping and contact details handled?",
+        answer: "Shipping addresses and contact numbers entered during checkout are retained only in local browser storage on this device to simulate order tracking in your account. They are not transmitted to a backend server. To safeguard your privacy on shared computers, use sample details or clear stored orders after testing."
       },
       {
         question: "What should I do if money was debited but the order shows pending?",

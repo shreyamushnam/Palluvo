@@ -51,6 +51,7 @@ export default function AccountPage() {
 
   const {
     orders,
+    clearOrders,
     formatPrice,
     showToast,
     addresses,
@@ -627,9 +628,20 @@ export default function AccountPage() {
                 tabIndex={0}
                 className="space-y-6 focus-visible:outline-none"
               >
-                <div className="flex items-center justify-between">
-                  <h2 className="font-serif text-xl text-neutral-900">Order History</h2>
-                  <span className="text-xs text-neutral-600 font-sans">{orders.length} Total orders</span>
+                <div className="flex items-center justify-between gap-3 flex-wrap">
+                  <div>
+                    <h2 className="font-serif text-xl text-neutral-900">Order History</h2>
+                    <span className="text-xs text-neutral-600 font-sans">{orders.length} Total orders (Stored locally)</span>
+                  </div>
+                  {orders.length > 0 && (
+                    <button
+                      type="button"
+                      onClick={() => clearOrders()}
+                      className="min-h-[38px] px-3 py-1.5 text-xs text-[#541920] border border-[#DCD5C9] hover:bg-[#FAF7F2] rounded-xs font-semibold transition-colors cursor-pointer focus-visible:ring-2 focus-visible:ring-[#541920] focus-visible:outline-none"
+                    >
+                      Clear Stored Orders
+                    </button>
+                  )}
                 </div>
 
                 {orders.length === 0 ? (

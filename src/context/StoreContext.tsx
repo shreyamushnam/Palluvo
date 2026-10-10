@@ -48,6 +48,7 @@ interface StoreContextType {
   applyCoupon: (code: string) => { success: boolean; message: string };
   removeCoupon: () => void;
   placeOrder: (order: Omit<OrderRecord, "id" | "orderNumber" | "date" | "status" | "deliveryDate">) => OrderRecord;
+  clearOrders: () => void;
   addAddress: (address: Omit<SavedAddress, "id">) => SavedAddress;
   updateAddress: (id: string, address: Partial<SavedAddress>) => void;
   deleteAddress: (id: string) => void;
@@ -340,6 +341,14 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     [clearCart]
   );
 
+  const clearOrders = useCallback(() => {
+    setOrders([]);
+    try {
+      localStorage.removeItem("palluvo_ecommerce_orders");
+    } catch {}
+    showToast("Simulated order history cleared", "info");
+  }, [showToast]);
+
   const addAddress = useCallback(
     (newAddrData: Omit<SavedAddress, "id">): SavedAddress => {
       const newAddress: SavedAddress = {
@@ -433,6 +442,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       applyCoupon,
       removeCoupon,
       placeOrder,
+      clearOrders,
       addAddress,
       updateAddress,
       deleteAddress,
@@ -474,6 +484,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       applyCoupon,
       removeCoupon,
       placeOrder,
+      clearOrders,
       addAddress,
       updateAddress,
       deleteAddress,

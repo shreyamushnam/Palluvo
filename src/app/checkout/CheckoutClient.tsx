@@ -35,6 +35,7 @@ export default function CheckoutPage() {
     finalTotal,
     formatPrice,
     placeOrder,
+    clearOrders,
     showToast,
     addresses,
     isLoggedIn,
@@ -240,9 +241,14 @@ export default function CheckoutPage() {
             <div className="bg-[#FAF7F2] p-4 rounded-xs border border-[#E8E2D9] text-left text-xs space-y-2.5">
               <div className="p-3 bg-white border border-[#C5A575]/40 rounded-xs flex items-start gap-2.5 text-neutral-700">
                 <Info className="w-4 h-4 text-[#541920] shrink-0 mt-0.5" />
-                <p className="text-[11px] leading-relaxed">
-                  <strong>Simulated Transaction Notice:</strong> No actual payment was charged to your card, UPI, or bank account. This simulated order has been saved to your local browser storage for workflow review.
-                </p>
+                <div className="space-y-1">
+                  <p className="text-[11px] leading-relaxed">
+                    <strong>Simulated Transaction & Local Storage Notice:</strong> No actual payment was charged. This simulated order and entered shipping address have been saved to your local browser storage (<code className="font-mono bg-[#FAF7F2] px-1 py-0.5 rounded border border-[#E8E2D9]">localStorage</code>) for prototype review on this device.
+                  </p>
+                  <p className="text-[11px] text-neutral-500">
+                    If using a shared or public browser profile, you can clear stored prototype order data below.
+                  </p>
+                </div>
               </div>
 
               <div className="pt-2 border-t border-[#E8E2D9] flex justify-between text-neutral-800">
@@ -271,16 +277,29 @@ export default function CheckoutPage() {
             <div className="flex flex-col sm:flex-row gap-3 pt-2">
               <Link
                 href="/account"
-                className="flex-1 py-3 bg-[#541920] text-white text-xs uppercase tracking-widest font-semibold rounded-xs shadow-xs hover:bg-[#3D1217] transition-colors text-center"
+                className="flex-1 min-h-[44px] inline-flex items-center justify-center py-3 bg-[#541920] text-white text-xs uppercase tracking-widest font-semibold rounded-xs shadow-xs hover:bg-[#3D1217] transition-colors text-center focus-visible:ring-2 focus-visible:ring-[#541920] focus-visible:outline-none"
               >
                 Track In My Orders
               </Link>
               <Link
                 href="/shop"
-                className="flex-1 py-3 bg-white border border-[#DCD5C9] text-neutral-900 text-xs uppercase tracking-widest font-semibold rounded-xs hover:bg-[#FAF7F2] transition-colors text-center"
+                className="flex-1 min-h-[44px] inline-flex items-center justify-center py-3 bg-white border border-[#DCD5C9] text-neutral-900 text-xs uppercase tracking-widest font-semibold rounded-xs hover:bg-[#FAF7F2] transition-colors text-center focus-visible:ring-2 focus-visible:ring-[#541920] focus-visible:outline-none"
               >
                 Continue Shopping
               </Link>
+            </div>
+
+            <div className="pt-1">
+              <button
+                type="button"
+                onClick={() => {
+                  clearOrders();
+                  showToast("Simulated order history cleared from browser storage");
+                }}
+                className="min-h-[44px] px-4 py-2 border border-[#DCD5C9] text-neutral-700 hover:text-[#541920] hover:bg-[#FAF7F2] text-[11px] uppercase tracking-wider font-semibold rounded-xs transition-colors cursor-pointer focus-visible:ring-2 focus-visible:ring-[#541920] focus-visible:outline-none"
+              >
+                Clear Stored Prototype Orders
+              </button>
             </div>
           </div>
         </div>
@@ -399,6 +418,39 @@ export default function CheckoutPage() {
 
               {step === 1 ? (
                 <form onSubmit={handleAddressSubmit} className="p-6 space-y-4 text-xs">
+                  {/* Privacy / Prototype Local Storage Notice */}
+                  <div className="p-3.5 bg-[#FAF7F2] border border-[#E8E2D9] rounded-xs text-xs text-neutral-800 space-y-1.5">
+                    <div className="flex items-center gap-1.5 font-semibold text-[#541920]">
+                      <Info className="w-4 h-4 shrink-0" aria-hidden="true" />
+                      <span>Demo Privacy & Storage Notice</span>
+                    </div>
+                    <p className="text-neutral-600 text-[11px] leading-relaxed">
+                      Please do not enter real personal, confidential, or sensitive shipping details. In this prototype, entered names, addresses, and phone numbers are stored strictly in your browser&apos;s local storage (<code className="font-mono bg-white px-1 py-0.5 rounded border border-[#E8E2D9]">localStorage</code>) to demonstrate simulated order workflows on this device.
+                    </p>
+                    <div className="pt-1">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setShippingAddress({
+                            fullName: "Ananya Rao",
+                            phone: "9876543210",
+                            email: "ananya.sample@example.com",
+                            addressLine1: "Flat 402, Lotus Grand, Banjara Hills",
+                            landmark: "Near City Center",
+                            city: "Hyderabad",
+                            state: "Telangana",
+                            pincode: "500034",
+                          });
+                          setSelectedAddressId("");
+                          showToast("Filled sample shipping details!");
+                        }}
+                        className="min-h-[36px] px-3 py-1 bg-[#541920]/10 hover:bg-[#541920]/15 text-[#541920] font-semibold text-[11px] rounded-xs transition-colors cursor-pointer focus-visible:ring-2 focus-visible:ring-[#541920] focus-visible:outline-none"
+                      >
+                        Fill Sample Details
+                      </button>
+                    </div>
+                  </div>
+
                   {/* Saved addresses selector */}
                   {addresses && addresses.length > 0 && (
                     <div className="space-y-2 pb-3 border-b border-[#E8E2D9]">
