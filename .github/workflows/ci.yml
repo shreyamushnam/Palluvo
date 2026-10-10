@@ -2,9 +2,8 @@ name: CI Audit & Build Verification
 
 on:
   push:
-    branches: [main, master, feature/**]
-  pull_request:
     branches: [main, master, "feature/**"]
+  pull_request:
 
 jobs:
   audit-and-build:
