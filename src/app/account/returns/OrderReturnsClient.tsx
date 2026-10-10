@@ -67,7 +67,7 @@ const RETURN_STEPS = [
   },
   {
     step: "03",
-    title: "Instant Refund / Dispatch",
+    title: "Quality Check & Refund / Dispatch",
     description: "Upon atelier quality check (unworn, intact Silk Mark tags), replacement is dispatched or refund is credited within 24–48 hours.",
     icon: <PackageCheck className="w-5 h-5 text-[#C5A575]" />,
   },

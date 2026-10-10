@@ -47,19 +47,19 @@ const HELP_SECTIONS = [
   },
   {
     icon: <Truck className="w-5 h-5 text-[#541920]" />,
-    title: "Insured Delivery & Shipping Timelines",
+    title: "Insured Delivery & Shipping Timelines (Illustrative Policy)",
     items: [
       {
-        question: "How long does shipping take?",
-        answer: "Standard Insured Delivery arrives in 3–5 business days across metros and 5–7 days across other Indian pin codes. Express shipments are dispatched directly from our regional atelier studios with real-time SMS and email tracking."
+        question: "How long does shipping take for real atelier orders?",
+        answer: "Our official brand shipping policy provides standard insured delivery in 3–5 business days across metros and 5–7 days across other Indian pin codes, with express dispatches and courier tracking. Note that orders placed through this prototype website are local simulations and do not trigger physical courier dispatch or real-time SMS/email notifications."
       },
       {
         question: "Is high-value bridal silk insured during transit?",
-        answer: "Yes, every PALLUVO consignment is 100% transit-insured and packaged in tamper-evident, moisture-resistant luxury boxes with unique security void seals."
+        answer: "Under our atelier fulfillment policy, all genuine consignments are 100% transit-insured and packaged in tamper-evident luxury keepsake boxes. Orders placed within this demo checkout are simulations and do not initiate live shipments or insurance coverage."
       },
       {
         question: "Do you offer complimentary shipping?",
-        answer: "All domestic orders over ₹1,999 qualify for complimentary insured courier delivery."
+        answer: "Our standard policy provides complimentary insured courier delivery for domestic orders over ₹1,999. The prototype checkout calculates this threshold for demonstration."
       }
     ]
   },
