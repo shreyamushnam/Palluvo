@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { Pause, Play } from "lucide-react";
@@ -72,10 +72,37 @@ export const HeroBanner: React.FC = () => {
   const [currentSlideIdx, setCurrentSlideIdx] = useState(0);
   const [isHovered, setIsHovered] = useState(false);
   const [isManuallyPaused, setIsManuallyPaused] = useState(false);
+  const [isFocusPaused, setIsFocusPaused] = useState(false);
   const [prefersReducedMotion, setPrefersReducedMotion] = useState(false);
   const [liveAnnouncement, setLiveAnnouncement] = useState("");
+  const isKeyboardFocusRef = useRef(false);
   const totalSlides = SLIDES.length;
   const slide = SLIDES[currentSlideIdx];
+
+  // Distinguish keyboard navigation from pointer / touch clicks to prevent focus events
+  // triggered by mouse clicks from pre-empting or inverting the Pause button's toggle state.
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Tab" || e.key.startsWith("Arrow")) {
+        isKeyboardFocusRef.current = true;
+      }
+    };
+    const handlePointerDown = () => {
+      isKeyboardFocusRef.current = false;
+    };
+
+    window.addEventListener("keydown", handleKeyDown, true);
+    window.addEventListener("pointerdown", handlePointerDown, true);
+    window.addEventListener("mousedown", handlePointerDown, true);
+    window.addEventListener("touchstart", handlePointerDown, true);
+
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown, true);
+      window.removeEventListener("pointerdown", handlePointerDown, true);
+      window.removeEventListener("mousedown", handlePointerDown, true);
+      window.removeEventListener("touchstart", handlePointerDown, true);
+    };
+  }, []);
 
   // Detect user preference for reduced motion
   useEffect(() => {
@@ -93,7 +120,8 @@ export const HeroBanner: React.FC = () => {
     };
   }, []);
 
-  const isPaused = isHovered || isManuallyPaused || prefersReducedMotion;
+  const isExplicitlyPaused = isManuallyPaused || isFocusPaused;
+  const isPaused = isHovered || isExplicitlyPaused || prefersReducedMotion;
 
   // Auto-advance showcase slides every 4.5 seconds (does NOT trigger live announcements)
   useEffect(() => {
@@ -117,13 +145,15 @@ export const HeroBanner: React.FC = () => {
 
   const handleTogglePause = () => {
     if (prefersReducedMotion) return;
-    setIsManuallyPaused((prev) => {
-      const nextPaused = !prev;
-      setLiveAnnouncement(
-        nextPaused ? "Carousel paused" : "Carousel auto-rotation resumed"
-      );
-      return nextPaused;
-    });
+    if (isExplicitlyPaused) {
+      setIsManuallyPaused(false);
+      setIsFocusPaused(false);
+      setLiveAnnouncement("Carousel auto-rotation resumed");
+    } else {
+      setIsManuallyPaused(true);
+      setIsFocusPaused(false);
+      setLiveAnnouncement("Carousel paused");
+    }
   };
 
   return (
@@ -135,10 +165,14 @@ export const HeroBanner: React.FC = () => {
       onMouseLeave={() => setIsHovered(false)}
       onTouchStart={() => setIsHovered(true)}
       onTouchEnd={() => setIsHovered(false)}
-      onFocus={() => {
-        // WAI Carousel Pattern: When carousel receives keyboard focus, rotation stops persistently
-        // until explicitly restarted by the user.
-        setIsManuallyPaused(true);
+      onFocus={(e) => {
+        // WAI Carousel Pattern: When keyboard navigation enters the carousel, rotation stops
+        // persistently until explicitly restarted by the user.
+        if (isKeyboardFocusRef.current) {
+          if (!e.currentTarget.contains(e.relatedTarget as Node | null)) {
+            setIsFocusPaused(true);
+          }
+        }
       }}
     >
       {/* Screen-reader live announcement ONLY for user-initiated actions */}
@@ -261,11 +295,11 @@ export const HeroBanner: React.FC = () => {
                       aria-label={
                         prefersReducedMotion
                           ? "Auto-rotation disabled by system reduced motion preference"
-                          : isManuallyPaused
+                          : isExplicitlyPaused
                           ? "Resume auto-rotating carousel"
                           : "Pause auto-rotating carousel"
                       }
-                      aria-pressed={prefersReducedMotion || isManuallyPaused}
+                      aria-pressed={prefersReducedMotion || isExplicitlyPaused}
                       className={`relative min-w-[44px] min-h-[44px] flex items-center justify-center rounded-full transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-black/50 ${
                         prefersReducedMotion
                           ? "opacity-60 cursor-not-allowed text-white/60"
@@ -273,7 +307,7 @@ export const HeroBanner: React.FC = () => {
                       }`}
                     >
                       <span className="w-8 h-8 rounded-full bg-black/45 backdrop-blur-md hover:bg-black/60 flex items-center justify-center border border-white/20 shadow-sm transition-all">
-                        {prefersReducedMotion || isManuallyPaused ? (
+                        {prefersReducedMotion || isExplicitlyPaused ? (
                           <Play className="w-3.5 h-3.5 fill-current" aria-hidden="true" />
                         ) : (
                           <Pause className="w-3.5 h-3.5 fill-current" aria-hidden="true" />
