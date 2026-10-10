@@ -43,11 +43,14 @@ export const BackToTopButton: React.FC = () => {
         type="button"
         onClick={scrollToTop}
         aria-label="Back to top"
+        title="Back to top"
         tabIndex={isVisible ? 0 : -1}
-        className="min-h-[44px] min-w-[44px] px-4 py-2.5 bg-[#1C1A18]/90 hover:bg-[#1C1A18] backdrop-blur-md text-[#FAF7F2] text-[10px] sm:text-xs font-semibold tracking-widest uppercase rounded-full border border-[#C5A575]/35 hover:border-[#C5A575] shadow-xl hover:shadow-2xl transition-all duration-200 inline-flex items-center justify-center gap-1.5 cursor-pointer focus-visible:ring-2 focus-visible:ring-[#C5A575] focus-visible:outline-none group"
+        className="w-11 h-11 min-w-[44px] min-h-[44px] rounded-full bg-white hover:bg-neutral-100 text-black shadow-lg hover:shadow-xl border border-neutral-200/80 transition-all duration-200 inline-flex items-center justify-center cursor-pointer focus-visible:ring-2 focus-visible:ring-black focus-visible:outline-none group"
       >
-        <ChevronUp className="w-3.5 h-3.5 text-[#C5A575] group-hover:-translate-y-0.5 transition-transform duration-200 shrink-0" aria-hidden="true" />
-        <span>TOP</span>
+        <ChevronUp
+          className="w-5 h-5 text-black group-hover:-translate-y-0.5 transition-transform duration-200 shrink-0"
+          aria-hidden="true"
+        />
       </button>
     </div>
   );
