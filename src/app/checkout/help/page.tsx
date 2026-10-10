@@ -37,7 +37,7 @@ const HELP_SECTIONS = [
       },
       {
         question: "What should I do if money was debited but the order shows pending?",
-        answer: "If your bank debited the amount during network timeout, bank gateways auto-reconcile within 2 hours. If your order isn't confirmed, the debited sum reverses automatically to your source account within 2-4 business days."
+        answer: "No real debit or refund timeline applies. This prototype never contacts a bank or payment gateway, so no money is debited and nothing needs to be reversed. If you believe you were charged elsewhere, contact your bank."
       }
     ]
   },
