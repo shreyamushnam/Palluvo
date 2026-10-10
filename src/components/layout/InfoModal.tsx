@@ -188,16 +188,42 @@ export const InfoModal: React.FC<InfoModalProps> = ({
                     <div className="p-3.5 bg-white border border-[#E8E2D9] rounded-xs flex items-start gap-3">
                       <Phone className="w-4 h-4 text-[#541920] shrink-0 mt-0.5" />
                       <div>
-                        <strong className="block text-neutral-900">WhatsApp & Phone</strong>
-                        <div className="space-y-0.5">
-                          <a href="tel:+918498854323" className="text-[#541920] hover:underline block font-medium">
-                            +91 84988 54323
-                          </a>
-                          <a href="tel:+918106789789" className="text-[#541920] hover:underline block font-medium">
-                            +91 81067 89789
-                          </a>
+                        <strong className="block text-neutral-900">WhatsApp & Phone Care</strong>
+                        <div className="space-y-1 mt-1">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className="font-medium text-neutral-900">+91 84988 54323</span>
+                            <span className="text-neutral-300">|</span>
+                            <a href="tel:+918498854323" className="text-[#541920] hover:underline font-medium">
+                              Call
+                            </a>
+                            <span className="text-neutral-300">·</span>
+                            <a
+                              href="https://wa.me/918498854323"
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-[#128C7E] hover:underline font-medium"
+                            >
+                              WhatsApp
+                            </a>
+                          </div>
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className="font-medium text-neutral-900">+91 81067 89789</span>
+                            <span className="text-neutral-300">|</span>
+                            <a href="tel:+918106789789" className="text-[#541920] hover:underline font-medium">
+                              Call
+                            </a>
+                            <span className="text-neutral-300">·</span>
+                            <a
+                              href="https://wa.me/918106789789"
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-[#128C7E] hover:underline font-medium"
+                            >
+                              WhatsApp
+                            </a>
+                          </div>
                         </div>
-                        <p className="text-[11px] text-neutral-600 mt-0.5">Mon - Sat, 10 AM to 7 PM IST</p>
+                        <p className="text-[11px] text-neutral-600 mt-1">Mon - Sat, 10 AM to 7 PM IST</p>
                       </div>
                     </div>
                   </div>
@@ -213,9 +239,13 @@ export const InfoModal: React.FC<InfoModalProps> = ({
                       </span>
                     </div>
                     <p className="text-[11px] text-neutral-500 mb-3">
-                      This is a demonstration form for interface testing; messages are not transmitted. For assistance, call{" "}
-                      <a href="tel:+918045678900" className="underline font-medium text-[#541920]">
-                        +91 (80) 4567 8900
+                      This is a demonstration form for interface testing; messages are not transmitted. For assistance, reach us at{" "}
+                      <a href="mailto:contact@palluvo.com" className="underline font-medium text-[#541920]">
+                        contact@palluvo.com
+                      </a>{" "}
+                      or call / WhatsApp{" "}
+                      <a href="tel:+918498854323" className="underline font-medium text-[#541920]">
+                        +91 84988 54323
                       </a>
                       .
                     </p>

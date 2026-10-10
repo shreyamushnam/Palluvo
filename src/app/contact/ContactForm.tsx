@@ -41,12 +41,21 @@ export function ContactForm() {
         <Info className="w-4 h-4 text-amber-700 shrink-0 mt-0.5" aria-hidden="true" />
         <div className="leading-relaxed">
           <strong className="font-medium">Demonstration Notice:</strong> This prototype inquiry form is for interface testing only and does not transmit or store messages. For real customer assistance, reach us directly at{" "}
-          <a href="mailto:care@palluvo.com" className="underline font-medium hover:text-[#541920]">
-            care@palluvo.com
+          <a href="mailto:contact@palluvo.com" className="underline font-medium hover:text-[#541920]">
+            contact@palluvo.com
           </a>{" "}
-          or{" "}
-          <a href="tel:+918045678900" className="underline font-medium hover:text-[#541920]">
-            +91 (80) 4567 8900
+          or call / WhatsApp{" "}
+          <a href="tel:+918498854323" className="underline font-medium hover:text-[#541920]">
+            +91 84988 54323
+          </a>{" "}
+          /{" "}
+          <a
+            href="https://wa.me/918498854323"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="underline font-medium text-[#128C7E] hover:text-[#075E54]"
+          >
+            WhatsApp
           </a>
           .
         </div>
@@ -64,8 +73,12 @@ export function ContactForm() {
               <p className="font-semibold text-neutral-900">Demo Inquiry Simulated</p>
               <p className="text-neutral-600">
                 This is a demo store; no inquiry was transmitted or saved. For real support, please email us directly at{" "}
-                <a href="mailto:care@palluvo.com" className="underline text-[#541920] font-medium">
-                  care@palluvo.com
+                <a href="mailto:contact@palluvo.com" className="underline text-[#541920] font-medium">
+                  contact@palluvo.com
+                </a>{" "}
+                or call/WhatsApp{" "}
+                <a href="tel:+918498854323" className="underline text-[#541920] font-medium">
+                  +91 84988 54323
                 </a>
                 .
               </p>

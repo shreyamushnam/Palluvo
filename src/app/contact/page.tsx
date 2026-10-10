@@ -44,19 +44,45 @@ export default function ContactPage() {
                 <Phone className="w-4 h-4 text-[#541920] shrink-0 mt-0.5" />
                 <div>
                   <strong className="block text-neutral-900 font-semibold">WhatsApp & Phone Care</strong>
-                  <div className="space-y-1 mt-1">
-                    <a
-                      href="tel:+918498854323"
-                      className="min-h-[44px] py-1.5 text-[#541920] hover:underline flex items-center font-medium focus-visible:ring-2 focus-visible:ring-[#541920] focus-visible:outline-none"
-                    >
-                      +91 84988 54323
-                    </a>
-                    <a
-                      href="tel:+918106789789"
-                      className="min-h-[44px] py-1.5 text-[#541920] hover:underline flex items-center font-medium focus-visible:ring-2 focus-visible:ring-[#541920] focus-visible:outline-none"
-                    >
-                      +91 81067 89789
-                    </a>
+                  <div className="space-y-2 mt-1.5">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="font-medium text-neutral-800">+91 84988 54323</span>
+                      <span className="text-neutral-300">|</span>
+                      <a
+                        href="tel:+918498854323"
+                        className="min-h-[44px] px-2 py-1 text-[#541920] hover:underline inline-flex items-center font-medium focus-visible:ring-2 focus-visible:ring-[#541920] focus-visible:outline-none"
+                      >
+                        Call
+                      </a>
+                      <span className="text-neutral-300">·</span>
+                      <a
+                        href="https://wa.me/918498854323"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="min-h-[44px] px-2 py-1 text-[#128C7E] hover:underline inline-flex items-center font-medium focus-visible:ring-2 focus-visible:ring-[#128C7E] focus-visible:outline-none"
+                      >
+                        WhatsApp
+                      </a>
+                    </div>
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="font-medium text-neutral-800">+91 81067 89789</span>
+                      <span className="text-neutral-300">|</span>
+                      <a
+                        href="tel:+918106789789"
+                        className="min-h-[44px] px-2 py-1 text-[#541920] hover:underline inline-flex items-center font-medium focus-visible:ring-2 focus-visible:ring-[#541920] focus-visible:outline-none"
+                      >
+                        Call
+                      </a>
+                      <span className="text-neutral-300">·</span>
+                      <a
+                        href="https://wa.me/918106789789"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="min-h-[44px] px-2 py-1 text-[#128C7E] hover:underline inline-flex items-center font-medium focus-visible:ring-2 focus-visible:ring-[#128C7E] focus-visible:outline-none"
+                      >
+                        WhatsApp
+                      </a>
+                    </div>
                   </div>
                 </div>
               </div>
