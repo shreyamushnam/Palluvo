@@ -2,8 +2,8 @@ import type { Metadata } from "next";
 import CheckoutClient from "./CheckoutClient";
 
 export const metadata: Metadata = {
-  title: "Secure Checkout | PALLUVO",
-  description: "Complete your order with 256-bit SSL encrypted checkout, verified Indian payment options, and insured luxury doorstep delivery.",
+  title: "Demo Checkout | PALLUVO",
+  description: "Try the PALLUVO prototype checkout. This is a demo simulation: no live payment gateway is connected and no real charge is made.",
   alternates: {
     canonical: "/checkout",
   },

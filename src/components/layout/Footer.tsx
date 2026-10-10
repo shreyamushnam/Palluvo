@@ -232,7 +232,7 @@ export const Footer: React.FC = () => {
               <span>•</span>
               <span>Silk Mark Certified</span>
               <span>•</span>
-              <span>Secure 256-Bit SSL Checkout</span>
+              <span>Demo Checkout – No Real Payment</span>
             </div>
           </div>
 

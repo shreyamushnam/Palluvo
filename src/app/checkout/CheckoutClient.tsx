@@ -314,7 +314,7 @@ export default function CheckoutPage() {
 
               <div className="sm:hidden flex items-center gap-1 text-[11px] text-[#15803D] font-medium shrink-0">
                 <Lock className="w-3.5 h-3.5 shrink-0" />
-                <span>256-bit Secure</span>
+                <span>Demo Checkout</span>
               </div>
             </div>
 
@@ -352,7 +352,7 @@ export default function CheckoutPage() {
 
             <div className="hidden sm:flex items-center gap-1.5 text-xs text-[#15803D] font-medium shrink-0">
               <Lock className="w-3.5 h-3.5 shrink-0" />
-              <span>256-bit Secure</span>
+              <span>Demo Checkout</span>
             </div>
           </div>
         </div>

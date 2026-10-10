@@ -16,8 +16,8 @@ const TRUST_PILLARS = [
   },
   {
     icon: ShieldCheck,
-    title: "Secure Payments",
-    description: "Safe and secure checkout",
+    title: "Simple Checkout",
+    description: "Demo checkout, no real payment",
   },
   {
     icon: RotateCcw,

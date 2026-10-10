@@ -29,11 +29,11 @@ const HELP_SECTIONS = [
     items: [
       {
         question: "Which payment options are supported?",
-        answer: "We support instant UPI (Google Pay, PhonePe, Paytm, BHIM), all major Credit/Debit Cards (Visa, MasterCard, RuPay, Amex), Net Banking across 50+ Indian banks, and flexible zero-cost EMI plans on eligible cards."
+        answer: "This prototype does not connect to a live payment gateway, so no real payment methods are processed. The checkout form is a simulation for demonstration only."
       },
       {
         question: "Is my payment transaction secure?",
-        answer: "All transactions are secured with 256-bit bank-grade TLS encryption and RBI-mandated two-factor authentication (2FA/OTP). PALLUVO never stores your complete card details or banking credentials."
+        answer: "No real transactions take place in this prototype. Please do not enter real card or banking details; no live gateway is connected and no actual charge occurs."
       },
       {
         question: "What should I do if money was debited but the order shows pending?",
