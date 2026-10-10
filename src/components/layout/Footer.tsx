@@ -3,7 +3,7 @@
 import React, { useState } from "react";
 import Link from "next/link";
 import dynamic from "next/dynamic";
-import { Check } from "lucide-react";
+import { Check, MapPin } from "lucide-react";
 import type { InfoModalTab } from "@/components/layout/InfoModal";
 
 const InfoModal = dynamic(
@@ -207,6 +207,26 @@ export const Footer: React.FC = () => {
                   >
                     FAQs
                   </button>
+                </li>
+                <li className="pt-3 border-t border-[#FAF7F2]/10 mt-2">
+                  <div className="flex items-start gap-2.5 text-[#FAF7F2]/75">
+                    <MapPin className="w-4 h-4 text-[#C5A575] shrink-0 mt-0.5" aria-hidden="true" />
+                    <div className="space-y-1">
+                      <strong className="block font-medium text-[#FAF7F2] text-xs">Flagship Atelier</strong>
+                      <p className="text-[11px] text-[#FAF7F2]/65 leading-relaxed font-light">
+                        PALLUVO Textile Studio, Road No. 36, Jubilee Hills, Hyderabad, Telangana 500033
+                      </p>
+                      <a
+                        href="https://www.google.com/maps/search/?api=1&query=PALLUVO+Textile+Studio,+Road+No.+36,+Jubilee+Hills,+Hyderabad,+Telangana+500033"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        aria-label="Get directions to PALLUVO Atelier in Google Maps (opens in a new tab)"
+                        className="min-h-[44px] inline-flex items-center text-xs text-[#C5A575] hover:underline font-medium focus-visible:ring-2 focus-visible:ring-[#C5A575] focus-visible:outline-none rounded-2xs"
+                      >
+                        Get Directions ↗
+                      </a>
+                    </div>
+                  </div>
                 </li>
               </ul>
             </div>
