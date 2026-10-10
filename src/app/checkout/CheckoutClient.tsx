@@ -260,7 +260,7 @@ export default function CheckoutPage() {
               <div className="pt-2 border-t border-[#E8E2D9] text-neutral-600">
                 <p className="font-semibold text-neutral-800 mb-0.5">Need help with your order?</p>
                 <p>
-                  Email: <a href="mailto:contact@palluvo.com" className="text-[#541920] font-medium hover:underline">contact@palluvo.com</a>
+                  Email: <a href="mailto:info@palluvo.store" className="text-[#541920] font-medium hover:underline">info@palluvo.store</a>
                 </p>
                 <p>
                   Phone: <a href="tel:+918897776984" className="text-[#541920] font-medium hover:underline">+91 88977 76984</a> / <a href="tel:+918498854323" className="text-[#541920] font-medium hover:underline">+91 84988 54323</a> / <a href="tel:+918106789789" className="text-[#541920] font-medium hover:underline">+91 81067 89789</a> · <a href="https://wa.me/918897776984" target="_blank" rel="noopener noreferrer" className="text-[#075E54] hover:underline font-medium">WhatsApp</a>
@@ -1178,7 +1178,7 @@ export default function CheckoutPage() {
                     <ArrowRight className="w-3 h-3 text-[#541920]" aria-hidden="true" />
                   </Link>
                   <p>
-                    Email: <a href="mailto:contact@palluvo.com" className="text-[#541920] hover:underline font-medium">contact@palluvo.com</a>
+                    Email: <a href="mailto:info@palluvo.store" className="text-[#541920] hover:underline font-medium">info@palluvo.store</a>
                   </p>
                   <p>
                     Phone: <a href="tel:+918897776984" className="text-[#541920] hover:underline font-medium">+91 88977 76984</a> / <a href="tel:+918498854323" className="text-[#541920] hover:underline font-medium">+91 84988 54323</a> / <a href="tel:+918106789789" className="text-[#541920] hover:underline font-medium">+91 81067 89789</a> · <a href="https://wa.me/918897776984" target="_blank" rel="noopener noreferrer" className="text-[#075E54] hover:underline font-medium">WhatsApp</a>

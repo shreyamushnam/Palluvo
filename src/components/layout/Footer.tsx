@@ -165,8 +165,8 @@ export const Footer: React.FC = () => {
                   </button>
                 </li>
                 <li>
-                  <a href="mailto:contact@palluvo.com" className="min-h-[44px] inline-flex items-center hover:text-[#C5A575] transition-colors focus-visible:ring-2 focus-visible:ring-[#C5A575] focus-visible:outline-none rounded-2xs">
-                    contact@palluvo.com
+                  <a href="mailto:info@palluvo.store" className="min-h-[44px] inline-flex items-center hover:text-[#C5A575] transition-colors focus-visible:ring-2 focus-visible:ring-[#C5A575] focus-visible:outline-none rounded-2xs">
+                    info@palluvo.store
                   </a>
                 </li>
                 <li>

@@ -178,8 +178,8 @@ export const InfoModal: React.FC<InfoModalProps> = ({
                       <Mail className="w-4 h-4 text-[#541920] shrink-0 mt-0.5" />
                       <div>
                         <strong className="block text-neutral-900">Email Concierge</strong>
-                        <a href="mailto:contact@palluvo.com" className="text-[#541920] hover:underline font-medium">
-                          contact@palluvo.com
+                        <a href="mailto:info@palluvo.store" className="text-[#541920] hover:underline font-medium">
+                          info@palluvo.store
                         </a>
                         <p className="text-[11px] text-neutral-600 mt-0.5">Response within 4 hours</p>
                       </div>
@@ -265,8 +265,8 @@ export const InfoModal: React.FC<InfoModalProps> = ({
                     </div>
                     <p className="text-[11px] text-neutral-500 mb-3">
                       This is a demonstration form for interface testing; messages are not transmitted. For assistance, reach us at{" "}
-                      <a href="mailto:contact@palluvo.com" className="underline font-medium text-[#541920]">
-                        contact@palluvo.com
+                      <a href="mailto:info@palluvo.store" className="underline font-medium text-[#541920]">
+                        info@palluvo.store
                       </a>
                       , call{" "}
                       <a href="tel:+918498854323" className="underline font-medium text-[#541920]">
@@ -289,8 +289,8 @@ export const InfoModal: React.FC<InfoModalProps> = ({
                           <Info className="w-4 h-4 text-[#541920] shrink-0 mt-0.5" />
                           <span>
                             Demo simulation complete: No message was transmitted. For real inquiries, please email{" "}
-                            <a href="mailto:contact@palluvo.com" className="underline text-[#541920] font-medium">
-                              contact@palluvo.com
+                            <a href="mailto:info@palluvo.store" className="underline text-[#541920] font-medium">
+                              info@palluvo.store
                             </a>
                             , call{" "}
                             <a href="tel:+918498854323" className="underline text-[#541920] font-medium">
@@ -464,7 +464,7 @@ export const InfoModal: React.FC<InfoModalProps> = ({
                         <span>Easy Return Window</span>
                       </strong>
                       <p>
-                        You can initiate a return or exchange within <strong>7 days of delivery</strong> directly from your account or by emailing us at <strong>contact@palluvo.com</strong>.
+                        You can initiate a return or exchange within <strong>7 days of delivery</strong> directly from your account or by emailing us at <strong>info@palluvo.store</strong>.
                       </p>
                     </div>
 

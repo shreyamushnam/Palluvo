@@ -41,8 +41,8 @@ export function ContactForm() {
         <Info className="w-4 h-4 text-amber-700 shrink-0 mt-0.5" aria-hidden="true" />
         <div className="leading-relaxed">
           <strong className="font-medium">Demonstration Notice:</strong> This prototype inquiry form is for interface testing only and does not transmit or store messages. For real customer assistance, reach us directly at{" "}
-          <a href="mailto:contact@palluvo.com" className="underline font-medium hover:text-[#541920]">
-            contact@palluvo.com
+          <a href="mailto:info@palluvo.store" className="underline font-medium hover:text-[#541920]">
+            info@palluvo.store
           </a>
           , call{" "}
           <a href="tel:+918498854323" className="underline font-medium hover:text-[#541920]">
@@ -73,8 +73,8 @@ export function ContactForm() {
               <p className="font-semibold text-neutral-900">Demo Inquiry Simulated</p>
               <p className="text-neutral-600">
                 This is a demo store; no inquiry was transmitted or saved. For real support, please email us directly at{" "}
-                <a href="mailto:contact@palluvo.com" className="underline text-[#541920] font-medium">
-                  contact@palluvo.com
+                <a href="mailto:info@palluvo.store" className="underline text-[#541920] font-medium">
+                  info@palluvo.store
                 </a>
                 , call{" "}
                 <a href="tel:+918498854323" className="underline text-[#541920] font-medium">

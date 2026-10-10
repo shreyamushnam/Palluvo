@@ -119,8 +119,8 @@ export default function ContactPage() {
                 <Mail className="w-4 h-4 text-[#541920] shrink-0 mt-0.5" />
                 <div>
                   <strong className="block text-neutral-900 font-semibold">Written Correspondence</strong>
-                  <a href="mailto:contact@palluvo.com" className="text-[#541920] hover:underline block font-medium mt-0.5">
-                    contact@palluvo.com
+                  <a href="mailto:info@palluvo.store" className="text-[#541920] hover:underline block font-medium mt-0.5">
+                    info@palluvo.store
                   </a>
                 </div>
               </div>
