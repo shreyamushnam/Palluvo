@@ -248,10 +248,19 @@ export const InfoModal: React.FC<InfoModalProps> = ({
                       This is a demonstration form for interface testing; messages are not transmitted. For assistance, reach us at{" "}
                       <a href="mailto:contact@palluvo.com" className="underline font-medium text-[#541920]">
                         contact@palluvo.com
-                      </a>{" "}
-                      or call / WhatsApp{" "}
+                      </a>
+                      , call{" "}
                       <a href="tel:+918498854323" className="underline font-medium text-[#541920]">
                         +91 84988 54323
+                      </a>
+                      , or message on{" "}
+                      <a
+                        href="https://wa.me/918498854323"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="underline font-medium text-[#075E54] hover:text-[#054C44]"
+                      >
+                        WhatsApp
                       </a>
                       .
                     </p>
@@ -259,7 +268,26 @@ export const InfoModal: React.FC<InfoModalProps> = ({
                       <div role="status" aria-live="polite" className="p-3.5 bg-[#F4EFE6] border border-[#C5A575]/40 text-neutral-900 rounded-xs space-y-2 text-xs">
                         <div className="flex items-start gap-2">
                           <Info className="w-4 h-4 text-[#541920] shrink-0 mt-0.5" />
-                          <span>Demo simulation complete: No message was transmitted. For real customer inquiries, please call or email us directly.</span>
+                          <span>
+                            Demo simulation complete: No message was transmitted. For real inquiries, please email{" "}
+                            <a href="mailto:contact@palluvo.com" className="underline text-[#541920] font-medium">
+                              contact@palluvo.com
+                            </a>
+                            , call{" "}
+                            <a href="tel:+918498854323" className="underline text-[#541920] font-medium">
+                              +91 84988 54323
+                            </a>
+                            , or message on{" "}
+                            <a
+                              href="https://wa.me/918498854323"
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="underline text-[#075E54] hover:text-[#054C44] font-medium"
+                            >
+                              WhatsApp
+                            </a>
+                            .
+                          </span>
                         </div>
                         <button
                           type="button"

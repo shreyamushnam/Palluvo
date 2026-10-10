@@ -43,12 +43,12 @@ export function ContactForm() {
           <strong className="font-medium">Demonstration Notice:</strong> This prototype inquiry form is for interface testing only and does not transmit or store messages. For real customer assistance, reach us directly at{" "}
           <a href="mailto:contact@palluvo.com" className="underline font-medium hover:text-[#541920]">
             contact@palluvo.com
-          </a>{" "}
-          or call / WhatsApp{" "}
+          </a>
+          , call{" "}
           <a href="tel:+918498854323" className="underline font-medium hover:text-[#541920]">
             +91 84988 54323
-          </a>{" "}
-          /{" "}
+          </a>
+          , or message on{" "}
           <a
             href="https://wa.me/918498854323"
             target="_blank"
@@ -75,10 +75,19 @@ export function ContactForm() {
                 This is a demo store; no inquiry was transmitted or saved. For real support, please email us directly at{" "}
                 <a href="mailto:contact@palluvo.com" className="underline text-[#541920] font-medium">
                   contact@palluvo.com
-                </a>{" "}
-                or call/WhatsApp{" "}
+                </a>
+                , call{" "}
                 <a href="tel:+918498854323" className="underline text-[#541920] font-medium">
                   +91 84988 54323
+                </a>
+                , or message on{" "}
+                <a
+                  href="https://wa.me/918498854323"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="underline text-[#075E54] hover:text-[#054C44] font-medium"
+                >
+                  WhatsApp
                 </a>
                 .
               </p>

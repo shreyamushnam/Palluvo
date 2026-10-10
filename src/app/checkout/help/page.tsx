@@ -79,11 +79,11 @@ const HELP_SECTIONS = [
     items: [
       {
         question: "Can I receive live video styling or drape assistance?",
-        answer: "Our senior sari concierge can guide you through weave selections, custom blouse styling, and matching jewelry via WhatsApp video consultation during atelier hours (10:00 AM – 8:00 PM IST)."
+        answer: "Our senior sari concierge can guide you through weave selections, custom blouse styling, and matching jewelry via WhatsApp video consultation during atelier hours (Mon - Sat, 10:00 AM – 7:00 PM IST)."
       },
       {
         question: "Direct Support Channels",
-        answer: "Reach our concierge team directly at contact@palluvo.com or call / WhatsApp +91 84988 54323 / +91 81067 89789 for priority checkout help."
+        answer: "Reach our concierge team directly at contact@palluvo.com, call +91 84988 54323 / +91 81067 89789, or chat via WhatsApp for priority checkout help."
       }
     ]
   }
