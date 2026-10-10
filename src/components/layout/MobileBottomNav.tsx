@@ -3,18 +3,17 @@
 import React from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Home, Grid, Heart, ShoppingBag, User } from "lucide-react";
+import { Home, Grid, ShoppingBag, User } from "lucide-react";
 import { useStore } from "@/context/StoreContext";
 import { scrollToTop } from "@/utils/scroll";
 
 export const MobileBottomNav: React.FC = () => {
   const pathname = usePathname();
-  const { cartCount, wishlistCount, setIsCartOpen, isLoggedIn } = useStore();
+  const { cartCount, setIsCartOpen, isLoggedIn } = useStore();
 
   const items = [
     { label: "Home", href: "/", icon: Home },
     { label: "Shop", href: "/shop", icon: Grid },
-    { label: "Wishlist", href: "/wishlist", icon: Heart, count: wishlistCount },
     { label: "Cart", href: "/cart", icon: ShoppingBag, count: cartCount, isCartDrawer: true },
     { 
       label: isLoggedIn ? "Account" : "Sign In", 
