@@ -3,7 +3,7 @@
 import React, { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { Package, MapPin, User, Truck, CheckCircle2, ShieldCheck, Plus, X, Edit2, Trash2, Check, RotateCcw, LogOut, Sparkles, Award, Headphones, ArrowRight, Lock } from "lucide-react";
+import { Package, MapPin, User, Truck, CheckCircle2, ShieldCheck, Plus, X, Edit2, Trash2, Check, RotateCcw, LogOut, Sparkles, Award, Headphones, ArrowRight, Lock, Info } from "lucide-react";
 import { useStore } from "@/context/StoreContext";
 import { SavedAddress } from "@/data/mockOrders";
 import { useFocusTrap } from "@/hooks/useFocusTrap";
@@ -79,7 +79,7 @@ export default function AccountPage() {
     const name = loginIdentifier ? loginIdentifier.split("@")[0] : "Radhika Sharma";
     const email = loginIdentifier.includes("@") ? loginIdentifier : `${loginIdentifier || "radhika"}@palluvo.com`;
     login({ name: name.charAt(0).toUpperCase() + name.slice(1), email });
-    showToast("Signed in successfully to your Palluvo account!");
+    showToast("Signed in to prototype session (local demo mode).");
   };
 
   const handleDemoSignIn = () => {
@@ -92,7 +92,7 @@ export default function AccountPage() {
     const name = regFullName.trim() || "Valued Connoisseur";
     const email = regEmail.trim() || "member@palluvo.com";
     login({ name, email });
-    showToast("Welcome to Palluvo! Your connoisseur account has been created.");
+    showToast("Prototype profile created in local session.");
   };
 
   const handleSignOut = () => {
@@ -184,7 +184,18 @@ export default function AccountPage() {
         </div>
 
         {/* Auth Card Container */}
-        <div className="max-w-xl mx-auto px-4 sm:px-6 -mt-4 sm:-mt-6">
+        <div className="max-w-xl mx-auto px-4 sm:px-6 -mt-4 sm:-mt-6 space-y-4">
+          {/* Prototype Demonstration Notice */}
+          <div className="p-4 bg-[#F4EFE6] border border-[#C5A575]/50 rounded-xs flex items-start gap-3 shadow-xs">
+            <Info className="w-5 h-5 text-[#541920] shrink-0 mt-0.5" />
+            <div className="text-xs text-neutral-800 leading-relaxed font-sans">
+              <span className="font-semibold text-[#541920] uppercase tracking-wider block mb-0.5">
+                Prototype Demonstration Mode
+              </span>
+              Account creation and sign-in are simulated for storefront evaluation. Credentials are not validated against an external backend or shared across devices. Do not enter production credentials or personal passwords.
+            </div>
+          </div>
+
           <div className="bg-white rounded-sm border border-[#E8E2D9] shadow-lg overflow-hidden">
             {/* Tabbed Switch */}
             <div className="grid grid-cols-2 border-b border-[#E8E2D9] bg-[#FAF7F2]/60" role="tablist" aria-label="Authentication Options">
@@ -200,7 +211,7 @@ export default function AccountPage() {
                 }`}
               >
                 <Lock className="w-3.5 h-3.5 text-[#541920] shrink-0" />
-                <span>Sign In</span>
+                <span>Simulated Sign In</span>
               </button>
               <button
                 type="button"
@@ -214,7 +225,7 @@ export default function AccountPage() {
                 }`}
               >
                 <User className="w-3.5 h-3.5 text-[#541920] shrink-0" />
-                <span>Create Account</span>
+                <span>Create Prototype Profile</span>
               </button>
             </div>
 
@@ -423,18 +434,26 @@ export default function AccountPage() {
             <div className="flex items-center gap-3">
               <div className="inline-flex items-center gap-2 px-3 py-1 bg-white border border-[#E8E2D9] rounded-full text-xs font-semibold text-[#541920]">
                 <ShieldCheck className="w-3.5 h-3.5 text-[#C5A575]" />
-                <span>PALLUVO Royal Drape Club</span>
+                <span>Prototype Connoisseur Session</span>
               </div>
               <button
                 type="button"
                 onClick={handleSignOut}
                 className="inline-flex items-center gap-1.5 px-3 py-1 bg-white hover:bg-neutral-100 text-neutral-700 hover:text-black border border-[#DCD5C9] rounded-full text-xs font-semibold transition-colors cursor-pointer"
-                title="Sign out of your account"
+                title="Sign out of prototype session"
               >
                 <LogOut className="w-3.5 h-3.5 text-neutral-500" />
-                <span>Sign Out</span>
+                <span>Exit Session</span>
               </button>
             </div>
+          </div>
+
+          {/* Prototype Session Info Strip */}
+          <div className="mt-4 p-3 bg-white/80 border border-[#C5A575]/40 rounded-xs flex items-center gap-2.5 text-xs text-neutral-700 font-sans">
+            <Info className="w-4 h-4 text-[#541920] shrink-0" />
+            <span>
+              <strong>Storefront Evaluation Mode:</strong> Orders and delivery addresses are maintained in this browser&apos;s local storage for previewing workflows. Server authentication and backend data persistence are not active in this prototype.
+            </span>
           </div>
         </div>
       </div>

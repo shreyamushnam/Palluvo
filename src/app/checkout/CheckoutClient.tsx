@@ -3,7 +3,7 @@
 import React, { useState, useRef, useEffect } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { CheckCircle2, ShieldCheck, ArrowLeft, ArrowRight, ChevronRight, Lock, CreditCard, Building2 } from "lucide-react";
+import { CheckCircle2, ShieldCheck, ArrowLeft, ArrowRight, ChevronRight, Lock, CreditCard, Building2, Info } from "lucide-react";
 import { useStore } from "@/context/StoreContext";
 import { OrderRecord } from "@/data/mockOrders";
 
@@ -211,38 +211,37 @@ export default function CheckoutPage() {
             </div>
 
             <div>
-              <span className="text-xs uppercase tracking-widest text-[#541920] font-semibold">
-                Order Confirmed
+              <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-[#F4EFE6] border border-[#C5A575]/50 rounded-full text-xs uppercase tracking-widest text-[#541920] font-semibold mb-2">
+                <Info className="w-3.5 h-3.5 text-[#541920]" />
+                Simulated Prototype Order Placed
               </span>
               <h1 className="text-2xl sm:text-3xl font-serif font-normal text-neutral-900 mt-1">
-                Thank You For Your Order!
+                Thank You For Testing PALLUVO!
               </h1>
               <p className="text-xs sm:text-sm text-neutral-600 mt-1 font-sans">
-                Order ID: <strong className="text-neutral-900 font-mono">{completedOrder.orderNumber}</strong>
+                Simulated Order ID: <strong className="text-neutral-900 font-mono">{completedOrder.orderNumber}</strong>
               </p>
             </div>
 
-            <div className="bg-[#FAF7F2] p-4 rounded-xs border border-[#E8E2D9] text-left text-xs space-y-2">
-              <p className="text-neutral-600">
-                A confirmation email with shipping updates has been sent to{" "}
-                <strong className="text-neutral-900">{shippingAddress.email}</strong>.
-              </p>
+            <div className="bg-[#FAF7F2] p-4 rounded-xs border border-[#E8E2D9] text-left text-xs space-y-2.5">
+              <div className="p-3 bg-white border border-[#C5A575]/40 rounded-xs flex items-start gap-2.5 text-neutral-700">
+                <Info className="w-4 h-4 text-[#541920] shrink-0 mt-0.5" />
+                <p className="text-[11px] leading-relaxed">
+                  <strong>Simulated Transaction Notice:</strong> No actual payment was charged to your card, UPI, or bank account. This simulated order has been saved to your local browser storage for workflow review.
+                </p>
+              </div>
+
               <div className="pt-2 border-t border-[#E8E2D9] flex justify-between text-neutral-800">
                 <span>Estimated Handloom Dispatch:</span>
                 <strong className="text-[#541920]">{completedOrder.deliveryDate}</strong>
               </div>
               <div className="flex justify-between text-neutral-800">
-                <span>Payment Method:</span>
-                <strong>{completedOrder.paymentMethod}</strong>
+                <span>Selected Method:</span>
+                <strong>{completedOrder.paymentMethod} (Simulated)</strong>
               </div>
               <div className="flex justify-between text-neutral-800">
-                <span>
-                  {completedOrder.paymentMethod.toLowerCase().includes("cash on delivery") ||
-                  completedOrder.paymentMethod.toLowerCase().includes("cod")
-                    ? "Total Amount to Pay on Delivery:"
-                    : "Total Amount Paid:"}
-                </span>
-                <strong className="text-[#541920] tabular-nums">{formatPrice(completedOrder.totalAmount)}</strong>
+                <span>Order Total:</span>
+                <strong className="text-[#541920] tabular-nums">{formatPrice(completedOrder.totalAmount)} (Not Charged)</strong>
               </div>
               <div className="pt-2 border-t border-[#E8E2D9] text-neutral-600">
                 <p className="font-semibold text-neutral-800 mb-0.5">Need help with your order?</p>
@@ -722,6 +721,14 @@ export default function CheckoutPage() {
 
               {step === 3 && (
                 <div className="p-6 space-y-4 text-xs">
+                  {/* Prototype Payment Simulation Banner */}
+                  <div className="p-3.5 bg-[#F4EFE6] border border-[#C5A575]/50 rounded-xs flex items-start gap-2.5 text-neutral-800">
+                    <Info className="w-4 h-4 text-[#541920] shrink-0 mt-0.5" />
+                    <p className="text-[11px] leading-relaxed font-sans">
+                      <strong>Prototype Demonstration:</strong> Payment authorization is simulated locally for workflow evaluation. Live payment gateways are not connected, and no actual financial charges occur.
+                    </p>
+                  </div>
+
                   <div className="space-y-2.5">
                     {/* UPI */}
                     <div
@@ -740,7 +747,7 @@ export default function CheckoutPage() {
                             onChange={() => setPaymentMethod("upi")}
                             className="text-[#541920]"
                           />
-                          <span className="font-semibold text-neutral-900">Instant UPI (GPay, PhonePe, Paytm, QR)</span>
+                          <span className="font-semibold text-neutral-900">Simulated UPI (GPay, PhonePe, Paytm, QR)</span>
                         </div>
                         <span className="text-[10px] text-[#15803D] font-bold">Fastest</span>
                       </label>
@@ -795,12 +802,15 @@ export default function CheckoutPage() {
                             onChange={() => setPaymentMethod("card")}
                             className="text-[#541920]"
                           />
-                          <span className="font-semibold text-neutral-900">Credit / Debit Card (Visa, MasterCard, RuPay)</span>
+                          <span className="font-semibold text-neutral-900">Simulated Card Payment (Test Credentials)</span>
                         </div>
                         <CreditCard className="w-4 h-4 text-neutral-500" />
                       </label>
                       {paymentMethod === "card" && (
                         <div className="mt-3 pt-3 border-t border-[#E8E2D9] space-y-3">
+                          <div className="p-2.5 bg-[#FAF7F2] border border-[#C5A575]/40 rounded-xs text-[11px] text-neutral-700">
+                            <strong>Test Card Simulation:</strong> You may test this flow using any 16-digit sample number (e.g. 4123 4567 8901 2345). Do not enter real credit card numbers or security CVVs.
+                          </div>
                           <div>
                             <label htmlFor="cardholderName" className="block text-neutral-700 font-medium mb-1">
                               Cardholder Name *
@@ -969,7 +979,7 @@ export default function CheckoutPage() {
                             onChange={() => setPaymentMethod("netbanking")}
                             className="text-[#541920]"
                           />
-                          <span className="font-semibold text-neutral-900">Net Banking (All Indian Banks)</span>
+                          <span className="font-semibold text-neutral-900">Simulated Net Banking (Prototype Flow)</span>
                         </div>
                         <Building2 className="w-4 h-4 text-neutral-500" />
                       </label>
@@ -1030,9 +1040,9 @@ export default function CheckoutPage() {
                           </div>
 
                           <div className="p-3 bg-white border border-[#E8E2D9] rounded-xs flex items-start gap-2.5 text-neutral-700">
-                            <Lock className="w-4 h-4 text-[#541920] shrink-0 mt-0.5" />
+                            <Info className="w-4 h-4 text-[#541920] shrink-0 mt-0.5" />
                             <p className="text-[11px] leading-relaxed">
-                              <strong>Secure Gateway Redirect:</strong> Clicking &ldquo;Place Order&rdquo; will securely redirect you to your bank&rsquo;s official portal to authorize payment via NetBanking or OTP credentials.
+                              <strong>Simulated Flow:</strong> Placing an order simulates the net banking confirmation locally in this prototype without external gateway redirects or banking credentials.
                             </p>
                           </div>
                         </div>
@@ -1057,9 +1067,9 @@ export default function CheckoutPage() {
                             onChange={() => setPaymentMethod("cod")}
                             className="text-[#541920]"
                           />
-                          <span className="font-semibold text-neutral-900">Cash on Delivery (COD)</span>
+                          <span className="font-semibold text-neutral-900">Cash on Delivery (Simulated)</span>
                         </div>
-                        <span className="text-[10px] text-neutral-600">Pay when delivered</span>
+                        <span className="text-[10px] text-neutral-600">Simulated test order</span>
                       </div>
                     </label>
                   </div>
@@ -1070,7 +1080,7 @@ export default function CheckoutPage() {
                       className="w-full min-h-[44px] py-3.5 bg-[#541920] hover:bg-[#3D1217] text-white uppercase tracking-widest font-semibold rounded-xs shadow-md transition-all flex items-center justify-center gap-2 text-xs cursor-pointer focus-visible:ring-2 focus-visible:ring-[#541920] focus-visible:outline-none tabular-nums"
                     >
                       <ShieldCheck className="w-4 h-4 text-green-300" />
-                      <span>Place Order ({formatPrice(effectiveTotal)})</span>
+                      <span>Place Simulated Order ({formatPrice(effectiveTotal)})</span>
                     </button>
                   </div>
                 </div>
