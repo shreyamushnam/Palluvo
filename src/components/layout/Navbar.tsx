@@ -111,7 +111,7 @@ export const Navbar: React.FC = () => {
   const pathname = usePathname();
   const [isScrolled, setIsScrolled] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const { cartCount, wishlistCount, isSearchOpen, setIsSearchOpen, isLoggedIn } = useStore();
+  const { cartCount, wishlistCount, setIsCartOpen, isSearchOpen, setIsSearchOpen, isLoggedIn } = useStore();
 
   const mobileDrawerRef = useFocusTrap<HTMLDivElement>({
     isOpen: mobileMenuOpen,
@@ -256,6 +256,29 @@ export const Navbar: React.FC = () => {
                 )}
               </div>
             </Link>
+
+            {/* Shopping Bag / Cart Drawer Button */}
+            <button
+              type="button"
+              onClick={() => setIsCartOpen(true)}
+              className="min-h-[44px] min-w-[44px] p-2 text-[#1C1A18] hover:text-[#541920] transition-colors relative flex items-center justify-center focus-visible:ring-2 focus-visible:ring-[#541920] focus-visible:outline-none rounded-xs cursor-pointer"
+              aria-label={
+                cartCount > 0
+                  ? `Shopping Bag with ${cartCount} ${cartCount === 1 ? "item" : "items"}`
+                  : "Shopping Bag"
+              }
+              aria-haspopup="dialog"
+              title="Shopping Bag"
+            >
+              <div className="relative">
+                <ShoppingBag size={20} strokeWidth={1.8} />
+                {cartCount > 0 && (
+                  <span className="absolute -top-1 -right-1.5 w-4 h-4 bg-[#541920] text-white text-[9px] font-bold rounded-full flex items-center justify-center tabular-nums shadow-xs">
+                    {cartCount > 9 ? "9+" : cartCount}
+                  </span>
+                )}
+              </div>
+            </button>
           </div>
 
         </div>

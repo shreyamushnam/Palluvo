@@ -143,8 +143,8 @@ export const QuickViewModalContent: React.FC<QuickViewModalContentProps> = ({
                       <span className="text-xs text-neutral-600">
                         ({product.reviewsCount ?? product.reviewCount ?? 0}{" "}
                         {(product.reviewsCount ?? product.reviewCount ?? 0) === 1
-                          ? "verified review"
-                          : "verified reviews"}
+                          ? "review"
+                          : "reviews"}
                         )
                       </span>
                     ) : (
