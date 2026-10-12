@@ -194,7 +194,7 @@ export const HeroBanner: React.FC = () => {
         >
           {/* Left Column: Brand Copy & Direct CTAs */}
           <div className="lg:col-span-6 space-y-2 sm:space-y-3.5 md:space-y-6 text-center lg:text-left">
-            <h1 className="text-base min-[380px]:text-lg sm:text-2xl md:text-3xl lg:text-[2.25rem] xl:text-[2.75rem] font-serif font-normal text-[#1C1A18] tracking-tight leading-snug sm:leading-[1.2] whitespace-nowrap">
+            <h1 className="text-base min-[380px]:text-lg sm:text-2xl md:text-3xl lg:text-[2.25rem] xl:text-[2.75rem] font-serif font-normal text-[#1C1A18] tracking-tight leading-snug sm:leading-[1.2]">
               <span>{slide.titleLine1}</span>{" "}
               <span className="italic font-serif text-[#541920]">{slide.titleLine2}</span>
             </h1>

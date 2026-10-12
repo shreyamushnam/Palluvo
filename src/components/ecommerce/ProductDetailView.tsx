@@ -118,10 +118,18 @@ export const ProductDetailView: React.FC<ProductDetailViewProps> = ({
     router.push("/checkout");
   };
 
-  const handleShare = () => {
-    if (typeof window !== "undefined" && navigator.clipboard) {
-      navigator.clipboard.writeText(window.location.href);
-      showToast("Product link copied to clipboard!");
+  const handleShare = async () => {
+    if (typeof window === "undefined") return;
+
+    if (navigator?.clipboard?.writeText) {
+      try {
+        await navigator.clipboard.writeText(window.location.href);
+        showToast("Product link copied to clipboard!");
+      } catch {
+        showToast("Unable to copy link to clipboard.", "info");
+      }
+    } else {
+      showToast("Unable to copy link to clipboard.", "info");
     }
   };
 
