@@ -257,11 +257,11 @@ export const Navbar: React.FC = () => {
               </div>
             </Link>
 
-            {/* Shopping Bag / Cart Drawer Button */}
+            {/* Shopping Bag / Cart Drawer Button (desktop only; mobile uses fixed bottom nav) */}
             <button
               type="button"
               onClick={() => setIsCartOpen(true)}
-              className="min-h-[44px] min-w-[44px] p-2 text-[#1C1A18] hover:text-[#541920] transition-colors relative flex items-center justify-center focus-visible:ring-2 focus-visible:ring-[#541920] focus-visible:outline-none rounded-xs cursor-pointer"
+              className="hidden lg:flex min-h-[44px] min-w-[44px] p-2 text-[#1C1A18] hover:text-[#541920] transition-colors relative items-center justify-center focus-visible:ring-2 focus-visible:ring-[#541920] focus-visible:outline-none rounded-xs cursor-pointer"
               aria-label={
                 cartCount > 0
                   ? `Shopping Bag with ${cartCount} ${cartCount === 1 ? "item" : "items"}`

@@ -45,6 +45,7 @@ export interface Product {
   length?: string;
   blouseLength?: string;
   careInstructions?: string;
+  productType?: "saree" | "blouse" | "jewelry";
 }
 
 export interface LookItem {
@@ -442,6 +443,7 @@ export const PRODUCTS: Product[] = [
     hasBlousePiece: false,
     inStock: true,
     tags: ["blouse", "silk", "wine", "accessories"],
+    productType: "blouse",
     origin: "Varanasi, India",
   },
   {
@@ -475,6 +477,7 @@ export const PRODUCTS: Product[] = [
     hasBlousePiece: false,
     inStock: true,
     tags: ["jewelry", "jhumkas", "gold", "accessories"],
+    productType: "jewelry",
     origin: "Jaipur, Rajasthan",
   },
 ];
@@ -514,3 +517,33 @@ export const SHOP_THE_LOOK_ITEMS: LookItem[] = [
     productId: "pal-011",
   },
 ];
+
+export type ProductType = "saree" | "blouse" | "jewelry";
+
+export function getProductType(product: Product): ProductType {
+  if (product.productType) {
+    return product.productType;
+  }
+  const tags = (product.tags || []).map((t) => t.toLowerCase());
+  const name = product.name.toLowerCase();
+  if (tags.includes("jewelry") || tags.includes("jhumkas") || name.includes("jhumka") || name.includes("jewelry")) {
+    return "jewelry";
+  }
+  if (tags.includes("blouse") || name.includes("blouse")) {
+    return "blouse";
+  }
+  return "saree";
+}
+
+export function getProductMetadataSuffix(product: Product): string {
+  const type = getProductType(product);
+  switch (type) {
+    case "blouse":
+      return `Pure ${product.fabric} handcrafted blouse piece.`;
+    case "jewelry":
+      return `Handcrafted jewelry in ${product.fabric}.`;
+    case "saree":
+    default:
+      return `Pure ${product.fabric} handcrafted saree.`;
+  }
+}

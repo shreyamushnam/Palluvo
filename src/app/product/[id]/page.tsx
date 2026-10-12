@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import { PRODUCTS } from "@/data/products";
+import { PRODUCTS, getProductMetadataSuffix } from "@/data/products";
 import { getCategoryHref } from "@/data/categories";
 import { ProductDetailView } from "@/components/ecommerce/ProductDetailView";
 
@@ -19,7 +19,7 @@ export async function generateMetadata({
   }
 
   const title = `${product.name} | PALLUVO`;
-  const description = `${product.description.slice(0, 155)}… Pure ${product.fabric} handcrafted saree.`;
+  const description = `${product.description.slice(0, 155)}… ${getProductMetadataSuffix(product)}`;
   const canonicalUrl = `https://palluvo.com/product/${product.id}`;
 
   return {
