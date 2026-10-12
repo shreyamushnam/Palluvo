@@ -4,7 +4,7 @@ import React, { useState, useMemo } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Filter, X, SlidersHorizontal, Check, Search, ArrowUpDown } from "lucide-react";
-import { PRODUCTS, type Product } from "@/data/products";
+import { PRODUCTS, type Product, getProductType } from "@/data/products";
 import { CATEGORIES } from "@/data/categories";
 import { ProductCard } from "@/components/ecommerce/ProductCard";
 import { BackToTopButton } from "@/components/common/BackToTopButton";
@@ -46,24 +46,29 @@ const OCCASIONS = [
 export function matchesCategory(product: Product, category: string): boolean {
   if (!category) return true;
   const norm = category.toLowerCase().trim().replace(/\+/g, " ");
+  const isSaree = getProductType(product) === "saree";
+
   if (norm.includes("new arrival") || norm.includes("new")) {
     return !!product.isNewArrival;
   } else if (norm.includes("silk") && !norm.includes("cotton")) {
-    return product.category.toLowerCase() === "silk" || product.fabric.toLowerCase().includes("silk");
+    return isSaree && (product.category.toLowerCase() === "silk" || product.fabric.toLowerCase().includes("silk"));
   } else if (norm.includes("handloom")) {
-    return product.category.toLowerCase() === "handloom" || product.fabric.toLowerCase().includes("handloom");
+    return isSaree && (product.category.toLowerCase() === "handloom" || product.fabric.toLowerCase().includes("handloom"));
   } else if (norm.includes("cotton")) {
-    return product.category.toLowerCase() === "cotton" || product.fabric.toLowerCase().includes("cotton");
+    return isSaree && (product.category.toLowerCase() === "cotton" || product.fabric.toLowerCase().includes("cotton"));
   } else if (norm.includes("festive")) {
-    return product.category.toLowerCase() === "festive" || product.occasion.toLowerCase() === "festive";
+    return isSaree && (product.category.toLowerCase() === "festive" || product.occasion.toLowerCase() === "festive");
   } else if (norm.includes("bridal") || norm.includes("wedding")) {
-    return product.category.toLowerCase() === "bridal" || product.occasion.toLowerCase() === "wedding";
+    return isSaree && (product.category.toLowerCase() === "bridal" || product.occasion.toLowerCase() === "wedding");
   } else if (norm.includes("party")) {
     return product.category.toLowerCase() === "party wear" || product.occasion.toLowerCase() === "party";
   } else if (norm.includes("printed")) {
-    return product.category.toLowerCase() === "printed";
+    return isSaree && product.category.toLowerCase() === "printed";
   } else {
+    const isSareeQuery = norm.includes("saree");
+    if (isSareeQuery && !isSaree) return false;
     const root = norm.replace(/sarees?/g, "").trim();
+    if (!root) return isSaree;
     return (
       product.name.toLowerCase().includes(root) ||
       product.category.toLowerCase().includes(root) ||
@@ -342,7 +347,7 @@ export function ShopContent() {
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Search handcrafted sarees..."
+                placeholder="Search handcrafted sarees, blouses, jewelry..."
                 aria-label="Search handcrafted sarees and products"
                 className="w-full text-xs sm:text-sm bg-transparent border-none outline-none text-neutral-900 placeholder:text-neutral-500 font-sans"
               />

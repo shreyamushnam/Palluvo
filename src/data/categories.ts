@@ -1,4 +1,4 @@
-import { PRODUCTS } from "./products";
+import { PRODUCTS, type Product, getProductType } from "./products";
 
 export interface Category {
   id: string;
@@ -39,36 +39,47 @@ export function getCategoryHref(categoryNameOrQuery: string): string {
   return canon ? `/shop?category=${canon}` : "/shop";
 }
 
-export function getCategoryItemCount(categoryName: string): number {
-  const norm = categoryName.toLowerCase().trim().replace(/\+/g, " ");
-  return PRODUCTS.filter((product) => {
-    if (norm.includes("new arrival") || norm.includes("new")) {
-      return !!product.isNewArrival;
-    } else if (norm.includes("silk") && !norm.includes("cotton")) {
-      return product.category.toLowerCase() === "silk" || product.fabric.toLowerCase().includes("silk");
-    } else if (norm.includes("handloom")) {
-      return product.category.toLowerCase() === "handloom" || product.fabric.toLowerCase().includes("handloom");
-    } else if (norm.includes("cotton")) {
-      return product.category.toLowerCase() === "cotton" || product.fabric.toLowerCase().includes("cotton");
-    } else if (norm.includes("festive")) {
-      return product.category.toLowerCase() === "festive" || product.occasion.toLowerCase() === "festive";
-    } else if (norm.includes("bridal") || norm.includes("wedding")) {
-      return product.category.toLowerCase() === "bridal" || product.occasion.toLowerCase() === "wedding";
-    } else if (norm.includes("party")) {
-      return product.category.toLowerCase() === "party wear" || product.occasion.toLowerCase() === "party";
-    } else if (norm.includes("printed")) {
-      return product.category.toLowerCase() === "printed";
-    } else {
-      const root = norm.replace(/sarees?/g, "").trim();
-      return (
-        product.name.toLowerCase().includes(root) ||
-        product.category.toLowerCase().includes(root) ||
-        product.fabric.toLowerCase().includes(root) ||
-        product.occasion.toLowerCase().includes(root) ||
-        (product.tags || []).some((t) => t.toLowerCase().includes(root))
-      );
-    }
-  }).length;
+export function matchesCategory(product: Product, category: string): boolean {
+  if (!category) return true;
+  const norm = category.toLowerCase().trim().replace(/\+/g, " ");
+  const isSaree = getProductType(product) === "saree";
+
+  if (norm.includes("new arrival") || norm.includes("new")) {
+    return !!product.isNewArrival;
+  } else if (norm.includes("silk") && !norm.includes("cotton")) {
+    return isSaree && (product.category.toLowerCase() === "silk" || product.fabric.toLowerCase().includes("silk"));
+  } else if (norm.includes("handloom")) {
+    return isSaree && (product.category.toLowerCase() === "handloom" || product.fabric.toLowerCase().includes("handloom"));
+  } else if (norm.includes("cotton")) {
+    return isSaree && (product.category.toLowerCase() === "cotton" || product.fabric.toLowerCase().includes("cotton"));
+  } else if (norm.includes("festive")) {
+    return isSaree && (product.category.toLowerCase() === "festive" || product.occasion.toLowerCase() === "festive");
+  } else if (norm.includes("bridal") || norm.includes("wedding")) {
+    return isSaree && (product.category.toLowerCase() === "bridal" || product.occasion.toLowerCase() === "wedding");
+  } else if (norm.includes("party")) {
+    return product.category.toLowerCase() === "party wear" || product.occasion.toLowerCase() === "party";
+  } else if (norm.includes("printed")) {
+    return isSaree && product.category.toLowerCase() === "printed";
+  } else {
+    const isSareeQuery = norm.includes("saree");
+    if (isSareeQuery && !isSaree) return false;
+    const root = norm.replace(/sarees?/g, "").trim();
+    if (!root) return isSaree;
+    return (
+      product.name.toLowerCase().includes(root) ||
+      product.category.toLowerCase().includes(root) ||
+      product.fabric.toLowerCase().includes(root) ||
+      product.occasion.toLowerCase().includes(root) ||
+      (product.tags || []).some((t) => t.toLowerCase().includes(root))
+    );
+  }
+}
+
+export function getCategoryItemCount(
+  categoryName: string,
+  productList: Product[] = PRODUCTS
+): number {
+  return productList.filter((product) => matchesCategory(product, categoryName)).length;
 }
 
 const CATEGORY_DEFINITIONS: Omit<Category, "itemCount">[] = [
