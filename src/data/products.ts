@@ -442,6 +442,7 @@ export const PRODUCTS: Product[] = [
     ],
     hasBlousePiece: false,
     inStock: true,
+    isSilkMark: false,
     tags: ["blouse", "silk", "wine", "accessories"],
     productType: "blouse",
     origin: "Varanasi, India",
@@ -476,6 +477,7 @@ export const PRODUCTS: Product[] = [
     ],
     hasBlousePiece: false,
     inStock: true,
+    isSilkMark: false,
     tags: ["jewelry", "jhumkas", "gold", "accessories"],
     productType: "jewelry",
     origin: "Jaipur, Rajasthan",
@@ -574,4 +576,12 @@ export function getProductMetaDescription(product: Product, maxLength: number = 
   const lastSpace = sliced.lastIndexOf(" ");
   const trimmed = lastSpace > descriptor.length ? sliced.slice(0, lastSpace) : sliced;
   return `${trimmed.replace(/[.,:;—\s]+$/, "")}…`;
+}
+
+export function isSilkMarkCertified(product: Product): boolean {
+  if (typeof product.isSilkMark === "boolean") {
+    return product.isSilkMark;
+  }
+  const type = getProductType(product);
+  return type === "saree" && product.fabric.toLowerCase().includes("silk");
 }

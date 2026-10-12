@@ -6,6 +6,7 @@ import Link from "next/link";
 import { CheckCircle2, ShieldCheck, ArrowLeft, ArrowRight, ChevronRight, Lock, CreditCard, Building2, Info } from "lucide-react";
 import { useStore } from "@/context/StoreContext";
 import { OrderRecord } from "@/data/mockOrders";
+import { getProductType, isSilkMarkCertified } from "@/data/products";
 
 const POPULAR_BANKS = [
   { id: "hdfc", name: "HDFC Bank" },
@@ -104,6 +105,8 @@ export default function CheckoutPage() {
 
   // Delivery & Payment selection
   const [deliveryMethod, setDeliveryMethod] = useState<"standard" | "express">("standard");
+  const allSilkMarkItems = cart.length > 0 && cart.every((i) => isSilkMarkCertified(i.product));
+  const isJewelryOnly = cart.length > 0 && cart.every((i) => getProductType(i.product) === "jewelry");
   const isExpressEligible = appliedCoupon === "PALLUVO10" && subtotal >= 1999;
   const expressFee = deliveryMethod === "express" ? (isExpressEligible ? 0 : 299) : 0;
   const totalShippingFee = shippingFee + expressFee;
@@ -723,7 +726,11 @@ export default function CheckoutPage() {
                       />
                       <div>
                         <p className="font-semibold text-neutral-900">Standard Insured Delivery (3-5 Business Days)</p>
-                        <p className="text-[11px] text-neutral-600">Tamper-proof rigid box with Silk Mark Certificate</p>
+                        <p className="text-[11px] text-neutral-600">
+                          {allSilkMarkItems
+                            ? "Tamper-proof rigid box with Silk Mark Certificate (Illustrative prototype service)"
+                            : "Tamper-proof rigid keepsake box with Certificate of Authenticity (Illustrative prototype service)"}
+                        </p>
                       </div>
                     </div>
                     {shippingFee === 0 ? (
@@ -755,8 +762,8 @@ export default function CheckoutPage() {
                         <p className="font-semibold text-neutral-900">Priority Air Express (1-2 Business Days)</p>
                         <p className="text-[11px] text-neutral-600">
                           {isExpressEligible
-                            ? "Complimentary priority courier included with coupon PALLUVO10"
-                            : "Next-flight priority courier with real-time SMS tracking"}
+                            ? "Complimentary priority courier included with coupon PALLUVO10 (Illustrative service; no live tracking or SMS sent for prototype orders)"
+                            : "Priority air courier service (Illustrative details; no live tracking or SMS sent for prototype orders)"}
                         </p>
                       </div>
                     </div>
@@ -1232,7 +1239,14 @@ export default function CheckoutPage() {
 
               <div className="text-[11px] text-neutral-500 pt-2 border-t border-[#E8E2D9] space-y-1">
                 <p>• 7-Day Hassle-Free Returns Guaranteed</p>
-                <p>• 100% Pure Silk Mark Verified</p>
+                <p>
+                  •{" "}
+                  {allSilkMarkItems
+                    ? "100% Pure Silk Mark Verified"
+                    : isJewelryOnly
+                    ? "100% Certified Handcrafted Authenticity"
+                    : "100% Verified Artisanal Authenticity"}
+                </p>
                 <div className="pt-2 border-t border-[#E8E2D9] text-neutral-600">
                   <Link
                     href="/checkout/help"

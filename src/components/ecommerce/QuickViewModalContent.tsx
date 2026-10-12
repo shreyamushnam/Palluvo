@@ -6,6 +6,7 @@ import Link from "next/link";
 import { X, Star, Heart, ShoppingBag, ShieldCheck, Truck, RotateCcw, Check, ArrowRight } from "lucide-react";
 import { useStore } from "@/context/StoreContext";
 import { useFocusTrap } from "@/hooks/useFocusTrap";
+import { getProductType, isSilkMarkCertified } from "@/data/products";
 
 export interface QuickViewModalContentProps {
   product: NonNullable<ReturnType<typeof useStore>["quickViewProduct"]>;
@@ -37,6 +38,8 @@ export const QuickViewModalContent: React.FC<QuickViewModalContentProps> = ({
   const [quantity, setQuantity] = useState(1);
 
   const isFav = isInWishlist(product.id);
+  const productType = getProductType(product);
+  const isSilkMark = isSilkMarkCertified(product);
 
   const handleAddToCart = () => {
     addToCart(product, quantity, selectedColor, product.hasBlousePiece ? blouseOption : undefined);
@@ -285,7 +288,13 @@ export const QuickViewModalContent: React.FC<QuickViewModalContentProps> = ({
                   onClick={onClose}
                   className="inline-flex items-center justify-center gap-1.5 w-full text-center text-xs font-medium text-neutral-600 hover:text-[#541920] underline tracking-wider uppercase rounded-xs focus-visible:ring-2 focus-visible:ring-[#541920] focus-visible:outline-none"
                 >
-                  <span>View Full Product Details & Saree Specs</span>
+                  <span>
+                    {productType === "jewelry"
+                      ? "View Full Product Details & Jewelry Specs"
+                      : productType === "blouse"
+                      ? "View Full Product Details & Blouse Specs"
+                      : "View Full Product Details & Saree Specs"}
+                  </span>
                   <ArrowRight className="w-3.5 h-3.5" />
                 </Link>
 
@@ -297,7 +306,7 @@ export const QuickViewModalContent: React.FC<QuickViewModalContentProps> = ({
                   </div>
                   <div className="flex flex-col items-center gap-1">
                     <ShieldCheck className="w-4 h-4 text-[#15803D]" />
-                    <span>Silk Mark Certified</span>
+                    <span>{isSilkMark ? "Silk Mark Certified" : "Authentic Handcrafted"}</span>
                   </div>
                   <div className="flex flex-col items-center gap-1">
                     <RotateCcw className="w-4 h-4 text-[#C5A575]" />
