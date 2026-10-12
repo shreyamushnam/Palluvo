@@ -15,7 +15,7 @@ import {
   ZoomIn,
   ZoomOut,
 } from "lucide-react";
-import { Product, PRODUCTS } from "@/data/products";
+import { Product, PRODUCTS, getProductType } from "@/data/products";
 import { getCategoryHref } from "@/data/categories";
 import { useStore } from "@/context/StoreContext";
 import { ProductCard } from "@/components/ecommerce/ProductCard";
@@ -103,6 +103,7 @@ export const ProductDetailView: React.FC<ProductDetailViewProps> = ({
   }, []);
 
   const isFav = isInWishlist(product.id);
+  const productType = getProductType(product);
 
   const toggleAccordion = (key: string) => {
     setOpenAccordions((prev) => ({ ...prev, [key]: !prev[key] }));
@@ -472,13 +473,30 @@ export const ProductDetailView: React.FC<ProductDetailViewProps> = ({
             {/* Product Details Table */}
             <div className="pt-4 border-t border-[#E8E2D9] space-y-2">
               <h2 className="font-serif text-sm font-semibold text-neutral-900">
-                Product Details
+                {productType === "jewelry"
+                  ? "Jewelry Specifications"
+                  : productType === "blouse"
+                  ? "Blouse Specifications"
+                  : "Product Details"}
               </h2>
               <div className="grid grid-cols-2 gap-y-1.5 text-xs text-neutral-600 font-sans">
-                <div>Fabric: <strong className="text-neutral-900 font-medium">{product.fabric}</strong></div>
-                <div>Length: <strong className="text-neutral-900 font-medium">{product.details.length}</strong></div>
-                <div>Blouse Piece: <strong className="text-neutral-900 font-medium">{product.details.blousePiece}</strong></div>
-                <div>Work: <strong className="text-neutral-900 font-medium">{product.details.work}</strong></div>
+                <div>
+                  {productType === "jewelry" ? "Material: " : "Fabric: "}
+                  <strong className="text-neutral-900 font-medium">{product.fabric}</strong>
+                </div>
+                <div>
+                  {productType === "jewelry" ? "Drop / Size: " : "Length: "}
+                  <strong className="text-neutral-900 font-medium">{product.details.length}</strong>
+                </div>
+                {productType !== "jewelry" && product.details.blousePiece && product.details.blousePiece !== "N/A" && (
+                  <div>
+                    Blouse Piece: <strong className="text-neutral-900 font-medium">{product.details.blousePiece}</strong>
+                  </div>
+                )}
+                <div>
+                  {productType === "jewelry" ? "Style / Work: " : "Work: "}
+                  <strong className="text-neutral-900 font-medium">{product.details.work}</strong>
+                </div>
                 <div>Occasion: <strong className="text-neutral-900 font-medium">{product.details.occasion}</strong></div>
               </div>
             </div>

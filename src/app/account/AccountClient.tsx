@@ -722,7 +722,7 @@ export default function AccountPage() {
                                 href={`/product/${item.id}`}
                                 className="w-full sm:w-auto min-h-[44px] px-4 py-2.5 border border-[#DCD5C9] hover:border-[#541920] bg-white text-neutral-800 hover:text-[#541920] text-xs font-medium rounded-xs transition-colors shrink-0 inline-flex items-center justify-center text-center cursor-pointer focus-visible:ring-2 focus-visible:ring-[#541920] focus-visible:outline-none"
                               >
-                                View Saree
+                                View Product
                               </Link>
                             </div>
                           ))}
