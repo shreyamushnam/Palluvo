@@ -55,31 +55,51 @@ export const OfferWelcomeModal: React.FC = () => {
   });
 
   const handleCopyAndShop = async () => {
-    try {
-      if (typeof navigator !== "undefined" && navigator.clipboard?.writeText) {
+    let copySuccessful = false;
+    if (typeof navigator !== "undefined" && navigator.clipboard?.writeText) {
+      try {
         await navigator.clipboard.writeText("PALLUVO10");
+        copySuccessful = true;
+      } catch {
+        copySuccessful = false;
       }
-    } catch {
-      // Fallback if clipboard API is restricted
     }
-    setCopied(true);
-    showToast("Promotional code PALLUVO10 copied! Enjoy 10% off.");
-    handleClose();
-    router.push("/shop");
+
+    if (copySuccessful) {
+      setCopied(true);
+      showToast("Promotional code PALLUVO10 copied! Enjoy 10% off.");
+      handleClose();
+      router.push("/shop");
+    } else {
+      showToast(
+        "Unable to copy code to clipboard. Please select and copy code PALLUVO10 manually.",
+        "info"
+      );
+    }
   };
 
   const handleManualCopy = async (e: React.MouseEvent) => {
     e.stopPropagation();
-    try {
-      if (typeof navigator !== "undefined" && navigator.clipboard?.writeText) {
+    let copySuccessful = false;
+    if (typeof navigator !== "undefined" && navigator.clipboard?.writeText) {
+      try {
         await navigator.clipboard.writeText("PALLUVO10");
+        copySuccessful = true;
+      } catch {
+        copySuccessful = false;
       }
-    } catch {
-      // Fallback
     }
-    setCopied(true);
-    showToast("Promotional code PALLUVO10 copied to clipboard!");
-    setTimeout(() => setCopied(false), 2500);
+
+    if (copySuccessful) {
+      setCopied(true);
+      showToast("Promotional code PALLUVO10 copied to clipboard!");
+      setTimeout(() => setCopied(false), 2500);
+    } else {
+      showToast(
+        "Unable to copy code to clipboard. Please select and copy code PALLUVO10 manually.",
+        "info"
+      );
+    }
   };
 
   if (!isOpen) return null;

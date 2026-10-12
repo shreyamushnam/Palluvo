@@ -130,26 +130,43 @@ export const CartDrawer: React.FC = () => {
               {freeShippingLeft === 0 ? (
                 <span className="text-[#15803D] font-medium flex items-center gap-1.5">
                   <Sparkles className="w-3.5 h-3.5 text-[#15803D] shrink-0" />
-                  <span>You have unlocked FREE Express Shipping!</span>
+                  <span>
+                    {appliedCoupon === "PALLUVO10"
+                      ? "You have unlocked FREE Express Shipping with coupon PALLUVO10!"
+                      : "You have unlocked FREE Standard Shipping!"}
+                  </span>
                 </span>
               ) : (
                 <span>
                   Add <strong className="text-[#541920] tabular-nums">{formatPrice(freeShippingLeft)}</strong> more to get{" "}
-                  <strong>FREE Shipping</strong>
+                  <strong>
+                    {appliedCoupon === "PALLUVO10" ? "FREE Express Shipping" : "FREE Shipping"}
+                  </strong>
+                  {appliedCoupon === "PALLUVO10" ? " with coupon PALLUVO10" : ""}
                 </span>
               )}
               <span className="font-semibold text-neutral-700">{progressPercent}%</span>
             </div>
             <div
               role="progressbar"
-              aria-label="Free express shipping progress"
+              aria-label={
+                appliedCoupon === "PALLUVO10"
+                  ? "Free express shipping progress"
+                  : "Free shipping progress"
+              }
               aria-valuenow={progressPercent}
               aria-valuemin={0}
               aria-valuemax={100}
               aria-valuetext={
                 freeShippingLeft === 0
-                  ? "Free express shipping unlocked"
-                  : `Add ${formatPrice(freeShippingLeft)} more to get free express shipping`
+                  ? appliedCoupon === "PALLUVO10"
+                    ? "Free express shipping unlocked with coupon PALLUVO10"
+                    : "Free standard shipping unlocked"
+                  : `Add ${formatPrice(freeShippingLeft)} more to get ${
+                      appliedCoupon === "PALLUVO10"
+                        ? "free express shipping with coupon PALLUVO10"
+                        : "free shipping"
+                    }`
               }
               className="w-full bg-[#E5DFD5] h-1.5 rounded-full overflow-hidden"
             >

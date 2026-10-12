@@ -417,10 +417,10 @@ export const InfoModal: React.FC<InfoModalProps> = ({
                     <div className="p-4 bg-white rounded-xs border border-[#E8E2D9] space-y-1.5">
                       <strong className="text-neutral-900 font-semibold flex items-center gap-2 text-sm">
                         <Truck className="w-4 h-4 text-[#541920]" />
-                        <span>Free Express Shipping</span>
+                        <span>Free Shipping</span>
                       </strong>
                       <p>
-                        We offer 100% complimentary insured express shipping across India on all orders above <strong>₹1,999</strong>. For orders under ₹1,999, a flat nominal fee of ₹150 applies.
+                        We offer 100% complimentary insured shipping across India on all orders above <strong>₹1,999</strong>. For orders under ₹1,999, a flat nominal fee of ₹149 applies.
                       </p>
                     </div>
 
