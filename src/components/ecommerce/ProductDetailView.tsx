@@ -192,7 +192,7 @@ export const ProductDetailView: React.FC<ProductDetailViewProps> = ({
               }}
               role="button"
               tabIndex={0}
-              aria-label={isZoomed ? "Zoom out image" : "Tap to zoom into saree weave detail"}
+              aria-label={isZoomed ? "Zoom out product image" : "Zoom product image"}
               onKeyDown={(e) => {
                 if (e.key === "Enter" || e.key === " ") {
                   e.preventDefault();

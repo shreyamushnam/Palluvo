@@ -160,7 +160,7 @@ export const InfoModal: React.FC<InfoModalProps> = ({
               role="tabpanel"
               aria-labelledby={`info-tab-${activeTab}`}
               tabIndex={0}
-              className="md:col-span-8 p-6 sm:p-8 max-h-[70vh] overflow-y-auto focus-visible:outline-none"
+              className="md:col-span-8 p-6 sm:p-8 max-h-[70vh] overflow-y-auto focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#541920] focus-visible:ring-offset-2 rounded-xs"
             >
               
               {/* CONTACT US */}

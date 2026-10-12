@@ -626,7 +626,7 @@ export default function AccountPage() {
                 role="tabpanel"
                 aria-labelledby="account-tab-orders"
                 tabIndex={0}
-                className="space-y-6 focus-visible:outline-none"
+                className="space-y-6 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#541920] focus-visible:ring-offset-2 rounded-xs"
               >
                 <div className="flex items-center justify-between gap-3 flex-wrap">
                   <div>
@@ -750,7 +750,7 @@ export default function AccountPage() {
                 role="tabpanel"
                 aria-labelledby="account-tab-addresses"
                 tabIndex={0}
-                className="space-y-6 focus-visible:outline-none"
+                className="space-y-6 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#541920] focus-visible:ring-offset-2 rounded-xs"
               >
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
                   <div>
@@ -856,7 +856,7 @@ export default function AccountPage() {
                 role="tabpanel"
                 aria-labelledby="account-tab-profile"
                 tabIndex={0}
-                className="bg-white p-6 rounded-sm border border-[#E8E2D9] space-y-6 focus-visible:outline-none"
+                className="bg-white p-6 rounded-sm border border-[#E8E2D9] space-y-6 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#541920] focus-visible:ring-offset-2"
               >
                 <div>
                   <h2 className="font-serif text-xl text-neutral-900 pb-1">
