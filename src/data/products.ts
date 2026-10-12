@@ -539,11 +539,39 @@ export function getProductMetadataSuffix(product: Product): string {
   const type = getProductType(product);
   switch (type) {
     case "blouse":
-      return `Pure ${product.fabric} handcrafted blouse piece.`;
+      return `${product.fabric} handcrafted blouse piece.`;
     case "jewelry":
       return `Handcrafted jewelry in ${product.fabric}.`;
     case "saree":
     default:
-      return `Pure ${product.fabric} handcrafted saree.`;
+      return `${product.fabric} handcrafted saree.`;
   }
+}
+
+export function getProductMetaDescription(product: Product, maxLength: number = 155): string {
+  const type = getProductType(product);
+  let descriptor = "";
+  switch (type) {
+    case "blouse":
+      descriptor = `${product.fabric} handcrafted blouse piece.`;
+      break;
+    case "jewelry":
+      descriptor = `Handcrafted jewelry in ${product.fabric}.`;
+      break;
+    case "saree":
+    default:
+      descriptor = `${product.fabric} handcrafted saree.`;
+      break;
+  }
+
+  const full = `${descriptor} ${product.description}`;
+  if (full.length <= maxLength) {
+    return full;
+  }
+
+  const budget = maxLength - 1; // space for ellipsis character
+  const sliced = full.slice(0, budget);
+  const lastSpace = sliced.lastIndexOf(" ");
+  const trimmed = lastSpace > descriptor.length ? sliced.slice(0, lastSpace) : sliced;
+  return `${trimmed.replace(/[.,:;—\s]+$/, "")}…`;
 }
