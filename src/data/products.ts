@@ -218,6 +218,7 @@ export const PRODUCTS: Product[] = [
     blouseOptions: ["With Blouse", "Without Blouse"],
     inStock: true,
     isNewArrival: true,
+    isSilkMark: false,
     tags: ["cotton", "mustard", "yellow", "haldi"],
     origin: "Chanderi, Madhya Pradesh",
   },
@@ -294,6 +295,7 @@ export const PRODUCTS: Product[] = [
     blouseOptions: ["With Blouse", "Without Blouse"],
     inStock: true,
     isTrending: true,
+    isSilkMark: false,
     tags: ["black", "chiffon", "party"],
     origin: "Surat, Gujarat",
   },
@@ -331,6 +333,7 @@ export const PRODUCTS: Product[] = [
     blouseOptions: ["With Blouse", "Without Blouse"],
     inStock: true,
     isNewArrival: true,
+    isSilkMark: false,
     tags: ["organza", "lavender", "party"],
     origin: "Kolkata, West Bengal",
   },
@@ -368,6 +371,7 @@ export const PRODUCTS: Product[] = [
     blouseOptions: ["With Blouse", "Without Blouse"],
     inStock: true,
     isNewArrival: true,
+    isSilkMark: false,
     tags: ["handloom", "ivory", "white", "temple"],
     origin: "Chettinad, Tamil Nadu",
   },
@@ -579,9 +583,5 @@ export function getProductMetaDescription(product: Product, maxLength: number = 
 }
 
 export function isSilkMarkCertified(product: Product): boolean {
-  if (typeof product.isSilkMark === "boolean") {
-    return product.isSilkMark;
-  }
-  const type = getProductType(product);
-  return type === "saree" && product.fabric.toLowerCase().includes("silk");
+  return product.isSilkMark === true;
 }

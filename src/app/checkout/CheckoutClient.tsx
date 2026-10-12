@@ -725,7 +725,7 @@ export default function CheckoutPage() {
                         className="text-[#541920]"
                       />
                       <div>
-                        <p className="font-semibold text-neutral-900">Standard Insured Delivery (3-5 Business Days)</p>
+                        <p className="font-semibold text-neutral-900">Standard Insured Delivery (3-5 Business Days • Illustrative ETA)</p>
                         <p className="text-[11px] text-neutral-600">
                           {allSilkMarkItems
                             ? "Tamper-proof rigid box with Silk Mark Certificate (Illustrative prototype service)"
@@ -759,7 +759,7 @@ export default function CheckoutPage() {
                         className="text-[#541920]"
                       />
                       <div>
-                        <p className="font-semibold text-neutral-900">Priority Air Express (1-2 Business Days)</p>
+                        <p className="font-semibold text-neutral-900">Priority Air Express (1-2 Business Days • Illustrative ETA)</p>
                         <p className="text-[11px] text-neutral-600">
                           {isExpressEligible
                             ? "Complimentary priority courier included with coupon PALLUVO10 (Illustrative service; no live tracking or SMS sent for prototype orders)"
