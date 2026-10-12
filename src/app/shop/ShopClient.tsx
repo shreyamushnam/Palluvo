@@ -45,7 +45,7 @@ const OCCASIONS = [
 
 export function matchesCategory(product: Product, category: string): boolean {
   if (!category) return true;
-  const norm = category.toLowerCase().trim().replace(/\+/g, " ");
+  const norm = category.toLowerCase().trim();
   const isSaree = getProductType(product) === "saree";
 
   if (norm.includes("new arrival") || norm.includes("new")) {
@@ -81,7 +81,7 @@ export function matchesCategory(product: Product, category: string): boolean {
 
 function isCategoryActive(selectedCategory: string, cat: (typeof CATEGORIES)[number]): boolean {
   if (!selectedCategory) return false;
-  const selNorm = selectedCategory.toLowerCase().trim().replace(/\+/g, " ");
+  const selNorm = selectedCategory.toLowerCase().trim();
   const catCanonNorm = cat.canonicalQuery.toLowerCase().trim().replace(/\+/g, " ");
   const catNameNorm = cat.name.toLowerCase().trim();
 
@@ -168,7 +168,7 @@ export function ShopContent() {
     if (!selectedCategory) return "";
     const matched = CATEGORIES.find((cat) => isCategoryActive(selectedCategory, cat));
     if (matched) return matched.name;
-    return selectedCategory.replace(/\+/g, " ");
+    return selectedCategory;
   }, [selectedCategory]);
 
   const [selectedFabric, setSelectedFabric] = useState<string>("");

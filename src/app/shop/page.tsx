@@ -3,16 +3,16 @@ import { Suspense } from "react";
 import { ShopContent } from "./ShopClient";
 
 export const metadata: Metadata = {
-  title: "Handcrafted Luxury Sarees | Pure Silk, Banarasi, Kanjeevaram | PALLUVO",
+  title: "Handcrafted Luxury Sarees, Blouses & Jewelry | PALLUVO",
   description:
-    "Explore PALLUVO's curated collection of authentic Indian handloom sarees. Pure Kanjeevaram silk, Banarasi brocades, delicate organzas, and bridal heirlooms.",
+    "Explore PALLUVO's curated collection of authentic Indian handcrafted products. Pure silk & handloom sarees, embroidered designer blouses, and temple jewelry.",
   alternates: {
     canonical: "/shop",
   },
   openGraph: {
-    title: "Handcrafted Luxury Sarees Collection | PALLUVO",
+    title: "Handcrafted Luxury Sarees, Blouses & Jewelry | PALLUVO",
     description:
-      "Explore PALLUVO's curated collection of authentic Indian handloom sarees. Pure Kanjeevaram silk, Banarasi brocades, delicate organzas, and bridal heirlooms.",
+      "Explore PALLUVO's curated collection of authentic Indian handcrafted products. Pure silk & handloom sarees, embroidered designer blouses, and temple jewelry.",
     url: "https://palluvo.com/shop",
     siteName: "PALLUVO",
     locale: "en_IN",
@@ -20,9 +20,9 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: "Handcrafted Luxury Sarees Collection | PALLUVO",
+    title: "Handcrafted Luxury Sarees, Blouses & Jewelry | PALLUVO",
     description:
-      "Explore PALLUVO's curated collection of authentic Indian handloom sarees. Pure Kanjeevaram silk, Banarasi brocades, delicate organzas, and bridal heirlooms.",
+      "Explore PALLUVO's curated collection of authentic Indian handcrafted products. Pure silk & handloom sarees, embroidered designer blouses, and temple jewelry.",
   },
 };
 

@@ -11,7 +11,7 @@ export interface Category {
 
 export function getCategoryCanonicalQuery(categoryNameOrQuery: string): string {
   if (!categoryNameOrQuery) return "";
-  const norm = categoryNameOrQuery.toLowerCase().trim().replace(/\+/g, " ");
+  const norm = categoryNameOrQuery.toLowerCase().trim();
   if (norm.includes("new arrival") || norm.includes("new")) {
     return "New+Arrivals";
   } else if (norm.includes("silk") && !norm.includes("cotton")) {
@@ -41,7 +41,7 @@ export function getCategoryHref(categoryNameOrQuery: string): string {
 
 export function matchesCategory(product: Product, category: string): boolean {
   if (!category) return true;
-  const norm = category.toLowerCase().trim().replace(/\+/g, " ");
+  const norm = category.toLowerCase().trim();
   const isSaree = getProductType(product) === "saree";
 
   if (norm.includes("new arrival") || norm.includes("new")) {
