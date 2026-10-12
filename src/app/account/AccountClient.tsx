@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useCallback } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -80,9 +80,13 @@ export default function AccountPage() {
   const [isAddressModalOpen, setIsAddressModalOpen] = useState(false);
   const [editingAddressId, setEditingAddressId] = useState<string | null>(null);
 
+  const handleCloseAddressModal = useCallback(() => {
+    setIsAddressModalOpen(false);
+  }, []);
+
   const addressModalRef = useFocusTrap<HTMLDivElement>({
     isOpen: isAddressModalOpen,
-    onClose: () => setIsAddressModalOpen(false),
+    onClose: handleCloseAddressModal,
   });
   const [addressForm, setAddressForm] = useState<Omit<SavedAddress, "id">>({
     name: "",

@@ -144,7 +144,7 @@ export const OfferWelcomeModal: React.FC = () => {
               id="welcome-offer-description"
               className="text-xs sm:text-sm text-neutral-300 max-w-sm mx-auto font-sans leading-relaxed"
             >
-              Enjoy an exclusive <strong className="text-[#C5A575] font-semibold">10% discount</strong> and complimentary express delivery on your first order of handwoven luxury sarees.
+              Enjoy an exclusive <strong className="text-[#C5A575] font-semibold">10% discount</strong> and complimentary express delivery on orders above ₹1,999 with coupon code PALLUVO10.
             </p>
           </div>
 

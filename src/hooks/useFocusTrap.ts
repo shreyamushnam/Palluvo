@@ -12,11 +12,17 @@ export function useFocusTrap<T extends HTMLElement = HTMLDivElement>({
   autoFocus = true,
 }: UseFocusTrapOptions) {
   const containerRef = useRef<T | null>(null);
+  const onCloseRef = useRef(onClose);
+  const previousActiveElementRef = useRef<HTMLElement | null>(null);
+
+  useEffect(() => {
+    onCloseRef.current = onClose;
+  });
 
   useEffect(() => {
     if (!isOpen) return;
 
-    const previousActiveElement = document.activeElement as HTMLElement | null;
+    previousActiveElementRef.current = document.activeElement as HTMLElement | null;
 
     const getFocusableElements = (): HTMLElement[] => {
       const container = containerRef.current;
@@ -31,8 +37,9 @@ export function useFocusTrap<T extends HTMLElement = HTMLDivElement>({
       );
     };
 
+    let timer: ReturnType<typeof setTimeout> | null = null;
     if (autoFocus) {
-      const timer = setTimeout(() => {
+      timer = setTimeout(() => {
         const container = containerRef.current;
         if (!container) return;
         const focusable = getFocusableElements();
@@ -42,59 +49,14 @@ export function useFocusTrap<T extends HTMLElement = HTMLDivElement>({
           container.focus();
         }
       }, 50);
-
-      const handleKeyDown = (e: KeyboardEvent) => {
-        if (e.key === "Escape") {
-          if (onClose) {
-            e.preventDefault();
-            e.stopPropagation();
-            onClose();
-          }
-          return;
-        }
-
-        if (e.key === "Tab") {
-          const container = containerRef.current;
-          const focusable = getFocusableElements();
-          if (focusable.length === 0) {
-            e.preventDefault();
-            return;
-          }
-
-          const first = focusable[0];
-          const last = focusable[focusable.length - 1];
-
-          if (e.shiftKey) {
-            if (document.activeElement === first || !container?.contains(document.activeElement)) {
-              e.preventDefault();
-              last.focus();
-            }
-          } else {
-            if (document.activeElement === last || !container?.contains(document.activeElement)) {
-              e.preventDefault();
-              first.focus();
-            }
-          }
-        }
-      };
-
-      window.addEventListener("keydown", handleKeyDown);
-
-      return () => {
-        clearTimeout(timer);
-        window.removeEventListener("keydown", handleKeyDown);
-        if (previousActiveElement && typeof previousActiveElement.focus === "function") {
-          previousActiveElement.focus();
-        }
-      };
     }
 
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
-        if (onClose) {
+        if (onCloseRef.current) {
           e.preventDefault();
           e.stopPropagation();
-          onClose();
+          onCloseRef.current();
         }
         return;
       }
@@ -127,12 +89,14 @@ export function useFocusTrap<T extends HTMLElement = HTMLDivElement>({
     window.addEventListener("keydown", handleKeyDown);
 
     return () => {
+      if (timer) clearTimeout(timer);
       window.removeEventListener("keydown", handleKeyDown);
-      if (previousActiveElement && typeof previousActiveElement.focus === "function") {
-        previousActiveElement.focus();
+      const prev = previousActiveElementRef.current;
+      if (prev && typeof prev.focus === "function") {
+        prev.focus();
       }
     };
-  }, [isOpen, onClose, autoFocus]);
+  }, [isOpen, autoFocus]);
 
   return containerRef;
 }

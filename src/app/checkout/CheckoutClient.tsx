@@ -33,6 +33,7 @@ export default function CheckoutPage() {
     discountAmount,
     shippingFee,
     finalTotal,
+    appliedCoupon,
     formatPrice,
     placeOrder,
     clearOrders,
@@ -103,6 +104,10 @@ export default function CheckoutPage() {
 
   // Delivery & Payment selection
   const [deliveryMethod, setDeliveryMethod] = useState<"standard" | "express">("standard");
+  const isExpressEligible = appliedCoupon === "PALLUVO10" && subtotal >= 1999;
+  const expressFee = deliveryMethod === "express" ? (isExpressEligible ? 0 : 299) : 0;
+  const totalShippingFee = shippingFee + expressFee;
+  const effectiveTotal = finalTotal + expressFee;
   const [paymentMethod, setPaymentMethod] = useState<"upi" | "card" | "netbanking" | "cod">("upi");
   const [upiId, setUpiId] = useState(isLoggedIn ? "radhika@okhdfcbank" : "");
   const [upiError, setUpiError] = useState("");
@@ -195,7 +200,7 @@ export default function CheckoutPage() {
         quantity: i.quantity,
         color: i.selectedColor || "Standard",
       })),
-      totalAmount: finalTotal + (deliveryMethod === "express" ? 299 : 0),
+      totalAmount: effectiveTotal,
       shippingAddress: `${shippingAddress.fullName}, ${shippingAddress.addressLine1}${shippingAddress.landmark ? `, ${shippingAddress.landmark}` : ""}, ${shippingAddress.city}, ${shippingAddress.state} - ${shippingAddress.pincode} (Ph: ${shippingAddress.phone})`,
       paymentMethod:
         paymentMethod === "upi"
@@ -322,9 +327,6 @@ export default function CheckoutPage() {
       </div>
     );
   }
-
-  const totalShippingFee = shippingFee + (deliveryMethod === "express" ? 299 : 0);
-  const effectiveTotal = finalTotal + (deliveryMethod === "express" ? 299 : 0);
 
   return (
     <div className="min-h-screen bg-[#FAF7F2] pb-16">
@@ -751,10 +753,21 @@ export default function CheckoutPage() {
                       />
                       <div>
                         <p className="font-semibold text-neutral-900">Priority Air Express (1-2 Business Days)</p>
-                        <p className="text-[11px] text-neutral-600">Next-flight priority courier with real-time SMS tracking</p>
+                        <p className="text-[11px] text-neutral-600">
+                          {isExpressEligible
+                            ? "Complimentary priority courier included with coupon PALLUVO10"
+                            : "Next-flight priority courier with real-time SMS tracking"}
+                        </p>
                       </div>
                     </div>
-                    <span className="font-bold text-neutral-900 tabular-nums">₹299</span>
+                    {isExpressEligible ? (
+                      <span className="font-bold text-[#15803D] tabular-nums">
+                        <span className="line-through text-neutral-400 font-normal text-xs mr-1.5">₹299</span>
+                        FREE
+                      </span>
+                    ) : (
+                      <span className="font-bold text-neutral-900 tabular-nums">₹299</span>
+                    )}
                   </label>
 
                   <div className="pt-2">
