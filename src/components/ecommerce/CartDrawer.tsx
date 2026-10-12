@@ -6,6 +6,7 @@ import Link from "next/link";
 import { X, Trash2, Plus, Minus, ShoppingBag, ArrowRight, ShieldCheck, Tag, Sparkles } from "lucide-react";
 import { useStore } from "@/context/StoreContext";
 import { useFocusTrap } from "@/hooks/useFocusTrap";
+import { getProductType } from "@/data/products";
 
 export const CartDrawer: React.FC = () => {
   const {
@@ -24,6 +25,8 @@ export const CartDrawer: React.FC = () => {
     freeShippingThreshold,
     formatPrice,
   } = useStore();
+
+  const isAllSarees = cart.length > 0 && cart.every((item) => getProductType(item.product) === "saree");
 
   const [inputCoupon, setInputCoupon] = useState("");
   const [couponError, setCouponError] = useState<string | null>(null);
@@ -388,7 +391,11 @@ export const CartDrawer: React.FC = () => {
 
               <div className="flex items-center justify-center gap-1.5 text-[11px] text-neutral-700 font-medium pt-1">
                 <ShieldCheck className="w-3.5 h-3.5 text-[#15803D]" />
-                <span>100% Authentic Handcrafted Sarees • Easy 7-Day Returns</span>
+                <span>
+                  {isAllSarees
+                    ? "100% Authentic Handcrafted Sarees • Easy 7-Day Returns"
+                    : "100% Authentic Handcrafted Products • Easy 7-Day Returns"}
+                </span>
               </div>
             </div>
           )}

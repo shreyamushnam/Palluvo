@@ -168,7 +168,7 @@ export function ShopContent() {
     if (!selectedCategory) return "";
     const matched = CATEGORIES.find((cat) => isCategoryActive(selectedCategory, cat));
     if (matched) return matched.name;
-    return decodeURIComponent(selectedCategory).replace(/\+/g, " ");
+    return selectedCategory.replace(/\+/g, " ");
   }, [selectedCategory]);
 
   const [selectedFabric, setSelectedFabric] = useState<string>("");
