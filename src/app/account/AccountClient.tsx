@@ -1,12 +1,12 @@
 "use client";
 
-import React, { useState, useCallback } from "react";
+import React, { useState, useCallback, useMemo } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Package, MapPin, User, Truck, CheckCircle2, ShieldCheck, Plus, X, Edit2, Trash2, Check, RotateCcw, LogOut, Sparkles, Award, Headphones, ArrowRight, Lock, Info } from "lucide-react";
 import { useStore } from "@/context/StoreContext";
-import { SavedAddress } from "@/data/mockOrders";
+import { SavedAddress, OrderRecord } from "@/data/mockOrders";
 import { useFocusTrap } from "@/hooks/useFocusTrap";
 
 function getSafeRedirectUrl(target: string | null | undefined): string {
@@ -64,6 +64,16 @@ export default function AccountPage() {
     login,
     logout,
   } = useStore();
+
+  const validOrders = useMemo(
+    () => (Array.isArray(orders) ? orders.filter((o): o is OrderRecord => Boolean(o && typeof o.id === "string")) : []),
+    [orders]
+  );
+  const validAddresses = useMemo(
+    () => (Array.isArray(addresses) ? addresses.filter((a): a is SavedAddress => Boolean(a && typeof a.id === "string")) : []),
+    [addresses]
+  );
+
   const [activeTab, setActiveTab] = useState<"orders" | "addresses" | "profile">("orders");
 
   // Unauthenticated Auth Card state
@@ -162,21 +172,22 @@ export default function AccountPage() {
       city: "",
       state: "",
       pincode: "",
-      isDefault: addresses.length === 0,
+      isDefault: validAddresses.length === 0,
     });
     setIsAddressModalOpen(true);
   };
 
   const handleOpenEditAddress = (addr: SavedAddress) => {
+    if (!addr) return;
     setEditingAddressId(addr.id);
     setAddressForm({
-      name: addr.name,
-      phone: addr.phone,
-      type: addr.type,
-      addressLine: addr.addressLine,
-      city: addr.city,
-      state: addr.state,
-      pincode: addr.pincode,
+      name: addr.name || "",
+      phone: addr.phone || "",
+      type: addr.type || "Home",
+      addressLine: addr.addressLine || "",
+      city: addr.city || "",
+      state: addr.state || "",
+      pincode: addr.pincode || "",
       isDefault: !!addr.isDefault,
     });
     setIsAddressModalOpen(true);
@@ -564,7 +575,7 @@ export default function AccountPage() {
               }`}
             >
               <Package className="w-4 h-4 shrink-0" />
-              <span>My Orders ({orders.length})</span>
+              <span>My Orders ({validOrders.length})</span>
             </button>
 
             <Link
@@ -590,7 +601,7 @@ export default function AccountPage() {
               }`}
             >
               <MapPin className="w-4 h-4 shrink-0" />
-              <span>Saved Addresses ({addresses.length})</span>
+              <span>Saved Addresses ({validAddresses.length})</span>
             </button>
 
             <button
@@ -635,9 +646,9 @@ export default function AccountPage() {
                 <div className="flex items-center justify-between gap-3 flex-wrap">
                   <div>
                     <h2 className="font-serif text-xl text-neutral-900">Order History</h2>
-                    <span className="text-xs text-neutral-600 font-sans">{orders.length} Total orders (Stored locally)</span>
+                    <span className="text-xs text-neutral-600 font-sans">{validOrders.length} Total orders (Stored locally)</span>
                   </div>
-                  {orders.length > 0 && (
+                  {validOrders.length > 0 && (
                     <button
                       type="button"
                       onClick={() => clearOrders()}
@@ -648,7 +659,7 @@ export default function AccountPage() {
                   )}
                 </div>
 
-                {orders.length === 0 ? (
+                {validOrders.length === 0 ? (
                   <div className="bg-white p-8 text-center rounded-sm border border-[#E8E2D9]">
                     <p className="font-serif text-neutral-700">No orders placed yet.</p>
                     <Link
@@ -660,7 +671,7 @@ export default function AccountPage() {
                   </div>
                 ) : (
                   <div className="space-y-4">
-                    {orders.map((order) => (
+                    {validOrders.map((order) => (
                       <div
                         key={order.id}
                         className="bg-white rounded-sm border border-[#E8E2D9] overflow-hidden shadow-2xs"
@@ -693,13 +704,13 @@ export default function AccountPage() {
 
                         {/* Order Items */}
                         <div className="p-4 sm:p-5 divide-y divide-[#EFEAE1]">
-                          {order.items.map((item, idx) => (
+                          {(Array.isArray(order.items) ? order.items : []).filter(Boolean).map((item, idx) => (
                             <div key={idx} className="pt-3 first:pt-0 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                               <div className="flex gap-3 sm:gap-4 items-center flex-1 min-w-0">
                                 <div className="relative w-16 h-20 shrink-0 rounded-xs overflow-hidden bg-neutral-200">
                                   <Image
-                                    src={item.image}
-                                    alt={item.name}
+                                    src={item.image || "/images/hero-saree.jpg"}
+                                    alt={item.name || "Saree"}
                                     fill
                                     sizes="64px"
                                     className="object-cover object-top"
@@ -713,7 +724,7 @@ export default function AccountPage() {
                                     Qty: {item.quantity} {item.color && `• Color: ${item.color}`}
                                   </p>
                                   <p className="text-xs font-semibold text-[#541920] mt-1 tabular-nums">
-                                    {formatPrice(item.price * item.quantity)}
+                                    {formatPrice((item.price || 0) * (item.quantity || 1))}
                                   </p>
                                 </div>
                               </div>
@@ -771,7 +782,7 @@ export default function AccountPage() {
                   </button>
                 </div>
 
-                {addresses.length === 0 ? (
+                {validAddresses.length === 0 ? (
                   <div className="bg-white p-8 text-center rounded-sm border border-[#E8E2D9] space-y-3">
                     <p className="font-serif text-neutral-700">No saved addresses found.</p>
                     <button
@@ -784,7 +795,7 @@ export default function AccountPage() {
                   </div>
                 ) : (
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {addresses.map((addr) => (
+                    {validAddresses.map((addr) => (
                       <div
                         key={addr.id}
                         className={`bg-white p-5 rounded-sm border space-y-2 relative transition-all ${
@@ -793,7 +804,7 @@ export default function AccountPage() {
                       >
                         <div className="flex items-center justify-between">
                           <span className="inline-block px-2 py-0.5 bg-[#F4EFE6] text-[#541920] border border-[#E8E2D9] rounded-xs text-[10px] font-bold uppercase tracking-wider">
-                            {addr.type}
+                            {addr.type || "Home"}
                           </span>
                           {addr.isDefault ? (
                             <span className="min-h-[44px] -my-2.5 inline-flex items-center gap-1 text-[11px] font-semibold text-[#15803D]">
@@ -815,22 +826,22 @@ export default function AccountPage() {
                             Recipient
                           </span>
                           <h3 className="font-serif text-sm font-semibold text-neutral-900">
-                            {addr.name}
+                            {addr.name || "Recipient"}
                           </h3>
                         </div>
                         <p className="text-xs text-neutral-600 font-sans leading-relaxed">
-                          {addr.addressLine} <br />
-                          {addr.city}, {addr.state} - {addr.pincode}
+                          {addr.addressLine || ""} <br />
+                          {addr.city || ""}, {addr.state || ""} - {addr.pincode || ""}
                         </p>
                         <p className="text-xs text-neutral-600 pt-1">
-                          Phone: <strong className="text-neutral-900">{addr.phone}</strong>
+                          Phone: <strong className="text-neutral-900">{addr.phone || "N/A"}</strong>
                         </p>
                         <div className="pt-2 border-t border-[#E8E2D9] flex items-center gap-1 text-xs font-medium -ml-2">
                           <button
                             type="button"
                             onClick={() => handleOpenEditAddress(addr)}
                             className="min-h-[44px] px-2.5 inline-flex items-center gap-1.5 text-[#541920] hover:bg-[#541920]/5 rounded-xs transition-colors cursor-pointer focus-visible:ring-2 focus-visible:ring-[#541920] focus-visible:outline-none"
-                            aria-label={`Edit recipient address for ${addr.name}`}
+                            aria-label={`Edit recipient address for ${addr.name || "Recipient"}`}
                           >
                             <Edit2 className="w-3.5 h-3.5" />
                             <span>Edit</span>
@@ -840,7 +851,7 @@ export default function AccountPage() {
                             type="button"
                             onClick={() => handleDeleteAddress(addr.id)}
                             className="min-h-[44px] px-2.5 inline-flex items-center gap-1.5 text-neutral-500 hover:text-red-600 hover:bg-red-50 rounded-xs transition-colors cursor-pointer focus-visible:ring-2 focus-visible:ring-[#541920] focus-visible:outline-none"
-                            aria-label={`Delete recipient address for ${addr.name}`}
+                            aria-label={`Delete recipient address for ${addr.name || "Recipient"}`}
                           >
                             <Trash2 className="w-3.5 h-3.5" />
                             <span>Delete</span>

@@ -2,7 +2,7 @@
 
 import React, { createContext, useContext, useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { Product, PRODUCTS } from "@/data/products";
-import { OrderRecord, MOCK_ORDERS, SavedAddress, MOCK_ADDRESSES } from "@/data/mockOrders";
+import { OrderRecord, OrderProductItem, MOCK_ORDERS, SavedAddress, MOCK_ADDRESSES } from "@/data/mockOrders";
 
 export interface CartItem {
   product: Product;
@@ -121,6 +121,205 @@ export function validateAndNormalizeCart(raw: unknown): CartItem[] {
   return normalized;
 }
 
+/**
+ * Validates and normalizes raw parsed auth data from storage.
+ * Handles null, primitives, non-objects, and missing or malformed fields safely.
+ */
+export function validateAndNormalizeAuth(raw: unknown): {
+  isLoggedIn: boolean;
+  user: { name: string; email: string } | null;
+} {
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) {
+    return { isLoggedIn: false, user: null };
+  }
+
+  const rawAuth = raw as { isLoggedIn?: unknown; user?: unknown };
+  const isLoggedIn = typeof rawAuth.isLoggedIn === "boolean" ? rawAuth.isLoggedIn : Boolean(rawAuth.isLoggedIn);
+
+  if (!isLoggedIn) {
+    return { isLoggedIn: false, user: null };
+  }
+
+  const rawUser = rawAuth.user;
+  if (!rawUser || typeof rawUser !== "object" || Array.isArray(rawUser)) {
+    return {
+      isLoggedIn: true,
+      user: { name: "Radhika Sharma", email: "radhika.sharma@example.com" },
+    };
+  }
+
+  const userObj = rawUser as { name?: unknown; email?: unknown };
+  const name =
+    typeof userObj.name === "string" && userObj.name.trim().length > 0
+      ? userObj.name.trim()
+      : "Radhika Sharma";
+  const email =
+    typeof userObj.email === "string" && userObj.email.trim().length > 0
+      ? userObj.email.trim()
+      : "radhika.sharma@example.com";
+
+  return {
+    isLoggedIn: true,
+    user: { name, email },
+  };
+}
+
+/**
+ * Validates and normalizes raw parsed orders data from storage.
+ * Ensures the value is an array of valid OrderRecord objects, validates nested items,
+ * and discards malformed entries so downstream rendering cannot crash.
+ */
+export function validateAndNormalizeOrders(raw: unknown): OrderRecord[] {
+  if (!Array.isArray(raw)) {
+    return [];
+  }
+
+  const validOrders: OrderRecord[] = [];
+
+  for (const item of raw) {
+    if (!item || typeof item !== "object" || Array.isArray(item)) continue;
+
+    const candidate = item as Record<string, unknown>;
+
+    if (typeof candidate.id !== "string" || candidate.id.trim().length === 0) continue;
+    if (typeof candidate.orderNumber !== "string" || candidate.orderNumber.trim().length === 0) continue;
+    if (typeof candidate.date !== "string" || candidate.date.trim().length === 0) continue;
+
+    if (!Array.isArray(candidate.items)) continue;
+
+    const validItems: OrderProductItem[] = [];
+    for (const rawProduct of candidate.items) {
+      if (!rawProduct || typeof rawProduct !== "object" || Array.isArray(rawProduct)) continue;
+      const p = rawProduct as Record<string, unknown>;
+
+      if (typeof p.id !== "string" || p.id.trim().length === 0) continue;
+      if (typeof p.name !== "string" || p.name.trim().length === 0) continue;
+
+      const rawPrice = p.price;
+      const price = typeof rawPrice === "number" && Number.isFinite(rawPrice) && rawPrice >= 0 ? rawPrice : 0;
+
+      const rawQty = p.quantity;
+      const quantity = typeof rawQty === "number" && Number.isFinite(rawQty) && rawQty >= 1 ? Math.floor(rawQty) : 1;
+
+      const image =
+        typeof p.image === "string" && p.image.trim().length > 0
+          ? p.image.trim()
+          : "/images/hero-saree.jpg";
+
+      const color = typeof p.color === "string" ? p.color.trim() : "";
+
+      validItems.push({
+        id: p.id.trim(),
+        name: p.name.trim(),
+        image,
+        price,
+        quantity,
+        color,
+      });
+    }
+
+    if (validItems.length === 0) continue;
+
+    const rawTotal = candidate.totalAmount;
+    const totalAmount =
+      typeof rawTotal === "number" && Number.isFinite(rawTotal) && rawTotal >= 0
+        ? rawTotal
+        : validItems.reduce((acc, it) => acc + it.price * it.quantity, 0);
+
+    const status: "Delivered" | "In Transit" | "Processing" =
+      candidate.status === "Delivered" || candidate.status === "In Transit" || candidate.status === "Processing"
+        ? candidate.status
+        : "Processing";
+
+    const trackingNumber = typeof candidate.trackingNumber === "string" ? candidate.trackingNumber.trim() : "";
+    const deliveryDate = typeof candidate.deliveryDate === "string" ? candidate.deliveryDate.trim() : "";
+    const shippingAddress =
+      typeof candidate.shippingAddress === "string" && candidate.shippingAddress.trim().length > 0
+        ? candidate.shippingAddress.trim()
+        : "Address not provided";
+    const paymentMethod =
+      typeof candidate.paymentMethod === "string" && candidate.paymentMethod.trim().length > 0
+        ? candidate.paymentMethod.trim()
+        : "Prepaid";
+
+    validOrders.push({
+      id: candidate.id.trim(),
+      orderNumber: candidate.orderNumber.trim(),
+      date: candidate.date.trim(),
+      status,
+      trackingNumber,
+      deliveryDate,
+      totalAmount,
+      items: validItems,
+      shippingAddress,
+      paymentMethod,
+    });
+  }
+
+  return validOrders;
+}
+
+/**
+ * Validates and normalizes raw parsed addresses data from storage.
+ * Ensures the value is an array of complete SavedAddress objects, with all required string
+ * properties present to prevent crashes (e.g. addr.phone.replace).
+ */
+export function validateAndNormalizeAddresses(raw: unknown): SavedAddress[] {
+  if (!Array.isArray(raw)) {
+    return [];
+  }
+
+  const validAddresses: SavedAddress[] = [];
+
+  for (const item of raw) {
+    if (!item || typeof item !== "object" || Array.isArray(item)) continue;
+
+    const candidate = item as Record<string, unknown>;
+
+    if (typeof candidate.id !== "string" || candidate.id.trim().length === 0) continue;
+    if (typeof candidate.name !== "string" || candidate.name.trim().length === 0) continue;
+
+    const rawPhone = candidate.phone;
+    const phone =
+      typeof rawPhone === "string" && rawPhone.trim().length > 0
+        ? rawPhone.trim()
+        : typeof rawPhone === "number" && Number.isFinite(rawPhone)
+        ? String(rawPhone)
+        : "";
+    if (!phone) continue;
+
+    if (typeof candidate.addressLine !== "string" || candidate.addressLine.trim().length === 0) continue;
+    if (typeof candidate.city !== "string" || candidate.city.trim().length === 0) continue;
+    if (typeof candidate.state !== "string" || candidate.state.trim().length === 0) continue;
+
+    const rawPincode = candidate.pincode;
+    const pincode =
+      typeof rawPincode === "string" && rawPincode.trim().length > 0
+        ? rawPincode.trim()
+        : typeof rawPincode === "number" && Number.isFinite(rawPincode)
+        ? String(rawPincode)
+        : "";
+    if (!pincode) continue;
+
+    const type: "Home" | "Office" = candidate.type === "Office" ? "Office" : "Home";
+    const isDefault = Boolean(candidate.isDefault);
+
+    validAddresses.push({
+      id: candidate.id.trim(),
+      type,
+      name: candidate.name.trim(),
+      phone,
+      addressLine: candidate.addressLine.trim(),
+      city: candidate.city.trim(),
+      state: candidate.state.trim(),
+      pincode,
+      isDefault,
+    });
+  }
+
+  return validAddresses;
+}
+
 export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const isHydratedRef = useRef(false);
   const [isHydrated, setIsHydrated] = useState(false);
@@ -136,15 +335,28 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [user, setUser] = useState<{ name: string; email: string } | null>(null);
 
-  // Load from localStorage on client mount
+  // Load from localStorage on client mount with per-key isolation
   useEffect(() => {
+    // 1. Auth: validate independently so failures never block cart/orders/addresses
     try {
       const savedAuth = localStorage.getItem("palluvo_ecommerce_auth");
-      if (savedAuth) {
-        const parsedAuth = JSON.parse(savedAuth);
-        setIsLoggedIn(!!parsedAuth.isLoggedIn);
-        setUser(parsedAuth.user || null);
+      if (savedAuth !== null) {
+        try {
+          const parsedAuth = JSON.parse(savedAuth);
+          const validated = validateAndNormalizeAuth(parsedAuth);
+          setIsLoggedIn(validated.isLoggedIn);
+          setUser(validated.user);
+        } catch {
+          setIsLoggedIn(false);
+          setUser(null);
+        }
       }
+    } catch {
+      // Storage access error fallback
+    }
+
+    // 2. Cart: load and normalize canonical products independently
+    try {
       const savedCart = localStorage.getItem("palluvo_ecommerce_cart");
       if (savedCart !== null) {
         try {
@@ -158,44 +370,61 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         // Seed initial cart item for instant e-commerce demonstration
         setCart([{ product: PRODUCTS[0], quantity: 1, selectedColor: "Wine", blouseOption: "Unstitched (Included)" }]);
       }
+    } catch {
+      // Storage access error fallback
+    }
+
+    // 3. Wishlist: load independently
+    try {
       const savedWishlist = localStorage.getItem("palluvo_ecommerce_wishlist");
-      if (savedWishlist) {
+      if (savedWishlist !== null) {
         try {
           const parsed = JSON.parse(savedWishlist);
           if (Array.isArray(parsed)) {
-            setWishlist(parsed.filter((id) => typeof id === "string"));
-          }
-        } catch {}
-      }
-      const savedOrders = localStorage.getItem("palluvo_ecommerce_orders");
-      if (savedOrders) {
-        try {
-          const parsed = JSON.parse(savedOrders);
-          if (Array.isArray(parsed)) {
-            setOrders(parsed);
-          }
-        } catch {}
-      }
-      const savedAddresses = localStorage.getItem("palluvo_ecommerce_addresses");
-      if (savedAddresses) {
-        try {
-          const parsed = JSON.parse(savedAddresses);
-          if (Array.isArray(parsed)) {
-            setAddresses(parsed);
+            setWishlist(parsed.filter((id): id is string => typeof id === "string" && id.trim().length > 0));
           }
         } catch {}
       }
     } catch {
-      // LocalStorage fallback
-    } finally {
-      isHydratedRef.current = true;
-      setIsHydrated(true);
+      // Storage access error fallback
     }
+
+    // 4. Orders: load, validate records and nested items, discard malformed entries
+    try {
+      const savedOrders = localStorage.getItem("palluvo_ecommerce_orders");
+      if (savedOrders !== null) {
+        try {
+          const parsed = JSON.parse(savedOrders);
+          const validated = validateAndNormalizeOrders(parsed);
+          setOrders(validated);
+        } catch {}
+      }
+    } catch {
+      // Storage access error fallback
+    }
+
+    // 5. Addresses: load, validate records, discard malformed entries
+    try {
+      const savedAddresses = localStorage.getItem("palluvo_ecommerce_addresses");
+      if (savedAddresses !== null) {
+        try {
+          const parsed = JSON.parse(savedAddresses);
+          const validated = validateAndNormalizeAddresses(parsed);
+          setAddresses(validated);
+        } catch {}
+      }
+    } catch {
+      // Storage access error fallback
+    }
+
+    // Mark hydration complete only after all storage keys have finished loading
+    isHydratedRef.current = true;
+    setIsHydrated(true);
   }, []);
 
-  // Save changes - guarded against initial hydration race/overwrite
+  // Save changes - only enable persistence after hydration has completed
   useEffect(() => {
-    if (!isHydratedRef.current) return;
+    if (!isHydrated || !isHydratedRef.current) return;
     try {
       localStorage.setItem("palluvo_ecommerce_auth", JSON.stringify({ isLoggedIn, user }));
     } catch {}
@@ -217,30 +446,30 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     setUser(null);
   }, []);
 
-  // Save changes - guarded against initial hydration race/overwrite
+  // Save changes - only enable persistence after hydration has completed
   useEffect(() => {
-    if (!isHydratedRef.current) return;
+    if (!isHydrated || !isHydratedRef.current) return;
     try {
       localStorage.setItem("palluvo_ecommerce_cart", JSON.stringify(cart));
     } catch {}
   }, [cart, isHydrated]);
 
   useEffect(() => {
-    if (!isHydratedRef.current) return;
+    if (!isHydrated || !isHydratedRef.current) return;
     try {
       localStorage.setItem("palluvo_ecommerce_wishlist", JSON.stringify(wishlist));
     } catch {}
   }, [wishlist, isHydrated]);
 
   useEffect(() => {
-    if (!isHydratedRef.current) return;
+    if (!isHydrated || !isHydratedRef.current) return;
     try {
       localStorage.setItem("palluvo_ecommerce_orders", JSON.stringify(orders));
     } catch {}
   }, [orders, isHydrated]);
 
   useEffect(() => {
-    if (!isHydratedRef.current) return;
+    if (!isHydrated || !isHydratedRef.current) return;
     try {
       localStorage.setItem("palluvo_ecommerce_addresses", JSON.stringify(addresses));
     } catch {}

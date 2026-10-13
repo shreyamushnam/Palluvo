@@ -1,11 +1,11 @@
 "use client";
 
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState, useRef, useEffect, useMemo } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { CheckCircle2, ShieldCheck, ArrowLeft, ArrowRight, ChevronRight, Lock, CreditCard, Building2, Info } from "lucide-react";
 import { useStore } from "@/context/StoreContext";
-import { OrderRecord } from "@/data/mockOrders";
+import { OrderRecord, SavedAddress } from "@/data/mockOrders";
 import { getProductType, isSilkMarkCertified } from "@/data/products";
 
 const POPULAR_BANKS = [
@@ -66,13 +66,18 @@ export default function CheckoutPage() {
     return () => clearTimeout(timer);
   }, [step]);
 
-  const defaultAddr = isLoggedIn && addresses.length > 0 ? (addresses.find((a) => a.isDefault) || addresses[0]) : null;
+  const validAddresses = useMemo(
+    () => (Array.isArray(addresses) ? addresses.filter((a): a is SavedAddress => Boolean(a && typeof a.id === "string")) : []),
+    [addresses]
+  );
+
+  const defaultAddr = isLoggedIn && validAddresses.length > 0 ? (validAddresses.find((a) => a.isDefault) || validAddresses[0]) : null;
   const [selectedAddressId, setSelectedAddressId] = useState<string>(defaultAddr ? defaultAddr.id : "");
 
   // Address Form State — Dynamic based on auth state (empty for guest checkout)
   const [shippingAddress, setShippingAddress] = useState({
     fullName: defaultAddr ? defaultAddr.name : (isLoggedIn && user?.name ? user.name : ""),
-    phone: defaultAddr ? defaultAddr.phone.replace("+91 ", "").replace(/\s/g, "") : "",
+    phone: defaultAddr && typeof defaultAddr.phone === "string" ? defaultAddr.phone.replace("+91 ", "").replace(/\s/g, "") : "",
     email: isLoggedIn && user?.email ? user.email : "",
     addressLine1: defaultAddr ? defaultAddr.addressLine : "",
     landmark: "",
@@ -83,25 +88,25 @@ export default function CheckoutPage() {
 
   // Keep form synchronized with StoreContext saved addresses when logged in
   useEffect(() => {
-    if (isLoggedIn && addresses.length > 0) {
-      const active = addresses.find((a) => a.id === selectedAddressId) || addresses.find((a) => a.isDefault) || addresses[0];
+    if (isLoggedIn && validAddresses.length > 0) {
+      const active = validAddresses.find((a) => a.id === selectedAddressId) || validAddresses.find((a) => a.isDefault) || validAddresses[0];
       if (active) {
         if (selectedAddressId !== active.id) {
           setSelectedAddressId(active.id);
         }
         setShippingAddress((prev) => ({
           ...prev,
-          fullName: active.name,
-          phone: active.phone.replace("+91 ", "").replace(/\s/g, ""),
+          fullName: active.name || "",
+          phone: typeof active.phone === "string" ? active.phone.replace("+91 ", "").replace(/\s/g, "") : "",
           email: prev.email || user?.email || "",
-          addressLine1: active.addressLine,
-          city: active.city,
-          state: active.state,
-          pincode: active.pincode,
+          addressLine1: active.addressLine || "",
+          city: active.city || "",
+          state: active.state || "",
+          pincode: active.pincode || "",
         }));
       }
     }
-  }, [isLoggedIn, addresses, selectedAddressId, user?.email]);
+  }, [isLoggedIn, validAddresses, selectedAddressId, user?.email]);
 
   // Delivery & Payment selection
   const [deliveryMethod, setDeliveryMethod] = useState<"standard" | "express">("standard");
@@ -457,7 +462,7 @@ export default function CheckoutPage() {
                   </div>
 
                   {/* Saved addresses selector */}
-                  {addresses && addresses.length > 0 && (
+                  {validAddresses && validAddresses.length > 0 && (
                     <div className="space-y-2 pb-3 border-b border-[#E8E2D9]">
                       <div className="flex items-center justify-between">
                         <span className="font-semibold text-neutral-800 text-xs">
@@ -472,7 +477,7 @@ export default function CheckoutPage() {
                         </Link>
                       </div>
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-                        {addresses.map((addr) => {
+                        {validAddresses.map((addr) => {
                           const isSelected = selectedAddressId === addr.id;
                           return (
                             <button
@@ -483,12 +488,12 @@ export default function CheckoutPage() {
                                 setSelectedAddressId(addr.id);
                                 setShippingAddress((prev) => ({
                                   ...prev,
-                                  fullName: addr.name,
-                                  phone: addr.phone.replace("+91 ", "").replace(/\s/g, ""),
-                                  addressLine1: addr.addressLine,
-                                  city: addr.city,
-                                  state: addr.state,
-                                  pincode: addr.pincode,
+                                  fullName: addr.name || "",
+                                  phone: typeof addr.phone === "string" ? addr.phone.replace("+91 ", "").replace(/\s/g, "") : "",
+                                  addressLine1: addr.addressLine || "",
+                                  city: addr.city || "",
+                                  state: addr.state || "",
+                                  pincode: addr.pincode || "",
                                 }));
                               }}
                               className={`p-3 text-left rounded-xs border transition-colors cursor-pointer text-xs focus-visible:ring-2 focus-visible:ring-[#541920] focus-visible:outline-none ${
@@ -499,9 +504,9 @@ export default function CheckoutPage() {
                             >
                               <div className="flex items-center justify-between mb-1">
                                 <span className="font-semibold text-neutral-900 flex items-center gap-1.5">
-                                  {addr.name}
+                                  {addr.name || "Address"}
                                   <span className="text-[10px] px-1.5 py-0.5 bg-neutral-100 rounded text-neutral-600 font-normal">
-                                    {addr.type}
+                                    {addr.type || "Home"}
                                   </span>
                                 </span>
                                 {addr.isDefault && (
@@ -510,9 +515,9 @@ export default function CheckoutPage() {
                                   </span>
                                 )}
                               </div>
-                              <p className="text-neutral-600 line-clamp-1">{addr.addressLine}</p>
+                              <p className="text-neutral-600 line-clamp-1">{addr.addressLine || ""}</p>
                               <p className="text-neutral-500 text-[11px] mt-0.5">
-                                {addr.city}, {addr.state} - {addr.pincode}
+                                {addr.city || ""}, {addr.state || ""} - {addr.pincode || ""}
                               </p>
                             </button>
                           );
