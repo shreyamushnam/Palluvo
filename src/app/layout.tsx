@@ -33,7 +33,7 @@ export const metadata: Metadata = {
   metadataBase: new URL("https://palluvo.com"),
   title: "PALLUVO | Buy Designer Sarees Online | Pure Silk, Handloom, & Bridal",
   description:
-    "Shop premium Indian sarees online at PALLUVO. Discover handwoven Kanjeevaram silk, Banarasi brocades, lightweight organza, and festive party wear. Free shipping above ₹1999 & easy returns.",
+    "Shop premium Indian sarees online at PALLUVO. Discover handwoven Kanjeevaram silk, Banarasi brocades, lightweight organza, and festive party wear. Free shipping on orders of ₹1,999 or more & easy returns.",
   keywords: [
     "PALLUVO",
     "Buy Sarees Online",

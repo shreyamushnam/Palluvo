@@ -53,7 +53,7 @@ const INITIAL_NOTIFICATIONS: NotificationItem[] = [
     id: "notif-3",
     type: "offer",
     title: "Exclusive Private Privilege: 10% Off",
-    description: "Use your celebration code PALLUVO10 on orders over ₹1,999 to enjoy complimentary insured courier and artisan care kit.",
+    description: "Use your celebration code PALLUVO10 on orders of ₹1,999 or more to enjoy complimentary insured courier and artisan care kit.",
     timestamp: "Yesterday",
     isRead: true,
     actionText: "Shop With Privilege",

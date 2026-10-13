@@ -549,7 +549,7 @@ export const ProductDetailView: React.FC<ProductDetailViewProps> = ({
                     aria-labelledby="accordion-trigger-shipping"
                   >
                     <p className="pb-3 text-neutral-600 leading-relaxed font-sans">
-                      Free standard shipping on all orders above ₹1,999. Dispatches within 24-48 hours. Delivered safely in a tamper-proof luxury keepsake box.
+                      Free standard shipping on all orders of ₹1,999 or more. Dispatches within 24-48 hours. Delivered safely in a tamper-proof luxury keepsake box.
                     </p>
                   </div>
                 )}

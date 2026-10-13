@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { 
@@ -15,7 +15,7 @@ import {
   Info
 } from "lucide-react";
 
-interface ReturnableSampleItem {
+export interface ReturnableSampleItem {
   orderId: string;
   orderDate: string;
   deliveredDate: string;
@@ -27,7 +27,107 @@ interface ReturnableSampleItem {
   daysLeft: number;
 }
 
-const SAMPLE_RETURNABLE_ITEMS: ReturnableSampleItem[] = [
+export interface RawReturnableSampleItem {
+  orderId: string;
+  orderDate: string;
+  deliveredDate: string;
+  productName: string;
+  fabric: string;
+  price: string;
+  image: string;
+}
+
+export const RETURN_WINDOW_DAYS = 7;
+
+export interface ReturnEligibility {
+  daysLeft: number;
+  status: "Eligible" | "Window Expired";
+  isEligible: boolean;
+}
+
+/**
+ * Parses date string in "DD MMM YYYY" (e.g. "06 Oct 2026") or standard ISO format.
+ */
+export function parseDeliveredDate(dateInput: string | Date): Date | null {
+  if (!dateInput) return null;
+  if (dateInput instanceof Date) {
+    return isNaN(dateInput.getTime()) ? null : dateInput;
+  }
+
+  const trimmed = dateInput.trim();
+  const dmyMatch = trimmed.match(/^(\d{1,2})[\s-]+([A-Za-z]+)[\s-]+(\d{4})$/);
+  if (dmyMatch) {
+    const day = parseInt(dmyMatch[1], 10);
+    const monthStr = dmyMatch[2].toLowerCase();
+    const year = parseInt(dmyMatch[3], 10);
+    const months: Record<string, number> = {
+      jan: 0, feb: 1, mar: 2, apr: 3, may: 4, jun: 5,
+      jul: 6, aug: 7, sep: 8, oct: 9, nov: 10, dec: 11,
+      january: 0, february: 1, march: 2, april: 3, june: 5,
+      july: 6, august: 7, september: 8, october: 9, november: 10, december: 11,
+    };
+    const month = months[monthStr];
+    if (month !== undefined && !isNaN(day) && !isNaN(year)) {
+      return new Date(year, month, day);
+    }
+  }
+
+  const parsed = new Date(trimmed);
+  return isNaN(parsed.getTime()) ? null : parsed;
+}
+
+/**
+ * Computes return eligibility and remaining calendar days from the delivery date.
+ * Based on the policy of 7 calendar days from delivery date.
+ */
+export function computeReturnEligibility(
+  deliveredDateInput: string | Date,
+  referenceDateInput: Date | string = new Date(),
+  windowDays: number = RETURN_WINDOW_DAYS
+): ReturnEligibility {
+  const delivered = parseDeliveredDate(deliveredDateInput);
+  if (!delivered) {
+    return { daysLeft: 0, status: "Window Expired", isEligible: false };
+  }
+
+  const referenceDate =
+    typeof referenceDateInput === "string"
+      ? parseDeliveredDate(referenceDateInput) || new Date()
+      : referenceDateInput;
+
+  // Normalize both dates to midnight local calendar day
+  const deliveredMidnight = new Date(
+    delivered.getFullYear(),
+    delivered.getMonth(),
+    delivered.getDate()
+  ).getTime();
+
+  const referenceMidnight = new Date(
+    referenceDate.getFullYear(),
+    referenceDate.getMonth(),
+    referenceDate.getDate()
+  ).getTime();
+
+  const diffMs = referenceMidnight - deliveredMidnight;
+  const elapsedDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+  const remainingDays = windowDays - elapsedDays;
+
+  if (remainingDays > 0) {
+    return {
+      daysLeft: remainingDays,
+      status: "Eligible",
+      isEligible: true,
+    };
+  }
+
+  return {
+    daysLeft: 0,
+    status: "Window Expired",
+    isEligible: false,
+  };
+}
+
+export const SAMPLE_RAW_ITEMS: RawReturnableSampleItem[] = [
   {
     orderId: "PAL-2026-8912",
     orderDate: "03 Oct 2026",
@@ -36,8 +136,6 @@ const SAMPLE_RETURNABLE_ITEMS: ReturnableSampleItem[] = [
     fabric: "Pure Tissue Silk with Zari Work",
     price: "₹3,999",
     image: "/images/products/wine-tissue-silk.jpg",
-    status: "Eligible",
-    daysLeft: 4,
   },
   {
     orderId: "PAL-2026-8745",
@@ -47,10 +145,24 @@ const SAMPLE_RETURNABLE_ITEMS: ReturnableSampleItem[] = [
     fabric: "Chanderi Cotton Silk Weave",
     price: "₹2,899",
     image: "/images/products/mustard-cotton-saree.jpg",
-    status: "Window Expired",
-    daysLeft: 0,
   },
 ];
+
+export function getSampleReturnableItems(
+  referenceDate?: Date | string,
+  rawItems: RawReturnableSampleItem[] = SAMPLE_RAW_ITEMS
+): ReturnableSampleItem[] {
+  return rawItems.map((item) => {
+    const { status, daysLeft } = computeReturnEligibility(item.deliveredDate, referenceDate);
+    return {
+      ...item,
+      status,
+      daysLeft,
+    };
+  });
+}
+
+export const SAMPLE_RETURNABLE_ITEMS: ReturnableSampleItem[] = getSampleReturnableItems();
 
 const RETURN_STEPS = [
   {
@@ -73,8 +185,21 @@ const RETURN_STEPS = [
   },
 ];
 
-export const OrderReturnsClient: React.FC = () => {
+export interface OrderReturnsClientProps {
+  currentDate?: Date | string;
+  initialItems?: ReturnableSampleItem[];
+}
+
+export const OrderReturnsClient: React.FC<OrderReturnsClientProps> = ({
+  currentDate,
+  initialItems,
+}) => {
   const [requestedOrders, setRequestedOrders] = useState<string[]>([]);
+
+  const returnableItems = useMemo(() => {
+    if (initialItems) return initialItems;
+    return getSampleReturnableItems(currentDate);
+  }, [currentDate, initialItems]);
 
   const handleRequestReturn = (orderId: string) => {
     setRequestedOrders((prev) => (prev.includes(orderId) ? prev : [...prev, orderId]));
@@ -186,7 +311,7 @@ export const OrderReturnsClient: React.FC = () => {
           </div>
 
           <div className="space-y-3.5">
-            {SAMPLE_RETURNABLE_ITEMS.map((item, idx) => {
+            {returnableItems.map((item, idx) => {
               const isRequested = requestedOrders.includes(item.orderId);
               return (
                 <div
@@ -213,7 +338,9 @@ export const OrderReturnsClient: React.FC = () => {
                           {item.status === "Eligible" ? (
                             <span className="text-[10px] font-semibold text-[#15803D] bg-[#15803D]/10 px-2 py-0.5 rounded-2xs inline-flex items-center gap-1">
                               <Clock className="w-3 h-3" />
-                              <span>{item.daysLeft} days left to return</span>
+                              <span>
+                                {item.daysLeft} {item.daysLeft === 1 ? "day" : "days"} left to return
+                              </span>
                             </span>
                           ) : (
                             <span className="text-[10px] font-semibold text-neutral-500 bg-neutral-100 px-2 py-0.5 rounded-2xs inline-flex items-center gap-1">

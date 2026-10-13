@@ -59,7 +59,7 @@ const HELP_SECTIONS = [
       },
       {
         question: "Do you offer complimentary shipping?",
-        answer: "Our standard policy provides complimentary insured courier delivery for domestic orders over ₹1,999. The prototype checkout calculates this threshold for demonstration."
+        answer: "Our standard policy provides complimentary insured courier delivery for domestic orders of ₹1,999 or more. The prototype checkout calculates this threshold for demonstration."
       }
     ]
   },

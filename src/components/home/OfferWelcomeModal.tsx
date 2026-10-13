@@ -164,7 +164,7 @@ export const OfferWelcomeModal: React.FC = () => {
               id="welcome-offer-description"
               className="text-xs sm:text-sm text-neutral-300 max-w-sm mx-auto font-sans leading-relaxed"
             >
-              Enjoy an exclusive <strong className="text-[#C5A575] font-semibold">10% discount</strong> and complimentary express delivery on orders above ₹1,999 with coupon code PALLUVO10.
+              Enjoy an exclusive <strong className="text-[#C5A575] font-semibold">10% discount</strong> and complimentary express delivery on orders of ₹1,999 or more with coupon code PALLUVO10.
             </p>
           </div>
 
@@ -200,7 +200,7 @@ export const OfferWelcomeModal: React.FC = () => {
             </div>
 
             <p className="text-[11px] text-neutral-400 font-sans">
-              10% OFF + Free Express Shipping on orders above ₹1,999
+              10% OFF + Free Express Shipping on orders of ₹1,999 or more
             </p>
           </div>
 

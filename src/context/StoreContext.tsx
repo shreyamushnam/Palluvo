@@ -263,6 +263,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     () => cart.reduce((sum, item) => sum + item.product.price * item.quantity, 0),
     [cart]
   );
+  // Standard free shipping boundary applies to orders of ₹1,999 or more (subtotal >= 1999)
   const freeShippingThreshold = 1999;
   const shippingFee = subtotal >= freeShippingThreshold || subtotal === 0 ? 0 : 149;
 

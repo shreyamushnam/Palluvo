@@ -20,7 +20,7 @@ export const AnnouncementBar: React.FC = () => {
     >
       <Sparkles size={12} className="text-[#C5A575] shrink-0" />
       <span className="leading-tight">
-        FREE SHIPPING OVER ₹1999 • USE CODE <strong className="text-[#C5A575] font-semibold">PALLUVO10</strong> FOR 10% OFF
+        FREE SHIPPING ON ORDERS OF ₹1,999 OR MORE • USE CODE <strong className="text-[#C5A575] font-semibold">PALLUVO10</strong> FOR 10% OFF
       </span>
       <Link href="/shop" className="underline ml-1 hidden sm:inline-block hover:text-[#C5A575] transition-colors">
         Shop Now

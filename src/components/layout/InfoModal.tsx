@@ -420,7 +420,7 @@ export const InfoModal: React.FC<InfoModalProps> = ({
                         <span>Free Shipping</span>
                       </strong>
                       <p>
-                        We offer 100% complimentary insured shipping across India on all orders above <strong>₹1,999</strong>. For orders under ₹1,999, a flat nominal fee of ₹149 applies.
+                        We offer 100% complimentary insured shipping across India on all orders of <strong>₹1,999 or more</strong>. For orders under ₹1,999, a flat nominal fee of ₹149 applies.
                       </p>
                     </div>
 
