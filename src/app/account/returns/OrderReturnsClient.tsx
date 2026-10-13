@@ -38,6 +38,13 @@ export interface RawReturnableSampleItem {
 }
 
 export const RETURN_WINDOW_DAYS = 7;
+export const POLICY_TIMEZONE = "Asia/Kolkata";
+
+export interface CalendarDateParts {
+  year: number;
+  month: number; // 1-12
+  day: number;   // 1-31
+}
 
 export interface ReturnEligibility {
   daysLeft: number;
@@ -46,70 +53,186 @@ export interface ReturnEligibility {
 }
 
 /**
- * Parses date string in "DD MMM YYYY" (e.g. "06 Oct 2026") or standard ISO format.
+ * Extracts calendar date parts (year, month, day) from a Date instance
+ * in the brand's policy timezone (Asia/Kolkata), avoiding local client DST / offset shifts.
  */
-export function parseDeliveredDate(dateInput: string | Date): Date | null {
-  if (!dateInput) return null;
-  if (dateInput instanceof Date) {
-    return isNaN(dateInput.getTime()) ? null : dateInput;
+export function getCalendarPartsFromDate(
+  date: Date,
+  timeZone: string = POLICY_TIMEZONE
+): CalendarDateParts {
+  try {
+    const formatter = new Intl.DateTimeFormat("en-US", {
+      timeZone,
+      year: "numeric",
+      month: "numeric",
+      day: "numeric",
+    });
+    const parts = formatter.formatToParts(date);
+    let year = date.getFullYear();
+    let month = date.getMonth() + 1;
+    let day = date.getDate();
+    for (const part of parts) {
+      if (part.type === "year") year = parseInt(part.value, 10);
+      if (part.type === "month") month = parseInt(part.value, 10);
+      if (part.type === "day") day = parseInt(part.value, 10);
+    }
+    return { year, month, day };
+  } catch {
+    return {
+      year: date.getFullYear(),
+      month: date.getMonth() + 1,
+      day: date.getDate(),
+    };
+  }
+}
+
+/**
+ * Parses calendar dates from date-only ISO strings (e.g. "2026-10-06"),
+ * localized formats ("06 Oct 2026"), or Date objects into explicit calendar components.
+ * Date-only ISO components are extracted directly to avoid JavaScript's default
+ * UTC-midnight interpretation shifting the date in western timezones (e.g. Los Angeles).
+ */
+export function parseToCalendarDate(
+  input: string | Date | null | undefined,
+  timeZone: string = POLICY_TIMEZONE
+): CalendarDateParts | null {
+  if (!input) return null;
+  if (input instanceof Date) {
+    if (isNaN(input.getTime())) return null;
+    return getCalendarPartsFromDate(input, timeZone);
   }
 
-  const trimmed = dateInput.trim();
+  const trimmed = String(input).trim();
+  if (!trimmed) return null;
+
+  // 1. Date-only ISO format: YYYY-MM-DD
+  const isoDateMatch = trimmed.match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/);
+  if (isoDateMatch) {
+    const year = parseInt(isoDateMatch[1], 10);
+    const month = parseInt(isoDateMatch[2], 10);
+    const day = parseInt(isoDateMatch[3], 10);
+    if (month >= 1 && month <= 12 && day >= 1 && day <= 31) {
+      return { year, month, day };
+    }
+  }
+
+  // 2. Formats like "06 Oct 2026" or "6 October 2026"
   const dmyMatch = trimmed.match(/^(\d{1,2})[\s-]+([A-Za-z]+)[\s-]+(\d{4})$/);
   if (dmyMatch) {
     const day = parseInt(dmyMatch[1], 10);
     const monthStr = dmyMatch[2].toLowerCase();
     const year = parseInt(dmyMatch[3], 10);
     const months: Record<string, number> = {
-      jan: 0, feb: 1, mar: 2, apr: 3, may: 4, jun: 5,
-      jul: 6, aug: 7, sep: 8, oct: 9, nov: 10, dec: 11,
-      january: 0, february: 1, march: 2, april: 3, june: 5,
-      july: 6, august: 7, september: 8, october: 9, november: 10, december: 11,
+      jan: 1, feb: 2, mar: 3, apr: 4, may: 5, jun: 6,
+      jul: 7, aug: 8, sep: 9, oct: 10, nov: 11, dec: 12,
+      january: 1, february: 2, march: 3, april: 4, june: 6,
+      july: 7, august: 8, september: 9, october: 10, november: 11, december: 12,
     };
     const month = months[monthStr];
-    if (month !== undefined && !isNaN(day) && !isNaN(year)) {
-      return new Date(year, month, day);
+    if (month !== undefined && day >= 1 && day <= 31) {
+      return { year, month, day };
     }
   }
 
-  const parsed = new Date(trimmed);
-  return isNaN(parsed.getTime()) ? null : parsed;
+  // 3. Formats like "Oct 12, 2026" or "October 12, 2026"
+  const mdyMatch = trimmed.match(/^([A-Za-z]+)[\s-]+(\d{1,2}),?[\s-]+(\d{4})$/);
+  if (mdyMatch) {
+    const monthStr = mdyMatch[1].toLowerCase();
+    const day = parseInt(mdyMatch[2], 10);
+    const year = parseInt(mdyMatch[3], 10);
+    const months: Record<string, number> = {
+      jan: 1, feb: 2, mar: 3, apr: 4, may: 5, jun: 6,
+      jul: 7, aug: 8, sep: 9, oct: 10, nov: 11, dec: 12,
+      january: 1, february: 2, march: 3, april: 4, june: 6,
+      july: 7, august: 8, september: 9, october: 10, november: 11, december: 12,
+    };
+    const month = months[monthStr];
+    if (month !== undefined && day >= 1 && day <= 31) {
+      return { year, month, day };
+    }
+  }
+
+  // 4. Fallback for strings containing ISO timestamp with time or other parseable formats
+  const parsedInstant = new Date(trimmed);
+  if (!isNaN(parsedInstant.getTime())) {
+    const isoStart = trimmed.match(/^(\d{4})-(\d{2})-(\d{2})/);
+    if (!trimmed.includes("T") && isoStart) {
+      return {
+        year: parseInt(isoStart[1], 10),
+        month: parseInt(isoStart[2], 10),
+        day: parseInt(isoStart[3], 10),
+      };
+    }
+    return getCalendarPartsFromDate(parsedInstant, timeZone);
+  }
+
+  return null;
+}
+
+/**
+ * Converts calendar date parts to integer day number since Unix epoch (1970-01-01).
+ * Completely immune to timezone offsets and DST transitions.
+ */
+export function calendarDateToOrdinal(parts: CalendarDateParts): number {
+  return Math.floor(Date.UTC(parts.year, parts.month - 1, parts.day) / 86400000);
+}
+
+/**
+ * Shifts a calendar date by integer offsetDays.
+ */
+export function shiftCalendarDate(base: CalendarDateParts, offsetDays: number): CalendarDateParts {
+  const baseOrdinal = calendarDateToOrdinal(base);
+  const targetUtcMs = (baseOrdinal + offsetDays) * 86400000;
+  const d = new Date(targetUtcMs);
+  return {
+    year: d.getUTCFullYear(),
+    month: d.getUTCMonth() + 1,
+    day: d.getUTCDate(),
+  };
+}
+
+/**
+ * Formats a calendar date as "DD MMM YYYY" (e.g. "06 Oct 2026").
+ */
+export function formatCalendarDate(parts: CalendarDateParts): string {
+  const day = String(parts.day).padStart(2, "0");
+  const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+  const m = monthNames[parts.month - 1] || "Jan";
+  return `${day} ${m} ${parts.year}`;
+}
+
+/**
+ * Parses date input into a Date instance invariant across timezones (anchored to noon UTC).
+ */
+export function parseDeliveredDate(dateInput: string | Date): Date | null {
+  const parts = parseToCalendarDate(dateInput);
+  if (!parts) return null;
+  return new Date(Date.UTC(parts.year, parts.month - 1, parts.day, 12, 0, 0));
 }
 
 /**
  * Computes return eligibility and remaining calendar days from the delivery date.
- * Based on the policy of 7 calendar days from delivery date.
+ * Compares pure calendar-day ordinals in the policy timezone, avoiding fixed 24h divisions across DST boundaries.
  */
 export function computeReturnEligibility(
   deliveredDateInput: string | Date,
   referenceDateInput: Date | string = new Date(),
   windowDays: number = RETURN_WINDOW_DAYS
 ): ReturnEligibility {
-  const delivered = parseDeliveredDate(deliveredDateInput);
-  if (!delivered) {
+  const deliveredParts = parseToCalendarDate(deliveredDateInput);
+  if (!deliveredParts) {
     return { daysLeft: 0, status: "Window Expired", isEligible: false };
   }
 
-  const referenceDate =
-    typeof referenceDateInput === "string"
-      ? parseDeliveredDate(referenceDateInput) || new Date()
-      : referenceDateInput;
+  const referenceParts = parseToCalendarDate(referenceDateInput);
+  if (!referenceParts) {
+    return { daysLeft: 0, status: "Window Expired", isEligible: false };
+  }
 
-  // Normalize both dates to midnight local calendar day
-  const deliveredMidnight = new Date(
-    delivered.getFullYear(),
-    delivered.getMonth(),
-    delivered.getDate()
-  ).getTime();
+  const deliveredOrdinal = calendarDateToOrdinal(deliveredParts);
+  const referenceOrdinal = calendarDateToOrdinal(referenceParts);
 
-  const referenceMidnight = new Date(
-    referenceDate.getFullYear(),
-    referenceDate.getMonth(),
-    referenceDate.getDate()
-  ).getTime();
-
-  const diffMs = referenceMidnight - deliveredMidnight;
-  const elapsedDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+  const elapsedDays = referenceOrdinal - deliveredOrdinal;
   const remainingDays = windowDays - elapsedDays;
 
   if (remainingDays > 0) {
@@ -127,32 +250,57 @@ export function computeReturnEligibility(
   };
 }
 
-export const SAMPLE_RAW_ITEMS: RawReturnableSampleItem[] = [
-  {
-    orderId: "PAL-2026-8912",
-    orderDate: "03 Oct 2026",
-    deliveredDate: "06 Oct 2026",
-    productName: "Wine Tissue Silk Saree",
-    fabric: "Pure Tissue Silk with Zari Work",
-    price: "₹3,999",
-    image: "/images/products/wine-tissue-silk.jpg",
-  },
-  {
-    orderId: "PAL-2026-8745",
-    orderDate: "28 Sep 2026",
-    deliveredDate: "01 Oct 2026",
-    productName: "Mustard Cotton Silk Saree",
-    fabric: "Chanderi Cotton Silk Weave",
-    price: "₹2,899",
-    image: "/images/products/mustard-cotton-saree.jpg",
-  },
-];
+/**
+ * Creates demonstration orders dynamically relative to the reference date.
+ * Keeps an eligible order (delivered 3 days ago, 4 days remaining) and an expired order
+ * (delivered 11 days ago, window closed) so that demo return workflows are always exerciseable.
+ */
+export function createSampleRawItems(
+  referenceDateInput: Date | string = new Date()
+): RawReturnableSampleItem[] {
+  const refParts = parseToCalendarDate(referenceDateInput) || getCalendarPartsFromDate(new Date());
+
+  // Eligible order: delivered 3 calendar days ago, ordered 6 days ago (4 days left in 7-day window)
+  const deliveredEligible = shiftCalendarDate(refParts, -3);
+  const orderedEligible = shiftCalendarDate(refParts, -6);
+
+  // Expired order: delivered 11 calendar days ago, ordered 15 days ago (window closed)
+  const deliveredExpired = shiftCalendarDate(refParts, -11);
+  const orderedExpired = shiftCalendarDate(refParts, -15);
+
+  return [
+    {
+      orderId: "PAL-2026-8912",
+      orderDate: formatCalendarDate(orderedEligible),
+      deliveredDate: formatCalendarDate(deliveredEligible),
+      productName: "Wine Tissue Silk Saree",
+      fabric: "Pure Tissue Silk with Zari Work",
+      price: "₹3,999",
+      image: "/images/products/wine-tissue-silk.jpg",
+    },
+    {
+      orderId: "PAL-2026-8745",
+      orderDate: formatCalendarDate(orderedExpired),
+      deliveredDate: formatCalendarDate(deliveredExpired),
+      productName: "Mustard Cotton Silk Saree",
+      fabric: "Chanderi Cotton Silk Weave",
+      price: "₹2,899",
+      image: "/images/products/mustard-cotton-saree.jpg",
+    },
+  ];
+}
+
+export const SAMPLE_RAW_ITEMS: RawReturnableSampleItem[] = createSampleRawItems();
 
 export function getSampleReturnableItems(
   referenceDate?: Date | string,
-  rawItems: RawReturnableSampleItem[] = SAMPLE_RAW_ITEMS
+  rawItems?: RawReturnableSampleItem[]
 ): ReturnableSampleItem[] {
-  return rawItems.map((item) => {
+  const effectiveRaw = rawItems && rawItems.length > 0
+    ? rawItems
+    : createSampleRawItems(referenceDate);
+
+  return effectiveRaw.map((item) => {
     const { status, daysLeft } = computeReturnEligibility(item.deliveredDate, referenceDate);
     return {
       ...item,
@@ -309,6 +457,23 @@ export const OrderReturnsClient: React.FC<OrderReturnsClientProps> = ({
               </p>
             </div>
           </div>
+
+          {returnableItems.length > 0 && returnableItems.every((item) => item.status !== "Eligible") && (
+            <div
+              role="status"
+              className="p-3.5 bg-amber-50/70 border border-amber-200/80 rounded-xs text-xs text-neutral-800 flex items-start gap-2.5"
+            >
+              <AlertCircle className="w-4 h-4 text-[#541920] shrink-0 mt-0.5" aria-hidden="true" />
+              <div className="space-y-0.5">
+                <span className="font-semibold text-neutral-900 block">
+                  All Listed Shipments Have Passed the 7-Day Return Window
+                </span>
+                <p className="text-neutral-600 text-[11px] leading-relaxed font-sans">
+                  The stated 7-day return period has elapsed for the current orders. In this demonstration, contact our concierge team directly or supply a recent shipment date to simulate an eligible return.
+                </p>
+              </div>
+            </div>
+          )}
 
           <div className="space-y-3.5">
             {returnableItems.map((item, idx) => {
