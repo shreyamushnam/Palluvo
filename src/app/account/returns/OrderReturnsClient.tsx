@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useMemo } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { 
@@ -39,6 +39,7 @@ export interface RawReturnableSampleItem {
 
 export const RETURN_WINDOW_DAYS = 7;
 export const POLICY_TIMEZONE = "Asia/Kolkata";
+export const DEFAULT_DEMO_REFERENCE_DATE = "2026-10-12";
 
 export interface CalendarDateParts {
   year: number;
@@ -50,6 +51,40 @@ export interface ReturnEligibility {
   daysLeft: number;
   status: "Eligible" | "Window Expired";
   isEligible: boolean;
+}
+
+/**
+ * Determines whether a given Gregorian year is a leap year.
+ */
+export function isLeapYear(year: number): boolean {
+  return (year % 4 === 0 && year % 100 !== 0) || year % 400 === 0;
+}
+
+/**
+ * Returns the maximum number of days in a given Gregorian month (1-12) for a given year.
+ */
+export function getDaysInMonth(year: number, month: number): number {
+  if (month < 1 || month > 12) return 0;
+  if (month === 2) {
+    return isLeapYear(year) ? 29 : 28;
+  }
+  if (month === 4 || month === 6 || month === 9 || month === 11) {
+    return 30;
+  }
+  return 31;
+}
+
+/**
+ * Validates whether the year, month, and day represent a valid Gregorian calendar date.
+ */
+export function isValidCalendarDate(year: number, month: number, day: number): boolean {
+  if (!Number.isInteger(year) || !Number.isInteger(month) || !Number.isInteger(day)) {
+    return false;
+  }
+  if (year < 1 || year > 9999) return false;
+  if (month < 1 || month > 12) return false;
+  const maxDays = getDaysInMonth(year, month);
+  return day >= 1 && day <= maxDays;
 }
 
 /**
@@ -91,6 +126,7 @@ export function getCalendarPartsFromDate(
  * localized formats ("06 Oct 2026"), or Date objects into explicit calendar components.
  * Date-only ISO components are extracted directly to avoid JavaScript's default
  * UTC-midnight interpretation shifting the date in western timezones (e.g. Los Angeles).
+ * Rejects impossible calendar dates (e.g. 2026-02-31) rather than letting Date.UTC normalize them.
  */
 export function parseToCalendarDate(
   input: string | Date | null | undefined,
@@ -99,7 +135,9 @@ export function parseToCalendarDate(
   if (!input) return null;
   if (input instanceof Date) {
     if (isNaN(input.getTime())) return null;
-    return getCalendarPartsFromDate(input, timeZone);
+    const parts = getCalendarPartsFromDate(input, timeZone);
+    if (!isValidCalendarDate(parts.year, parts.month, parts.day)) return null;
+    return parts;
   }
 
   const trimmed = String(input).trim();
@@ -111,9 +149,10 @@ export function parseToCalendarDate(
     const year = parseInt(isoDateMatch[1], 10);
     const month = parseInt(isoDateMatch[2], 10);
     const day = parseInt(isoDateMatch[3], 10);
-    if (month >= 1 && month <= 12 && day >= 1 && day <= 31) {
+    if (isValidCalendarDate(year, month, day)) {
       return { year, month, day };
     }
+    return null;
   }
 
   // 2. Formats like "06 Oct 2026" or "6 October 2026"
@@ -129,9 +168,10 @@ export function parseToCalendarDate(
       july: 7, august: 8, september: 9, october: 10, november: 11, december: 12,
     };
     const month = months[monthStr];
-    if (month !== undefined && day >= 1 && day <= 31) {
+    if (month !== undefined && isValidCalendarDate(year, month, day)) {
       return { year, month, day };
     }
+    return null;
   }
 
   // 3. Formats like "Oct 12, 2026" or "October 12, 2026"
@@ -147,23 +187,40 @@ export function parseToCalendarDate(
       july: 7, august: 8, september: 9, october: 10, november: 11, december: 12,
     };
     const month = months[monthStr];
-    if (month !== undefined && day >= 1 && day <= 31) {
+    if (month !== undefined && isValidCalendarDate(year, month, day)) {
       return { year, month, day };
+    }
+    return null;
+  }
+
+  // 4. ISO prefix validation to reject impossible dates in timestamp strings (e.g. "2026-02-31T00:00:00Z")
+  const isoPrefix = trimmed.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/);
+  if (isoPrefix) {
+    const y = parseInt(isoPrefix[1], 10);
+    const m = parseInt(isoPrefix[2], 10);
+    const d = parseInt(isoPrefix[3], 10);
+    if (!isValidCalendarDate(y, m, d)) {
+      return null;
     }
   }
 
-  // 4. Fallback for strings containing ISO timestamp with time or other parseable formats
+  // 5. Fallback for strings containing ISO timestamp with time or other parseable formats
   const parsedInstant = new Date(trimmed);
   if (!isNaN(parsedInstant.getTime())) {
     const isoStart = trimmed.match(/^(\d{4})-(\d{2})-(\d{2})/);
     if (!trimmed.includes("T") && isoStart) {
-      return {
-        year: parseInt(isoStart[1], 10),
-        month: parseInt(isoStart[2], 10),
-        day: parseInt(isoStart[3], 10),
-      };
+      const y = parseInt(isoStart[1], 10);
+      const m = parseInt(isoStart[2], 10);
+      const d = parseInt(isoStart[3], 10);
+      if (isValidCalendarDate(y, m, d)) {
+        return { year: y, month: m, day: d };
+      }
+      return null;
     }
-    return getCalendarPartsFromDate(parsedInstant, timeZone);
+    const parts = getCalendarPartsFromDate(parsedInstant, timeZone);
+    if (isValidCalendarDate(parts.year, parts.month, parts.day)) {
+      return parts;
+    }
   }
 
   return null;
@@ -172,8 +229,12 @@ export function parseToCalendarDate(
 /**
  * Converts calendar date parts to integer day number since Unix epoch (1970-01-01).
  * Completely immune to timezone offsets and DST transitions.
+ * Returns NaN if parts do not represent a valid calendar date.
  */
 export function calendarDateToOrdinal(parts: CalendarDateParts): number {
+  if (!parts || !isValidCalendarDate(parts.year, parts.month, parts.day)) {
+    return NaN;
+  }
   return Math.floor(Date.UTC(parts.year, parts.month - 1, parts.day) / 86400000);
 }
 
@@ -182,6 +243,9 @@ export function calendarDateToOrdinal(parts: CalendarDateParts): number {
  */
 export function shiftCalendarDate(base: CalendarDateParts, offsetDays: number): CalendarDateParts {
   const baseOrdinal = calendarDateToOrdinal(base);
+  if (isNaN(baseOrdinal)) {
+    return base;
+  }
   const targetUtcMs = (baseOrdinal + offsetDays) * 86400000;
   const d = new Date(targetUtcMs);
   return {
@@ -195,6 +259,9 @@ export function shiftCalendarDate(base: CalendarDateParts, offsetDays: number): 
  * Formats a calendar date as "DD MMM YYYY" (e.g. "06 Oct 2026").
  */
 export function formatCalendarDate(parts: CalendarDateParts): string {
+  if (!isValidCalendarDate(parts.year, parts.month, parts.day)) {
+    return "";
+  }
   const day = String(parts.day).padStart(2, "0");
   const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
   const m = monthNames[parts.month - 1] || "Jan";
@@ -213,10 +280,11 @@ export function parseDeliveredDate(dateInput: string | Date): Date | null {
 /**
  * Computes return eligibility and remaining calendar days from the delivery date.
  * Compares pure calendar-day ordinals in the policy timezone, avoiding fixed 24h divisions across DST boundaries.
+ * Fails closed (isEligible: false) if either date is invalid or impossible.
  */
 export function computeReturnEligibility(
   deliveredDateInput: string | Date,
-  referenceDateInput: Date | string = new Date(),
+  referenceDateInput: Date | string = DEFAULT_DEMO_REFERENCE_DATE,
   windowDays: number = RETURN_WINDOW_DAYS
 ): ReturnEligibility {
   const deliveredParts = parseToCalendarDate(deliveredDateInput);
@@ -231,6 +299,10 @@ export function computeReturnEligibility(
 
   const deliveredOrdinal = calendarDateToOrdinal(deliveredParts);
   const referenceOrdinal = calendarDateToOrdinal(referenceParts);
+
+  if (isNaN(deliveredOrdinal) || isNaN(referenceOrdinal)) {
+    return { daysLeft: 0, status: "Window Expired", isEligible: false };
+  }
 
   const elapsedDays = referenceOrdinal - deliveredOrdinal;
   const remainingDays = windowDays - elapsedDays;
@@ -254,11 +326,14 @@ export function computeReturnEligibility(
  * Creates demonstration orders dynamically relative to the reference date.
  * Keeps an eligible order (delivered 3 days ago, 4 days remaining) and an expired order
  * (delivered 11 days ago, window closed) so that demo return workflows are always exerciseable.
+ * Uses DEFAULT_DEMO_REFERENCE_DATE by default to keep server-rendered HTML and initial hydration deterministic.
  */
 export function createSampleRawItems(
-  referenceDateInput: Date | string = new Date()
+  referenceDateInput: Date | string = DEFAULT_DEMO_REFERENCE_DATE
 ): RawReturnableSampleItem[] {
-  const refParts = parseToCalendarDate(referenceDateInput) || getCalendarPartsFromDate(new Date());
+  const refParts =
+    parseToCalendarDate(referenceDateInput) ||
+    parseToCalendarDate(DEFAULT_DEMO_REFERENCE_DATE)!;
 
   // Eligible order: delivered 3 calendar days ago, ordered 6 days ago (4 days left in 7-day window)
   const deliveredEligible = shiftCalendarDate(refParts, -3);
@@ -290,15 +365,16 @@ export function createSampleRawItems(
   ];
 }
 
-export const SAMPLE_RAW_ITEMS: RawReturnableSampleItem[] = createSampleRawItems();
+export const SAMPLE_RAW_ITEMS: RawReturnableSampleItem[] = createSampleRawItems(DEFAULT_DEMO_REFERENCE_DATE);
 
 export function getSampleReturnableItems(
-  referenceDate?: Date | string,
+  referenceDate: Date | string = DEFAULT_DEMO_REFERENCE_DATE,
   rawItems?: RawReturnableSampleItem[]
 ): ReturnableSampleItem[] {
-  const effectiveRaw = rawItems && rawItems.length > 0
-    ? rawItems
-    : createSampleRawItems(referenceDate);
+  const effectiveRaw =
+    rawItems && rawItems.length > 0
+      ? rawItems
+      : createSampleRawItems(referenceDate);
 
   return effectiveRaw.map((item) => {
     const { status, daysLeft } = computeReturnEligibility(item.deliveredDate, referenceDate);
@@ -310,7 +386,7 @@ export function getSampleReturnableItems(
   });
 }
 
-export const SAMPLE_RETURNABLE_ITEMS: ReturnableSampleItem[] = getSampleReturnableItems();
+export const SAMPLE_RETURNABLE_ITEMS: ReturnableSampleItem[] = getSampleReturnableItems(DEFAULT_DEMO_REFERENCE_DATE);
 
 const RETURN_STEPS = [
   {
@@ -344,10 +420,26 @@ export const OrderReturnsClient: React.FC<OrderReturnsClientProps> = ({
 }) => {
   const [requestedOrders, setRequestedOrders] = useState<string[]>([]);
 
+  // Keep server HTML and first client hydration render identical by using
+  // the deterministic reference date when currentDate is omitted.
+  const [activeDate, setActiveDate] = useState<Date | string>(
+    currentDate ?? DEFAULT_DEMO_REFERENCE_DATE
+  );
+
+  // After hydration completes on the client, refresh to the current live date
+  // unless an explicit currentDate prop was provided.
+  useEffect(() => {
+    if (currentDate) {
+      setActiveDate(currentDate);
+    } else {
+      setActiveDate(new Date());
+    }
+  }, [currentDate]);
+
   const returnableItems = useMemo(() => {
     if (initialItems) return initialItems;
-    return getSampleReturnableItems(currentDate);
-  }, [currentDate, initialItems]);
+    return getSampleReturnableItems(activeDate);
+  }, [activeDate, initialItems]);
 
   const handleRequestReturn = (orderId: string) => {
     setRequestedOrders((prev) => (prev.includes(orderId) ? prev : [...prev, orderId]));
