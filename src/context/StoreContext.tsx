@@ -62,6 +62,65 @@ interface StoreContextType {
 
 const StoreContext = createContext<StoreContextType | undefined>(undefined);
 
+/**
+ * Validates and normalizes raw parsed cart data from storage.
+ * Ensures the value is an array of valid CartItem objects, maps each item's product
+ * to canonical product records from PRODUCTS by product ID, and sanitizes quantities.
+ * Returns a safe array of valid CartItem records.
+ */
+export function validateAndNormalizeCart(raw: unknown): CartItem[] {
+  if (!Array.isArray(raw)) {
+    return [];
+  }
+
+  const normalized: CartItem[] = [];
+
+  for (const item of raw) {
+    if (!item || typeof item !== "object") continue;
+
+    // Resolve canonical product ID from item.product object or item.productId property
+    const rawProduct = (item as { product?: unknown; productId?: unknown }).product;
+    const productId =
+      typeof rawProduct === "object" && rawProduct !== null && "id" in rawProduct && typeof (rawProduct as { id?: unknown }).id === "string"
+        ? (rawProduct as { id: string }).id
+        : typeof (item as { productId?: unknown }).productId === "string"
+        ? (item as { productId: string }).productId
+        : undefined;
+
+    if (!productId) continue;
+
+    const canonicalProduct = PRODUCTS.find((p) => p.id === productId);
+    if (!canonicalProduct) continue;
+
+    // Validate and sanitize quantity (1 to 99)
+    const rawQty = (item as { quantity?: unknown }).quantity;
+    const parsedQty = typeof rawQty === "number" && Number.isFinite(rawQty) ? Math.floor(rawQty) : 1;
+    const quantity = Math.max(1, Math.min(parsedQty, 99));
+
+    // Sanitize optional variant options
+    const rawColor = (item as { selectedColor?: unknown }).selectedColor;
+    const selectedColor =
+      typeof rawColor === "string" && rawColor.trim().length > 0
+        ? rawColor.trim()
+        : canonicalProduct.color;
+
+    const rawBlouse = (item as { blouseOption?: unknown }).blouseOption;
+    const blouseOption =
+      typeof rawBlouse === "string" && rawBlouse.trim().length > 0
+        ? rawBlouse.trim()
+        : undefined;
+
+    normalized.push({
+      product: canonicalProduct,
+      quantity,
+      selectedColor,
+      blouseOption,
+    });
+  }
+
+  return normalized;
+}
+
 export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const isHydratedRef = useRef(false);
   const [isHydrated, setIsHydrated] = useState(false);
@@ -87,23 +146,44 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         setUser(parsedAuth.user || null);
       }
       const savedCart = localStorage.getItem("palluvo_ecommerce_cart");
-      if (savedCart) {
-        setCart(JSON.parse(savedCart));
+      if (savedCart !== null) {
+        try {
+          const parsed = JSON.parse(savedCart);
+          const validated = validateAndNormalizeCart(parsed);
+          setCart(validated);
+        } catch {
+          setCart([]);
+        }
       } else {
         // Seed initial cart item for instant e-commerce demonstration
         setCart([{ product: PRODUCTS[0], quantity: 1, selectedColor: "Wine", blouseOption: "Unstitched (Included)" }]);
       }
       const savedWishlist = localStorage.getItem("palluvo_ecommerce_wishlist");
       if (savedWishlist) {
-        setWishlist(JSON.parse(savedWishlist));
+        try {
+          const parsed = JSON.parse(savedWishlist);
+          if (Array.isArray(parsed)) {
+            setWishlist(parsed.filter((id) => typeof id === "string"));
+          }
+        } catch {}
       }
       const savedOrders = localStorage.getItem("palluvo_ecommerce_orders");
       if (savedOrders) {
-        setOrders(JSON.parse(savedOrders));
+        try {
+          const parsed = JSON.parse(savedOrders);
+          if (Array.isArray(parsed)) {
+            setOrders(parsed);
+          }
+        } catch {}
       }
       const savedAddresses = localStorage.getItem("palluvo_ecommerce_addresses");
       if (savedAddresses) {
-        setAddresses(JSON.parse(savedAddresses));
+        try {
+          const parsed = JSON.parse(savedAddresses);
+          if (Array.isArray(parsed)) {
+            setAddresses(parsed);
+          }
+        } catch {}
       }
     } catch {
       // LocalStorage fallback
@@ -260,7 +340,11 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   );
 
   const subtotal = useMemo(
-    () => cart.reduce((sum, item) => sum + item.product.price * item.quantity, 0),
+    () =>
+      (Array.isArray(cart) ? cart : []).reduce(
+        (sum, item) => sum + (item?.product?.price || 0) * (item?.quantity || 1),
+        0
+      ),
     [cart]
   );
   // Standard free shipping boundary applies to orders of ₹1,999 or more (subtotal >= 1999)
@@ -317,7 +401,11 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     [subtotal, discountAmount, shippingFee]
   );
   const cartCount = useMemo(
-    () => cart.reduce((total, item) => total + item.quantity, 0),
+    () =>
+      (Array.isArray(cart) ? cart : []).reduce(
+        (total, item) => total + (item?.quantity || 0),
+        0
+      ),
     [cart]
   );
   const wishlistCount = wishlist.length;

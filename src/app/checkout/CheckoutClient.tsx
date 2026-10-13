@@ -769,7 +769,7 @@ export default function CheckoutPage() {
                     </div>
                     {isExpressEligible ? (
                       <span className="font-bold text-[#15803D] tabular-nums">
-                        <span className="line-through text-neutral-400 font-normal text-xs mr-1.5">₹299</span>
+                        <span className="line-through text-neutral-600 font-normal text-xs mr-1.5">₹299</span>
                         FREE
                       </span>
                     ) : (
