@@ -624,7 +624,7 @@ export const OrderReturnsClient: React.FC<OrderReturnsClientProps> = ({
                     <div className="w-9 h-9 rounded-full bg-[#FAF7F2] border border-[#E8E2D9] flex items-center justify-center">
                       {s.icon}
                     </div>
-                    <span className="text-xs font-mono font-bold text-neutral-400">
+                    <span className="text-xs font-mono font-bold text-neutral-600">
                       STEP {s.step}
                     </span>
                   </div>
@@ -806,25 +806,25 @@ export const OrderReturnsClient: React.FC<OrderReturnsClientProps> = ({
         </div>
 
         {/* Quality & Policy Requirements */}
-        <div className="bg-[#FAF7F2] rounded-sm border border-[#E8E2D9] p-5 sm:p-6 mb-8 space-y-3">
-          <div className="flex items-center gap-2 text-xs uppercase tracking-wider font-semibold text-[#541920]">
-            <ShieldCheck className="w-4 h-4" />
+        <section aria-labelledby="conditions-heading" className="bg-[#FAF7F2] rounded-sm border border-[#E8E2D9] p-5 sm:p-6 mb-8 space-y-3">
+          <h2 id="conditions-heading" className="flex items-center gap-2 text-xs uppercase tracking-wider font-semibold text-[#541920]">
+            <ShieldCheck className="w-4 h-4" aria-hidden="true" />
             <span>Important Condition Requirements</span>
-          </div>
+          </h2>
           <ul className="text-xs text-neutral-600 font-sans space-y-1.5 list-disc pl-5 leading-relaxed">
             <li>Sarees must be unworn, undamaged, unwashed, and in original folded condition.</li>
             <li>All original Silk Mark Organisation tags, security loops, and blouse pieces must remain attached.</li>
             <li>Original wooden keepsake box or luxury packaging must be returned during reverse pickup.</li>
             <li>Refunds are credited to original payment source (UPI / Cards / Bank) within 24–48 hours of quality inspection.</li>
           </ul>
-        </div>
+        </section>
 
         {/* Concierge Help Callout */}
-        <div className="p-5 sm:p-6 bg-white border border-[#E8E2D9] rounded-sm flex flex-col sm:flex-row items-center justify-between gap-4">
+        <section aria-labelledby="concierge-heading" className="p-5 sm:p-6 bg-white border border-[#E8E2D9] rounded-sm flex flex-col sm:flex-row items-center justify-between gap-4">
           <div className="space-y-1 text-center sm:text-left">
-            <h3 className="text-sm font-serif font-medium text-neutral-900">
+            <h2 id="concierge-heading" className="text-sm font-serif font-medium text-neutral-900">
               Need personalized return or exchange help?
-            </h3>
+            </h2>
             <p className="text-xs text-neutral-600">
               Our concierge team is available via WhatsApp or Phone to arrange custom pickup times.
             </p>
@@ -843,7 +843,7 @@ export const OrderReturnsClient: React.FC<OrderReturnsClientProps> = ({
               My Account
             </Link>
           </div>
-        </div>
+        </section>
 
       </div>
     </div>
