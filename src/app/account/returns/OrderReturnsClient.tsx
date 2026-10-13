@@ -15,6 +15,8 @@ import {
   Info
 } from "lucide-react";
 
+export type ReturnEligibilityStatus = "Eligible" | "Window Expired" | "Delivery Pending";
+
 export interface ReturnableSampleItem {
   orderId: string;
   orderDate: string;
@@ -23,7 +25,7 @@ export interface ReturnableSampleItem {
   fabric: string;
   price: string;
   image: string;
-  status: "Eligible" | "Window Expired";
+  status: ReturnEligibilityStatus;
   daysLeft: number;
 }
 
@@ -49,7 +51,7 @@ export interface CalendarDateParts {
 
 export interface ReturnEligibility {
   daysLeft: number;
-  status: "Eligible" | "Window Expired";
+  status: ReturnEligibilityStatus;
   isEligible: boolean;
 }
 
@@ -342,6 +344,16 @@ export function computeReturnEligibility(
   }
 
   const elapsedDays = referenceOrdinal - deliveredOrdinal;
+
+  // An order scheduled for a future delivery date is pending delivery and cannot yet be returned
+  if (elapsedDays < 0) {
+    return {
+      daysLeft: 0,
+      status: "Delivery Pending",
+      isEligible: false,
+    };
+  }
+
   const remainingDays = windowDays - elapsedDays;
 
   if (remainingDays > 0) {
@@ -535,7 +547,16 @@ export const OrderReturnsClient: React.FC<OrderReturnsClientProps> = ({
   }, [currentDate]);
 
   const returnableItems = useMemo(() => {
-    if (initialItems) return initialItems;
+    if (initialItems) {
+      return initialItems.map((item) => {
+        const { status, daysLeft } = computeReturnEligibility(item.deliveredDate, activeDate);
+        return {
+          ...item,
+          status,
+          daysLeft,
+        };
+      });
+    }
     return getSampleReturnableItems(activeDate);
   }, [activeDate, initialItems]);
 
@@ -669,10 +690,16 @@ export const OrderReturnsClient: React.FC<OrderReturnsClientProps> = ({
               <AlertCircle className="w-4 h-4 text-[#541920] shrink-0 mt-0.5" aria-hidden="true" />
               <div className="space-y-0.5">
                 <span className="font-semibold text-neutral-900 block">
-                  All Listed Shipments Have Passed the 7-Day Return Window
+                  {returnableItems.every((item) => item.status === "Delivery Pending")
+                    ? "All Listed Shipments Are Pending Delivery"
+                    : returnableItems.every((item) => item.status === "Window Expired")
+                    ? "All Listed Shipments Have Passed the 7-Day Return Window"
+                    : "No Listed Shipments Currently Eligible for Return"}
                 </span>
                 <p className="text-neutral-600 text-[11px] leading-relaxed font-sans">
-                  The stated 7-day return period has elapsed for the current orders. In this demonstration, contact our concierge team directly or supply a recent shipment date to simulate an eligible return.
+                  {returnableItems.every((item) => item.status === "Delivery Pending")
+                    ? "The listed shipments have not yet been delivered. Orders can be returned within 7 days once delivery is completed."
+                    : "The stated 7-day return period has elapsed or shipments are awaiting delivery for the current orders. In this demonstration, contact our concierge team directly or supply a recent delivered shipment date to simulate an eligible return."}
                 </p>
               </div>
             </div>
@@ -710,6 +737,11 @@ export const OrderReturnsClient: React.FC<OrderReturnsClientProps> = ({
                                 {item.daysLeft} {item.daysLeft === 1 ? "day" : "days"} left to return
                               </span>
                             </span>
+                          ) : item.status === "Delivery Pending" ? (
+                            <span className="text-[10px] font-semibold text-amber-800 bg-amber-50 px-2 py-0.5 rounded-2xs inline-flex items-center gap-1 border border-amber-200/60">
+                              <Clock className="w-3 h-3" />
+                              <span>Delivery Pending</span>
+                            </span>
                           ) : (
                             <span className="text-[10px] font-semibold text-neutral-500 bg-neutral-100 px-2 py-0.5 rounded-2xs inline-flex items-center gap-1">
                               <AlertCircle className="w-3 h-3" />
@@ -722,7 +754,7 @@ export const OrderReturnsClient: React.FC<OrderReturnsClientProps> = ({
                           {item.productName}
                         </h3>
                         <p className="text-xs text-neutral-600 font-sans mt-0.5">
-                          {item.fabric} • Delivered on {item.deliveredDate}
+                          {item.fabric} • {item.status === "Delivery Pending" ? `Expected on ${item.deliveredDate}` : `Delivered on ${item.deliveredDate}`}
                         </p>
                         <p className="text-xs font-bold text-[#541920] mt-1 tabular-nums">
                           {item.price}
@@ -761,7 +793,7 @@ export const OrderReturnsClient: React.FC<OrderReturnsClientProps> = ({
                           disabled
                           className="min-h-[44px] px-4 py-2 bg-neutral-100 text-neutral-400 text-xs uppercase tracking-wider font-semibold rounded-xs cursor-not-allowed"
                         >
-                          Return Closed
+                          {item.status === "Delivery Pending" ? "Delivery Pending" : "Return Closed"}
                         </button>
                       )}
                     </div>
