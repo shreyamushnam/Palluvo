@@ -278,13 +278,50 @@ export function parseDeliveredDate(dateInput: string | Date): Date | null {
 }
 
 /**
+ * Calculates milliseconds remaining until the next calendar day boundary (midnight)
+ * in the brand's policy timezone (Asia/Kolkata).
+ */
+export function getMillisecondsUntilNextPolicyMidnight(
+  now: Date = new Date(),
+  timeZone: string = POLICY_TIMEZONE
+): number {
+  try {
+    const formatter = new Intl.DateTimeFormat("en-US", {
+      timeZone,
+      hourCycle: "h23",
+      hour: "numeric",
+      minute: "numeric",
+      second: "numeric",
+      fractionalSecondDigits: 3,
+    });
+    const parts = formatter.formatToParts(now);
+    let hour = 0;
+    let minute = 0;
+    let second = 0;
+    let millisecond = 0;
+    for (const p of parts) {
+      if (p.type === "hour") hour = parseInt(p.value, 10);
+      if (p.type === "minute") minute = parseInt(p.value, 10);
+      if (p.type === "second") second = parseInt(p.value, 10);
+      if (p.type === "fractionalSecond") millisecond = parseInt(p.value, 10);
+    }
+    const elapsedMs = ((hour * 3600) + (minute * 60) + second) * 1000 + millisecond;
+    const remainingMs = 86400000 - elapsedMs;
+    return Math.max(1000, remainingMs + 250);
+  } catch {
+    return 3600000;
+  }
+}
+
+/**
  * Computes return eligibility and remaining calendar days from the delivery date.
  * Compares pure calendar-day ordinals in the policy timezone, avoiding fixed 24h divisions across DST boundaries.
+ * Defaults referenceDateInput to current Date() so standard runtime callers evaluate live eligibility.
  * Fails closed (isEligible: false) if either date is invalid or impossible.
  */
 export function computeReturnEligibility(
   deliveredDateInput: string | Date,
-  referenceDateInput: Date | string = DEFAULT_DEMO_REFERENCE_DATE,
+  referenceDateInput: Date | string = new Date(),
   windowDays: number = RETURN_WINDOW_DAYS
 ): ReturnEligibility {
   const deliveredParts = parseToCalendarDate(deliveredDateInput);
@@ -326,14 +363,14 @@ export function computeReturnEligibility(
  * Creates demonstration orders dynamically relative to the reference date.
  * Keeps an eligible order (delivered 3 days ago, 4 days remaining) and an expired order
  * (delivered 11 days ago, window closed) so that demo return workflows are always exerciseable.
- * Uses DEFAULT_DEMO_REFERENCE_DATE by default to keep server-rendered HTML and initial hydration deterministic.
+ * Defaults to current Date() for live evaluation, or accepts an explicit fixture date.
  */
 export function createSampleRawItems(
-  referenceDateInput: Date | string = DEFAULT_DEMO_REFERENCE_DATE
+  referenceDateInput: Date | string = new Date()
 ): RawReturnableSampleItem[] {
   const refParts =
     parseToCalendarDate(referenceDateInput) ||
-    parseToCalendarDate(DEFAULT_DEMO_REFERENCE_DATE)!;
+    getCalendarPartsFromDate(new Date());
 
   // Eligible order: delivered 3 calendar days ago, ordered 6 days ago (4 days left in 7-day window)
   const deliveredEligible = shiftCalendarDate(refParts, -3);
@@ -368,7 +405,7 @@ export function createSampleRawItems(
 export const SAMPLE_RAW_ITEMS: RawReturnableSampleItem[] = createSampleRawItems(DEFAULT_DEMO_REFERENCE_DATE);
 
 export function getSampleReturnableItems(
-  referenceDate: Date | string = DEFAULT_DEMO_REFERENCE_DATE,
+  referenceDate: Date | string = new Date(),
   rawItems?: RawReturnableSampleItem[]
 ): ReturnableSampleItem[] {
   const effectiveRaw =
@@ -426,14 +463,75 @@ export const OrderReturnsClient: React.FC<OrderReturnsClientProps> = ({
     currentDate ?? DEFAULT_DEMO_REFERENCE_DATE
   );
 
-  // After hydration completes on the client, refresh to the current live date
-  // unless an explicit currentDate prop was provided.
+  // Synchronize and refresh activeDate:
+  // 1. If currentDate prop is provided, keep synced to it.
+  // 2. If currentDate is omitted, refresh to live date upon hydration,
+  //    and keep refreshed at:
+  //    - Policy-timezone day boundaries (midnight in Asia/Kolkata)
+  //    - Document visibility change (when customer switches back to this tab)
+  //    - Window focus
+  //    - Periodic safety interval (every 30 seconds) to guard against backgrounded tabs
   useEffect(() => {
     if (currentDate) {
       setActiveDate(currentDate);
-    } else {
-      setActiveDate(new Date());
+      return;
     }
+
+    const refreshLiveDate = () => {
+      const now = new Date();
+      setActiveDate((prev) => {
+        if (!prev) return now;
+        const prevParts = parseToCalendarDate(prev, POLICY_TIMEZONE);
+        const nextParts = parseToCalendarDate(now, POLICY_TIMEZONE);
+        if (
+          prevParts &&
+          nextParts &&
+          prevParts.year === nextParts.year &&
+          prevParts.month === nextParts.month &&
+          prevParts.day === nextParts.day
+        ) {
+          return prev;
+        }
+        return now;
+      });
+    };
+
+    // Immediate refresh on hydration
+    refreshLiveDate();
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === "visible") {
+        refreshLiveDate();
+      }
+    };
+
+    const handleFocus = () => {
+      refreshLiveDate();
+    };
+
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+    window.addEventListener("focus", handleFocus);
+
+    let midnightTimeoutId: ReturnType<typeof setTimeout> | null = null;
+    const scheduleMidnightTimer = () => {
+      const delay = getMillisecondsUntilNextPolicyMidnight(new Date(), POLICY_TIMEZONE);
+      midnightTimeoutId = setTimeout(() => {
+        refreshLiveDate();
+        scheduleMidnightTimer();
+      }, delay);
+    };
+    scheduleMidnightTimer();
+
+    const intervalId = setInterval(() => {
+      refreshLiveDate();
+    }, 30000);
+
+    return () => {
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+      window.removeEventListener("focus", handleFocus);
+      if (midnightTimeoutId) clearTimeout(midnightTimeoutId);
+      clearInterval(intervalId);
+    };
   }, [currentDate]);
 
   const returnableItems = useMemo(() => {
@@ -442,6 +540,19 @@ export const OrderReturnsClient: React.FC<OrderReturnsClientProps> = ({
   }, [activeDate, initialItems]);
 
   const handleRequestReturn = (orderId: string) => {
+    const liveDate = currentDate ?? new Date();
+    const item = returnableItems.find((i) => i.orderId === orderId);
+    if (!item) return;
+
+    // Revalidate eligibility immediately before enabling / simulating the action
+    const currentEligibility = computeReturnEligibility(item.deliveredDate, liveDate);
+    if (!currentEligibility.isEligible) {
+      if (!currentDate) {
+        setActiveDate(liveDate);
+      }
+      return;
+    }
+
     setRequestedOrders((prev) => (prev.includes(orderId) ? prev : [...prev, orderId]));
   };
 
