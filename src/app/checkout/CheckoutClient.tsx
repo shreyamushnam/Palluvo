@@ -8,7 +8,7 @@ import { useStore } from "@/context/StoreContext";
 import { OrderRecord, SavedAddress } from "@/data/mockOrders";
 import { getProductType, isSilkMarkCertified } from "@/data/products";
 import { scrollIntoView } from "@/utils/scroll";
-import { extract10DigitPhone } from "@/utils/phone";
+import { extract10DigitPhone, formatStoredPhone } from "@/utils/phone";
 
 const POPULAR_BANKS = [
   { id: "hdfc", name: "HDFC Bank" },
@@ -192,6 +192,12 @@ export default function CheckoutPage() {
 
   const handleAddressSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    const cleanPhone = shippingAddress.phone.replace(/\D/g, "");
+    if (!/^[6-9]\d{9}$/.test(cleanPhone)) {
+      showToast("Please enter a valid 10-digit Indian mobile number (+91).", "info");
+      document.getElementById("phone")?.focus();
+      return;
+    }
     setStep(2);
   };
 
@@ -201,6 +207,14 @@ export default function CheckoutPage() {
   };
 
   const handlePlaceOrder = () => {
+    const cleanPhone = shippingAddress.phone.replace(/\D/g, "");
+    if (!/^[6-9]\d{9}$/.test(cleanPhone)) {
+      showToast("Please enter a valid 10-digit Indian mobile number (+91).", "info");
+      setStep(1);
+      setTimeout(() => document.getElementById("phone")?.focus(), 50);
+      return;
+    }
+
     if (paymentMethod === "upi" && !/^[a-zA-Z0-9._-]{2,256}@[a-zA-Z][a-zA-Z0-9]{1,63}$/.test(upiId.trim())) {
       setUpiError("Please enter a valid UPI ID (e.g. mobile@upi).");
       showToast("Please enter a valid UPI ID before placing your order.", "info");
@@ -263,7 +277,7 @@ export default function CheckoutPage() {
         blouseOption: i.blouseOption,
       })),
       totalAmount: effectiveTotal,
-      shippingAddress: `${shippingAddress.fullName}, ${shippingAddress.addressLine1}${shippingAddress.landmark ? `, ${shippingAddress.landmark}` : ""}, ${shippingAddress.city}, ${shippingAddress.state} - ${shippingAddress.pincode} (Ph: ${shippingAddress.phone})`,
+      shippingAddress: `${shippingAddress.fullName}, ${shippingAddress.addressLine1}${shippingAddress.landmark ? `, ${shippingAddress.landmark}` : ""}, ${shippingAddress.city}, ${shippingAddress.state} - ${shippingAddress.pincode} (Ph: ${formatStoredPhone(shippingAddress.phone)})`,
       paymentMethod:
         paymentMethod === "upi"
           ? "UPI (Google Pay / PhonePe)"
@@ -605,10 +619,12 @@ export default function CheckoutPage() {
                         name="phone"
                         type="tel"
                         inputMode="numeric"
-                        pattern="[0-9]*"
-                        autoComplete="tel"
+                        pattern="[6-9][0-9]{9}"
+                        minLength={10}
                         maxLength={10}
+                        autoComplete="tel"
                         required
+                        title="Please enter a valid 10-digit Indian mobile number starting with 6, 7, 8, or 9"
                         value={shippingAddress.phone}
                         onChange={(e) => {
                           const digitsOnly = e.target.value.replace(/\D/g, "").slice(0, 10);
@@ -732,7 +748,7 @@ export default function CheckoutPage() {
                 </form>
               ) : (
                 <div className="p-4 text-xs text-neutral-600">
-                  <p className="font-semibold text-neutral-900">{shippingAddress.fullName} ({shippingAddress.phone})</p>
+                  <p className="font-semibold text-neutral-900">{shippingAddress.fullName} ({formatStoredPhone(shippingAddress.phone)})</p>
                   <p>{shippingAddress.addressLine1}{shippingAddress.landmark ? `, ${shippingAddress.landmark}` : ""}, {shippingAddress.city}, {shippingAddress.state} - {shippingAddress.pincode}</p>
                 </div>
               )}

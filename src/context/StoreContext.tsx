@@ -383,13 +383,26 @@ export function validateAndNormalizeAddresses(raw: unknown): SavedAddress[] {
   return validAddresses;
 }
 
+/**
+ * Derives a safe, stable user-scoped localStorage key so orders and addresses
+ * are never shared across different signed-in accounts or guest sessions.
+ */
+export function getUserStorageKey(user: UserProfile | null, prefix: string): string {
+  if (!user) {
+    return `palluvo_ecommerce_${prefix}_guest`;
+  }
+  const rawId = (user.email || user.mobile || user.name || "guest").toLowerCase().trim();
+  const safeId = rawId.replace(/[^a-z0-9_.-]/g, "_");
+  return `palluvo_ecommerce_${prefix}_${safeId}`;
+}
+
 export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const isHydratedRef = useRef(false);
   const [isHydrated, setIsHydrated] = useState(false);
   const [cart, setCart] = useState<CartItem[]>([]);
   const [wishlist, setWishlist] = useState<string[]>(["pal-001", "pal-004"]);
-  const [orders, setOrders] = useState<OrderRecord[]>(MOCK_ORDERS);
-  const [addresses, setAddresses] = useState<SavedAddress[]>(MOCK_ADDRESSES);
+  const [orders, setOrders] = useState<OrderRecord[]>([]);
+  const [addresses, setAddresses] = useState<SavedAddress[]>([]);
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [quickViewProduct, setQuickViewProduct] = useState<Product | null>(null);
@@ -452,35 +465,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       // Storage access error fallback
     }
 
-    // 4. Orders: load, validate records and nested items, discard malformed entries
-    try {
-      const savedOrders = localStorage.getItem("palluvo_ecommerce_orders");
-      if (savedOrders !== null) {
-        try {
-          const parsed = JSON.parse(savedOrders);
-          const validated = validateAndNormalizeOrders(parsed);
-          setOrders(validated);
-        } catch {}
-      }
-    } catch {
-      // Storage access error fallback
-    }
-
-    // 5. Addresses: load, validate records, discard malformed entries
-    try {
-      const savedAddresses = localStorage.getItem("palluvo_ecommerce_addresses");
-      if (savedAddresses !== null) {
-        try {
-          const parsed = JSON.parse(savedAddresses);
-          const validated = validateAndNormalizeAddresses(parsed);
-          setAddresses(validated);
-        } catch {}
-      }
-    } catch {
-      // Storage access error fallback
-    }
-
-    // Mark hydration complete only after all storage keys have finished loading
+    // Mark initial client storage hydration complete (cart, wishlist, auth)
     isHydratedRef.current = true;
     setIsHydrated(true);
   }, []);
@@ -499,6 +484,70 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     document.documentElement.setAttribute("data-auth", isLoggedIn ? "in" : "out");
   }, [isLoggedIn, isHydrated]);
 
+  const activeUserKeyRef = useRef<string | null>(null);
+
+  // Synchronize user-scoped orders and addresses when user identity changes or after auth hydration
+  useEffect(() => {
+    if (!isHydrated || !isHydratedRef.current) return;
+
+    const currentKey = user && isLoggedIn
+      ? (user.email || user.mobile || user.name || "anon").toLowerCase().trim()
+      : null;
+
+    if (activeUserKeyRef.current === currentKey) {
+      return;
+    }
+    activeUserKeyRef.current = currentKey;
+
+    if (!isLoggedIn || !user) {
+      setOrders([]);
+      setAddresses([]);
+      return;
+    }
+
+    const isDemoUser = (user.email || "").toLowerCase() === "radhika.sharma@example.com";
+    const ordersKey = getUserStorageKey(user, "orders");
+    const addressesKey = getUserStorageKey(user, "addresses");
+
+    // Load user-scoped orders
+    try {
+      const savedOrders = localStorage.getItem(ordersKey);
+      if (savedOrders !== null) {
+        setOrders(validateAndNormalizeOrders(JSON.parse(savedOrders)));
+      } else if (isDemoUser) {
+        const legacy = localStorage.getItem("palluvo_ecommerce_orders");
+        if (legacy !== null) {
+          setOrders(validateAndNormalizeOrders(JSON.parse(legacy)));
+        } else {
+          setOrders(MOCK_ORDERS);
+        }
+      } else {
+        setOrders([]);
+      }
+    } catch {
+      setOrders(isDemoUser ? MOCK_ORDERS : []);
+    }
+
+    // Load user-scoped addresses
+    try {
+      const savedAddresses = localStorage.getItem(addressesKey);
+      if (savedAddresses !== null) {
+        setAddresses(validateAndNormalizeAddresses(JSON.parse(savedAddresses)));
+      } else if (isDemoUser) {
+        const legacy = localStorage.getItem("palluvo_ecommerce_addresses");
+        if (legacy !== null) {
+          setAddresses(validateAndNormalizeAddresses(JSON.parse(legacy)));
+        } else {
+          setAddresses(MOCK_ADDRESSES);
+        }
+      } else {
+        setAddresses([]);
+      }
+    } catch {
+      setAddresses(isDemoUser ? MOCK_ADDRESSES : []);
+    }
+  }, [isLoggedIn, user, isHydrated]);
+
   const login = useCallback((userData?: UserProfile) => {
     setIsLoggedIn(true);
     setUser(
@@ -515,6 +564,8 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const logout = useCallback(() => {
     setIsLoggedIn(false);
     setUser(null);
+    setOrders([]);
+    setAddresses([]);
   }, []);
 
   // Save changes - only enable persistence after hydration has completed
@@ -534,17 +585,21 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
   useEffect(() => {
     if (!isHydrated || !isHydratedRef.current) return;
+    if (!isLoggedIn || !user) return;
     try {
-      localStorage.setItem("palluvo_ecommerce_orders", JSON.stringify(orders));
+      const key = getUserStorageKey(user, "orders");
+      localStorage.setItem(key, JSON.stringify(orders));
     } catch {}
-  }, [orders, isHydrated]);
+  }, [orders, isLoggedIn, user, isHydrated]);
 
   useEffect(() => {
     if (!isHydrated || !isHydratedRef.current) return;
+    if (!isLoggedIn || !user) return;
     try {
-      localStorage.setItem("palluvo_ecommerce_addresses", JSON.stringify(addresses));
+      const key = getUserStorageKey(user, "addresses");
+      localStorage.setItem(key, JSON.stringify(addresses));
     } catch {}
-  }, [addresses, isHydrated]);
+  }, [addresses, isLoggedIn, user, isHydrated]);
 
   const showToast = useCallback((message: string, type: "success" | "info" = "success") => {
     const id = Date.now();
@@ -737,10 +792,13 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const clearOrders = useCallback(() => {
     setOrders([]);
     try {
+      if (user) {
+        localStorage.removeItem(getUserStorageKey(user, "orders"));
+      }
       localStorage.removeItem("palluvo_ecommerce_orders");
     } catch {}
     showToast("Simulated order history cleared", "info");
-  }, [showToast]);
+  }, [user, showToast]);
 
   const addAddress = useCallback(
     (newAddrData: Omit<SavedAddress, "id">): SavedAddress => {

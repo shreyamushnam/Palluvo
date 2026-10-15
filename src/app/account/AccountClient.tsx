@@ -8,7 +8,7 @@ import { Package, MapPin, User, Truck, CheckCircle2, ShieldCheck, Plus, X, Edit2
 import { useStore } from "@/context/StoreContext";
 import { SavedAddress, OrderRecord } from "@/data/mockOrders";
 import { useFocusTrap } from "@/hooks/useFocusTrap";
-import { formatStoredPhone } from "@/utils/phone";
+import { formatStoredPhone, isValidIndianMobile } from "@/utils/phone";
 
 const DEFAULT_PROFILE = {
   fullName: "Radhika Sharma",
@@ -179,8 +179,6 @@ export default function AccountPage() {
     e.preventDefault();
     const trimmedId = loginIdentifier.trim();
     const isEmail = trimmedId.includes("@");
-    const digitsOnly = trimmedId.replace(/\D/g, "");
-    const isPhone = !isEmail && digitsOnly.length >= 7;
 
     let resolvedName = "Valued Connoisseur";
     let resolvedEmail = "member@palluvo.store";
@@ -188,14 +186,12 @@ export default function AccountPage() {
     let resolvedConnoisseur = true;
     let resolvedDrape = "Nivi Style / Bengali Festive";
 
-    if (isPhone) {
-      // Build a phone-login profile strictly from entered identity, never reusing a prior customer's data
-      resolvedMobile = formatStoredPhone(trimmedId);
-      resolvedName = "Valued Connoisseur";
-      resolvedEmail = `connoisseur.${digitsOnly.length >= 4 ? digitsOnly.slice(-4) : "member"}@palluvo.store`;
-      resolvedConnoisseur = true;
-      resolvedDrape = "Nivi Style / Bengali Festive";
-    } else if (isEmail) {
+    if (isEmail) {
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmedId)) {
+        showToast("Please enter a valid email address.", "info");
+        document.getElementById("signin-identifier")?.focus();
+        return;
+      }
       resolvedEmail = trimmedId;
       const localPart = trimmedId.split("@")[0].replace(/[._+-]+/g, " ").trim();
       if (localPart) {
@@ -211,13 +207,17 @@ export default function AccountPage() {
       resolvedConnoisseur = true;
       resolvedDrape = "Nivi Style / Bengali Festive";
     } else {
-      resolvedName = trimmedId
-        ? trimmedId.charAt(0).toUpperCase() + trimmedId.slice(1)
-        : "Valued Connoisseur";
-      resolvedEmail = trimmedId
-        ? `${trimmedId.toLowerCase().replace(/[^a-z0-9]/g, "")}@palluvo.store`
-        : "member@palluvo.store";
-      resolvedMobile = "+91 98765 43210";
+      // Must be a valid Indian mobile number
+      if (!isValidIndianMobile(trimmedId)) {
+        showToast("Please enter a valid 10-digit Indian mobile number (+91) or email address.", "info");
+        document.getElementById("signin-identifier")?.focus();
+        return;
+      }
+      const digitsOnly = trimmedId.replace(/\D/g, "");
+      const tenDigits = digitsOnly.length >= 10 ? digitsOnly.slice(-10) : digitsOnly;
+      resolvedMobile = formatStoredPhone(trimmedId);
+      resolvedName = "Valued Connoisseur";
+      resolvedEmail = `connoisseur.${tenDigits.slice(-4)}@palluvo.store`;
       resolvedConnoisseur = true;
       resolvedDrape = "Nivi Style / Bengali Festive";
     }
@@ -259,6 +259,11 @@ export default function AccountPage() {
 
   const handleRegisterSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    if (!isValidIndianMobile(regMobile)) {
+      showToast("Please enter a valid 10-digit Indian mobile number (e.g. +91 98765 43210).", "info");
+      document.getElementById("reg-mobile")?.focus();
+      return;
+    }
     const name = regFullName.trim() || "Valued Connoisseur";
     const email = regEmail.trim() || "member@palluvo.store";
     const mobile = formatStoredPhone(regMobile);
@@ -340,10 +345,19 @@ export default function AccountPage() {
 
   const handleSaveAddress = (e: React.FormEvent) => {
     e.preventDefault();
+    if (!isValidIndianMobile(addressForm.phone)) {
+      showToast("Please enter a valid 10-digit Indian phone number (+91).", "info");
+      document.getElementById("addr-phone")?.focus();
+      return;
+    }
+    const cleanForm = {
+      ...addressForm,
+      phone: formatStoredPhone(addressForm.phone),
+    };
     if (editingAddressId) {
-      updateAddress(editingAddressId, addressForm);
+      updateAddress(editingAddressId, cleanForm);
     } else {
-      addAddress(addressForm);
+      addAddress(cleanForm);
     }
     setIsAddressModalOpen(false);
   };
@@ -351,13 +365,23 @@ export default function AccountPage() {
   // Profile Actions
   const handleSaveProfile = (e: React.FormEvent) => {
     e.preventDefault();
+    if (!isValidIndianMobile(profile.mobile)) {
+      showToast("Please enter a valid 10-digit Indian mobile number (+91).", "info");
+      document.getElementById("profile-mobile")?.focus();
+      return;
+    }
+    const normalizedMobile = formatStoredPhone(profile.mobile);
     login({
       name: profile.fullName,
       email: profile.email,
-      mobile: profile.mobile,
+      mobile: normalizedMobile,
       isConnoisseur: profile.isConnoisseur,
       preferredDrape: profile.preferredDrape,
     });
+    setProfile((prev) => ({
+      ...prev,
+      mobile: normalizedMobile,
+    }));
     setProfileSuccessMessage(true);
     showToast("Profile details updated successfully!");
     setTimeout(() => {
@@ -562,7 +586,11 @@ export default function AccountPage() {
                       <input
                         id="reg-mobile"
                         type="tel"
+                        inputMode="tel"
                         required
+                        pattern="^(\+91[\-\s]?)?[0]?[6-9]\d{9}$"
+                        minLength={10}
+                        maxLength={16}
                         value={regMobile}
                         onChange={(e) => setRegMobile(e.target.value)}
                         placeholder="+91 98765 43210"
@@ -1097,7 +1125,11 @@ export default function AccountPage() {
                         name="mobile"
                         type="tel"
                         autoComplete="tel"
+                        pattern="^(\+91[\-\s]?)?[0]?[6-9]\d{9}$"
+                        minLength={10}
+                        maxLength={16}
                         required
+                        title="Please enter a valid 10-digit Indian mobile number (e.g. +91 98765 43210)"
                         value={profile.mobile}
                         onChange={(e) => setProfile({ ...profile, mobile: e.target.value })}
                         className="w-full min-h-[44px] px-3.5 py-2.5 border border-[#DCD5C9] rounded-xs focus:border-[#541920] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#541920]"
@@ -1210,9 +1242,11 @@ export default function AccountPage() {
                     type="tel"
                     autoComplete="tel"
                     inputMode="numeric"
-                    pattern="[0-9]*"
+                    pattern="[6-9][0-9]{9}"
+                    minLength={10}
                     maxLength={10}
                     required
+                    title="Please enter a valid 10-digit Indian mobile number starting with 6, 7, 8, or 9"
                     value={addressForm.phone}
                     onChange={(e) => {
                       const digitsOnly = e.target.value.replace(/\D/g, "").slice(0, 10);
