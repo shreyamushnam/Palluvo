@@ -38,7 +38,7 @@ export const CategoryGrid: React.FC = () => {
                   src={cat.image}
                   alt=""
                   fill
-                  sizes="(max-width: 479px) 50vw, (max-width: 639px) 33vw, (max-width: 1279px) 20vw, 220px"
+                  sizes="(max-width: 479px) calc((100vw - 62px) / 2), (max-width: 639px) calc((100vw - 84px) / 3), (max-width: 1023px) calc((100vw - 152px) / 5), (max-width: 1279px) calc((100vw - 184px) / 5), 220px"
                   className="object-cover object-top group-hover:scale-105 transition-transform duration-500"
                 />
               </div>
