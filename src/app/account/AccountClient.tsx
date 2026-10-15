@@ -8,6 +8,15 @@ import { Package, MapPin, User, Truck, CheckCircle2, ShieldCheck, Plus, X, Edit2
 import { useStore } from "@/context/StoreContext";
 import { SavedAddress, OrderRecord } from "@/data/mockOrders";
 import { useFocusTrap } from "@/hooks/useFocusTrap";
+import { formatStoredPhone } from "@/utils/phone";
+
+const DEFAULT_PROFILE = {
+  fullName: "Radhika Sharma",
+  email: "radhika.sharma@example.com",
+  mobile: "+91 98765 43210",
+  preferredDrape: "Nivi Style / Bengali Festive",
+  isConnoisseur: true,
+};
 
 function getSafeRedirectUrl(target: string | null | undefined): string {
   if (!target || typeof target !== "string") return "/";
@@ -138,26 +147,31 @@ export default function AccountPage() {
   });
 
   // Profile & Settings state
-  const [profile, setProfile] = useState({
-    fullName: user?.name || "Radhika Sharma",
-    email: user?.email || "radhika.sharma@example.com",
-    mobile: user?.mobile || "+91 98765 43210",
-    preferredDrape: user?.preferredDrape || "Nivi Style / Bengali Festive",
-    isConnoisseur: user?.isConnoisseur !== undefined ? user.isConnoisseur : true,
-  });
+  const [profile, setProfile] = useState(() => (
+    user
+      ? {
+          fullName: user.name || DEFAULT_PROFILE.fullName,
+          email: user.email || DEFAULT_PROFILE.email,
+          mobile: user.mobile ? formatStoredPhone(user.mobile) : DEFAULT_PROFILE.mobile,
+          preferredDrape: user.preferredDrape || DEFAULT_PROFILE.preferredDrape,
+          isConnoisseur: user.isConnoisseur !== undefined ? user.isConnoisseur : DEFAULT_PROFILE.isConnoisseur,
+        }
+      : DEFAULT_PROFILE
+  ));
   const [profileSuccessMessage, setProfileSuccessMessage] = useState(false);
 
-  // Sync profile when auth user updates
+  // Sync profile when auth user updates, and reset to defaults when logged out
   React.useEffect(() => {
     if (user) {
-      setProfile((prev) => ({
-        ...prev,
-        fullName: user.name || prev.fullName,
-        email: user.email || prev.email,
-        mobile: user.mobile || prev.mobile,
-        preferredDrape: user.preferredDrape || prev.preferredDrape,
-        isConnoisseur: user.isConnoisseur !== undefined ? user.isConnoisseur : prev.isConnoisseur,
-      }));
+      setProfile({
+        fullName: user.name || DEFAULT_PROFILE.fullName,
+        email: user.email || DEFAULT_PROFILE.email,
+        mobile: user.mobile ? formatStoredPhone(user.mobile) : DEFAULT_PROFILE.mobile,
+        preferredDrape: user.preferredDrape || DEFAULT_PROFILE.preferredDrape,
+        isConnoisseur: user.isConnoisseur !== undefined ? user.isConnoisseur : DEFAULT_PROFILE.isConnoisseur,
+      });
+    } else {
+      setProfile(DEFAULT_PROFILE);
     }
   }, [user]);
 
@@ -170,26 +184,17 @@ export default function AccountPage() {
 
     let resolvedName = "Valued Connoisseur";
     let resolvedEmail = "member@palluvo.store";
-    let resolvedMobile = profile.mobile || "+91 98765 43210";
+    let resolvedMobile = "+91 98765 43210";
+    let resolvedConnoisseur = true;
+    let resolvedDrape = "Nivi Style / Bengali Festive";
 
     if (isPhone) {
-      if (trimmedId.startsWith("+")) {
-        resolvedMobile = trimmedId.replace(/\s+/g, " ");
-      } else if (digitsOnly.length === 10) {
-        resolvedMobile = `+91 ${digitsOnly.slice(0, 5)} ${digitsOnly.slice(5)}`;
-      } else if (digitsOnly.length === 12 && digitsOnly.startsWith("91")) {
-        resolvedMobile = `+91 ${digitsOnly.slice(2, 7)} ${digitsOnly.slice(7)}`;
-      } else {
-        resolvedMobile = `+91 ${digitsOnly}`;
-      }
-
-      resolvedName = profile.fullName && profile.fullName !== "Radhika Sharma"
-        ? profile.fullName
-        : "Valued Connoisseur";
-
-      resolvedEmail = profile.email && profile.email !== "radhika.sharma@example.com"
-        ? profile.email
-        : `connoisseur.${digitsOnly.slice(-4)}@palluvo.store`;
+      // Build a phone-login profile strictly from entered identity, never reusing a prior customer's data
+      resolvedMobile = formatStoredPhone(trimmedId);
+      resolvedName = "Valued Connoisseur";
+      resolvedEmail = `connoisseur.${digitsOnly.length >= 4 ? digitsOnly.slice(-4) : "member"}@palluvo.store`;
+      resolvedConnoisseur = true;
+      resolvedDrape = "Nivi Style / Bengali Festive";
     } else if (isEmail) {
       resolvedEmail = trimmedId;
       const localPart = trimmedId.split("@")[0].replace(/[._+-]+/g, " ").trim();
@@ -200,30 +205,39 @@ export default function AccountPage() {
           .map((w) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
           .join(" ");
       } else {
-        resolvedName = profile.fullName || "Valued Connoisseur";
+        resolvedName = "Valued Connoisseur";
       }
-      resolvedMobile = profile.mobile || "+91 98765 43210";
+      resolvedMobile = "+91 98765 43210";
+      resolvedConnoisseur = true;
+      resolvedDrape = "Nivi Style / Bengali Festive";
     } else {
       resolvedName = trimmedId
         ? trimmedId.charAt(0).toUpperCase() + trimmedId.slice(1)
-        : (profile.fullName || "Valued Connoisseur");
-      resolvedEmail = trimmedId ? `${trimmedId.toLowerCase().replace(/[^a-z0-9]/g, "")}@palluvo.store` : "member@palluvo.store";
-      resolvedMobile = profile.mobile || "+91 98765 43210";
+        : "Valued Connoisseur";
+      resolvedEmail = trimmedId
+        ? `${trimmedId.toLowerCase().replace(/[^a-z0-9]/g, "")}@palluvo.store`
+        : "member@palluvo.store";
+      resolvedMobile = "+91 98765 43210";
+      resolvedConnoisseur = true;
+      resolvedDrape = "Nivi Style / Bengali Festive";
     }
 
     login({
       name: resolvedName,
       email: resolvedEmail,
       mobile: resolvedMobile,
-      isConnoisseur: profile.isConnoisseur ?? true,
-      preferredDrape: profile.preferredDrape,
+      isConnoisseur: resolvedConnoisseur,
+      preferredDrape: resolvedDrape,
     });
-    setProfile((prev) => ({
-      ...prev,
+    setProfile({
       fullName: resolvedName,
       email: resolvedEmail,
       mobile: resolvedMobile,
-    }));
+      isConnoisseur: resolvedConnoisseur,
+      preferredDrape: resolvedDrape,
+    });
+    setLoginIdentifier("");
+    setLoginPassword("");
     showToast("Signed in to prototype session (local demo mode).");
     const targetRedirect = getSafeRedirectUrl(redirectUrl);
     router.push(targetRedirect);
@@ -237,6 +251,7 @@ export default function AccountPage() {
       isConnoisseur: true,
       preferredDrape: "Nivi Style / Bengali Festive",
     });
+    setProfile(DEFAULT_PROFILE);
     showToast("Signed in as Radhika Sharma (Demo Account)");
     const targetRedirect = getSafeRedirectUrl(redirectUrl);
     router.push(targetRedirect);
@@ -246,7 +261,7 @@ export default function AccountPage() {
     e.preventDefault();
     const name = regFullName.trim() || "Valued Connoisseur";
     const email = regEmail.trim() || "member@palluvo.store";
-    const mobile = regMobile.trim() || "+91 98765 43210";
+    const mobile = formatStoredPhone(regMobile);
     login({
       name,
       email,
@@ -261,6 +276,10 @@ export default function AccountPage() {
       preferredDrape: "Nivi Style / Bengali Festive",
       isConnoisseur: regConnoisseur,
     });
+    setRegFullName("");
+    setRegMobile("");
+    setRegEmail("");
+    setRegPassword("");
     showToast("Prototype profile created in local session.");
     const targetRedirect = getSafeRedirectUrl(redirectUrl);
     router.push(targetRedirect);
@@ -268,6 +287,14 @@ export default function AccountPage() {
 
   const handleSignOut = () => {
     logout();
+    setProfile(DEFAULT_PROFILE);
+    setLoginIdentifier("");
+    setLoginPassword("");
+    setRegFullName("");
+    setRegMobile("");
+    setRegEmail("");
+    setRegPassword("");
+    setRegConnoisseur(true);
     showToast("Signed out of your Palluvo account.", "info");
   };
 

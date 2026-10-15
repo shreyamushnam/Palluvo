@@ -8,6 +8,7 @@ import { useStore } from "@/context/StoreContext";
 import { OrderRecord, SavedAddress } from "@/data/mockOrders";
 import { getProductType, isSilkMarkCertified } from "@/data/products";
 import { scrollIntoView } from "@/utils/scroll";
+import { extract10DigitPhone } from "@/utils/phone";
 
 const POPULAR_BANKS = [
   { id: "hdfc", name: "HDFC Bank" },
@@ -80,8 +81,8 @@ export default function CheckoutPage() {
   const [shippingAddress, setShippingAddress] = useState({
     fullName: defaultAddr ? defaultAddr.name : (isLoggedIn && user?.name ? user.name : ""),
     phone: defaultAddr && typeof defaultAddr.phone === "string"
-      ? defaultAddr.phone.replace("+91 ", "").replace(/\s/g, "")
-      : (isLoggedIn && user?.mobile ? user.mobile.replace("+91 ", "").replace(/\s/g, "") : ""),
+      ? extract10DigitPhone(defaultAddr.phone)
+      : (isLoggedIn && user?.mobile ? extract10DigitPhone(user.mobile) : ""),
     email: isLoggedIn && user?.email ? user.email : "",
     addressLine1: defaultAddr ? defaultAddr.addressLine : "",
     landmark: "",
@@ -102,8 +103,8 @@ export default function CheckoutPage() {
           ...prev,
           fullName: active.name || "",
           phone: typeof active.phone === "string"
-            ? active.phone.replace("+91 ", "").replace(/\s/g, "")
-            : (prev.phone || (user?.mobile ? user.mobile.replace("+91 ", "").replace(/\s/g, "") : "")),
+            ? extract10DigitPhone(active.phone)
+            : (prev.phone || (user?.mobile ? extract10DigitPhone(user.mobile) : "")),
           email: prev.email || user?.email || "",
           addressLine1: active.addressLine || "",
           city: active.city || "",
@@ -120,7 +121,7 @@ export default function CheckoutPage() {
       setShippingAddress((prev) => {
         const needsName = !prev.fullName.trim() && Boolean(user.name);
         const needsEmail = !prev.email.trim() && Boolean(user.email);
-        const formattedMobile = user.mobile ? user.mobile.replace("+91 ", "").replace(/\s/g, "") : "";
+        const formattedMobile = user.mobile ? extract10DigitPhone(user.mobile) : "";
         const needsPhone = !prev.phone.trim() && Boolean(formattedMobile);
 
         if (!needsName && !needsEmail && !needsPhone) {
@@ -542,7 +543,7 @@ export default function CheckoutPage() {
                                 setShippingAddress((prev) => ({
                                   ...prev,
                                   fullName: addr.name || "",
-                                  phone: typeof addr.phone === "string" ? addr.phone.replace("+91 ", "").replace(/\s/g, "") : "",
+                                  phone: typeof addr.phone === "string" ? extract10DigitPhone(addr.phone) : "",
                                   addressLine1: addr.addressLine || "",
                                   city: addr.city || "",
                                   state: addr.state || "",

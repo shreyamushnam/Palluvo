@@ -3,6 +3,7 @@
 import React, { createContext, useContext, useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { Product, PRODUCTS } from "@/data/products";
 import { OrderRecord, OrderProductItem, MOCK_ORDERS, SavedAddress, MOCK_ADDRESSES } from "@/data/mockOrders";
+import { formatStoredPhone } from "@/utils/phone";
 
 export interface CartItem {
   product: Product;
@@ -183,7 +184,7 @@ export function validateAndNormalizeAuth(raw: unknown): {
       : "radhika.sharma@example.com";
   const mobile =
     typeof userObj.mobile === "string" && userObj.mobile.trim().length > 0
-      ? userObj.mobile.trim()
+      ? formatStoredPhone(userObj.mobile)
       : undefined;
   const isConnoisseur =
     typeof userObj.isConnoisseur === "boolean" ? userObj.isConnoisseur : undefined;
@@ -344,9 +345,9 @@ export function validateAndNormalizeAddresses(raw: unknown): SavedAddress[] {
     const rawPhone = candidate.phone;
     const phone =
       typeof rawPhone === "string" && rawPhone.trim().length > 0
-        ? rawPhone.trim()
+        ? formatStoredPhone(rawPhone)
         : typeof rawPhone === "number" && Number.isFinite(rawPhone)
-        ? String(rawPhone)
+        ? formatStoredPhone(String(rawPhone))
         : "";
     if (!phone) continue;
 
