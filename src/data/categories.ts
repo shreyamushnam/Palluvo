@@ -119,6 +119,70 @@ export function getCategoryItemCount(
   return productList.filter((product) => matchesCategory(product, categoryName)).length;
 }
 
+export function isCategoryActive(
+  selectedCategory: string,
+  cat: Category | Omit<Category, "itemCount">
+): boolean {
+  if (!selectedCategory) return false;
+  const selNorm = selectedCategory.toLowerCase().trim();
+  const catCanonNorm = cat.canonicalQuery.toLowerCase().trim().replace(/\+/g, " ");
+  const catNameNorm = cat.name.toLowerCase().trim();
+
+  if (selNorm === catCanonNorm || selNorm === catNameNorm) return true;
+  if (catCanonNorm === "silk" && selNorm.includes("silk") && !selNorm.includes("cotton")) return true;
+  if (catCanonNorm === "handloom" && selNorm.includes("handloom")) return true;
+  if (catCanonNorm === "cotton" && selNorm.includes("cotton")) return true;
+  if (catCanonNorm === "festive" && selNorm.includes("festive")) return true;
+  if (catCanonNorm === "bridal" && (selNorm.includes("bridal") || selNorm.includes("wedding"))) return true;
+  if (catCanonNorm.includes("party") && selNorm.includes("party")) return true;
+  if (catCanonNorm === "printed" && selNorm.includes("printed")) return true;
+  if (catCanonNorm.includes("new") && selNorm.includes("new")) return true;
+  if (catCanonNorm === "blouses" && selNorm.includes("blouse")) return true;
+  if (
+    catCanonNorm === "jewelry" &&
+    (selNorm.includes("jewel") || selNorm.includes("jhumka") || selNorm.includes("accessor"))
+  ) return true;
+  return false;
+}
+
+export function getCategoryDescription(categoryOrQuery?: string): string {
+  if (!categoryOrQuery) {
+    return "Explore authentic zari brocades, royal silk drapes, designer blouses, and handcrafted jewellery curated with artisanal elegance.";
+  }
+  const norm = categoryOrQuery.toLowerCase().trim();
+  if (norm.includes("jewel") || norm.includes("jhumka") || norm.includes("accessor")) {
+    return "Discover artisanal temple jewellery and handcrafted antique gold-plated adornments designed to complement your luxury drapes.";
+  }
+  if (norm.includes("blouse")) {
+    return "Explore curated designer blouse pieces crafted in fine silk with intricate zari embroidery to complete your ensemble.";
+  }
+  if (norm.includes("silk") && !norm.includes("cotton")) {
+    return "Explore authentic pure silk sarees and opulent zari brocades curated with certified Silk Mark purity.";
+  }
+  if (norm.includes("handloom")) {
+    return "Discover heritage handloom weaves and timeless artisan drapes crafted with authentic weaving traditions.";
+  }
+  if (norm.includes("cotton")) {
+    return "Explore lightweight cotton and chanderi silk sarees designed for breathable all-day elegance and festive grace.";
+  }
+  if (norm.includes("bridal") || norm.includes("wedding")) {
+    return "Explore heirloom bridal drapes and opulent zari brocades curated for timeless wedding celebrations.";
+  }
+  if (norm.includes("festive")) {
+    return "Celebrate festive moments in shimmering tissue silks, vibrant jewel tones, and celebratory gold zari drapes.";
+  }
+  if (norm.includes("party")) {
+    return "Step into contemporary elegance with modern organza drapes, fine sequins, and evening celebrations wear.";
+  }
+  if (norm.includes("printed")) {
+    return "Discover fluid georgette and printed floral drapes crafted for modern versatility and effortless styling.";
+  }
+  if (norm.includes("new")) {
+    return "Explore the latest handcrafted drapes, designer blouses, and artisanal accessories fresh from our master weavers.";
+  }
+  return "Explore authentic zari brocades, handloom weaves, and royal silk drapes curated with Silk Mark purity.";
+}
+
 const CATEGORY_DEFINITIONS: Omit<Category, "itemCount">[] = [
   {
     id: "cat-silk",
@@ -175,6 +239,20 @@ const CATEGORY_DEFINITIONS: Omit<Category, "itemCount">[] = [
     slug: "new-arrivals",
     canonicalQuery: "New+Arrivals",
     image: "/images/categories/new-arrivals.jpg",
+  },
+  {
+    id: "cat-blouses",
+    name: "Blouses",
+    slug: "blouses",
+    canonicalQuery: "Blouses",
+    image: "/images/products/wine-blouse-piece.jpg",
+  },
+  {
+    id: "cat-jewelry",
+    name: "Jewelry",
+    slug: "jewelry",
+    canonicalQuery: "Jewelry",
+    image: "/images/products/gold-jhumkas.jpg",
   },
 ];
 

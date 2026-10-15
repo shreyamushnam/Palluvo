@@ -5,10 +5,18 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Filter, X, SlidersHorizontal, Check, Search, ArrowUpDown } from "lucide-react";
 import { PRODUCTS, type Product, getProductType } from "@/data/products";
-import { CATEGORIES } from "@/data/categories";
+import {
+  CATEGORIES,
+  isCategoryActive,
+  getCategoryDescription,
+  matchesCategory,
+  getCategoryItemCount,
+} from "@/data/categories";
 import { ProductCard } from "@/components/ecommerce/ProductCard";
 import { BackToTopButton } from "@/components/common/BackToTopButton";
 import { useFocusTrap } from "@/hooks/useFocusTrap";
+
+export { matchesCategory, getCategoryItemCount };
 
 const SORT_OPTIONS = [
   { value: "featured", label: "Featured Weaves" },
@@ -42,64 +50,6 @@ const OCCASIONS = [
   "Cocktail & Evening",
   "Workwear & Casual",
 ];
-
-export function matchesCategory(product: Product, category: string): boolean {
-  if (!category) return true;
-  const norm = category.toLowerCase().trim();
-  const isSaree = getProductType(product) === "saree";
-
-  if (norm.includes("new arrival") || norm.includes("new")) {
-    return !!product.isNewArrival;
-  } else if (norm.includes("silk") && !norm.includes("cotton")) {
-    return isSaree && (product.category.toLowerCase() === "silk" || product.fabric.toLowerCase().includes("silk"));
-  } else if (norm.includes("handloom")) {
-    return isSaree && (product.category.toLowerCase() === "handloom" || product.fabric.toLowerCase().includes("handloom"));
-  } else if (norm.includes("cotton")) {
-    return isSaree && (product.category.toLowerCase() === "cotton" || product.fabric.toLowerCase().includes("cotton"));
-  } else if (norm.includes("festive")) {
-    return isSaree && (product.category.toLowerCase() === "festive" || product.occasion.toLowerCase() === "festive");
-  } else if (norm.includes("bridal") || norm.includes("wedding")) {
-    return isSaree && (product.category.toLowerCase() === "bridal" || product.occasion.toLowerCase() === "wedding");
-  } else if (norm.includes("party")) {
-    return product.category.toLowerCase() === "party wear" || product.occasion.toLowerCase() === "party";
-  } else if (norm.includes("printed")) {
-    return isSaree && product.category.toLowerCase() === "printed";
-  } else if (norm.includes("blouse")) {
-    return getProductType(product) === "blouse";
-  } else if (norm.includes("jewel") || norm.includes("jhumka") || norm.includes("accessor")) {
-    return getProductType(product) === "jewelry";
-  } else {
-    const isSareeQuery = norm.includes("saree");
-    if (isSareeQuery && !isSaree) return false;
-    const root = norm.replace(/sarees?/g, "").trim();
-    if (!root) return isSaree;
-    return (
-      product.name.toLowerCase().includes(root) ||
-      product.category.toLowerCase().includes(root) ||
-      product.fabric.toLowerCase().includes(root) ||
-      product.occasion.toLowerCase().includes(root) ||
-      (product.tags || []).some((t) => t.toLowerCase().includes(root))
-    );
-  }
-}
-
-function isCategoryActive(selectedCategory: string, cat: (typeof CATEGORIES)[number]): boolean {
-  if (!selectedCategory) return false;
-  const selNorm = selectedCategory.toLowerCase().trim();
-  const catCanonNorm = cat.canonicalQuery.toLowerCase().trim().replace(/\+/g, " ");
-  const catNameNorm = cat.name.toLowerCase().trim();
-
-  if (selNorm === catCanonNorm || selNorm === catNameNorm) return true;
-  if (catCanonNorm === "silk" && selNorm.includes("silk") && !selNorm.includes("cotton")) return true;
-  if (catCanonNorm === "handloom" && selNorm.includes("handloom")) return true;
-  if (catCanonNorm === "cotton" && selNorm.includes("cotton")) return true;
-  if (catCanonNorm === "festive" && selNorm.includes("festive")) return true;
-  if (catCanonNorm === "bridal" && (selNorm.includes("bridal") || selNorm.includes("wedding"))) return true;
-  if (catCanonNorm.includes("party") && selNorm.includes("party")) return true;
-  if (catCanonNorm === "printed" && selNorm.includes("printed")) return true;
-  if (catCanonNorm.includes("new") && selNorm.includes("new")) return true;
-  return false;
-}
 
 export function matchesFabric(product: Product, fabric: string): boolean {
   if (!fabric) return true;
@@ -149,13 +99,6 @@ export function getOccasionItemCount(
   productList: Product[] = PRODUCTS
 ): number {
   return productList.filter((product) => matchesOccasion(product, occ)).length;
-}
-
-export function getCategoryItemCount(
-  categoryName: string,
-  productList: Product[] = PRODUCTS
-): number {
-  return productList.filter((product) => matchesCategory(product, categoryName)).length;
 }
 
 const PRICE_RANGES = [
@@ -335,9 +278,7 @@ export function ShopContent() {
             {displayCategoryName || "All Handcrafted Products"}
           </h1>
           <p className="text-xs sm:text-sm text-neutral-600 mt-1 font-sans max-w-2xl">
-            {selectedCategory
-              ? "Explore authentic zari brocades, handloom weaves, and royal silk drapes curated with Silk Mark purity."
-              : "Explore authentic zari brocades, royal silk drapes, designer blouses, and handcrafted jewellery curated with Silk Mark purity."}
+            {getCategoryDescription(selectedCategory)}
           </p>
         </div>
       </div>

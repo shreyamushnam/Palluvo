@@ -25,8 +25,8 @@ export const CategoryGrid: React.FC = () => {
           </Link>
         </div>
 
-        {/* 8 Categories in an enlarged, responsive grid */}
-        <div className="grid grid-cols-2 min-[480px]:grid-cols-4 lg:grid-cols-8 gap-3.5 sm:gap-4 lg:gap-5">
+        {/* 10 Categories in an enlarged, responsive grid */}
+        <div className="grid grid-cols-2 min-[480px]:grid-cols-3 sm:grid-cols-5 gap-3.5 sm:gap-4 lg:gap-5">
           {CATEGORIES.map((cat) => (
             <Link
               key={cat.id}
