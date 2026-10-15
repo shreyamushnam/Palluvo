@@ -92,7 +92,7 @@ export const InfoModal: React.FC<InfoModalProps> = ({
     },
     {
       q: "How long does shipping take across India?",
-      a: "Orders dispatch within 24 to 48 hours from our fulfillment ateliers. Delivery typically takes 2-4 business days for metro cities and 4-6 business days for rest of India.",
+      a: "Our official brand shipping policy provides standard insured delivery in 3-5 business days across metros and 5-7 business days across other Indian pin codes. Please note that orders placed through this prototype website are local simulations for demonstration and do not trigger physical courier dispatch.",
     },
     {
       q: "What is your return & exchange policy?",
@@ -466,11 +466,13 @@ export const InfoModal: React.FC<InfoModalProps> = ({
                     <div className="p-4 bg-white rounded-xs border border-[#E8E2D9] space-y-1.5">
                       <strong className="text-neutral-900 font-semibold flex items-center gap-2 text-sm">
                         <Clock className="w-4 h-4 text-[#541920]" />
-                        <span>Dispatch & Delivery Timelines</span>
+                        <span>Dispatch & Delivery Timelines (Illustrative Brand Policy)</span>
                       </strong>
-                      <p>• <strong>Dispatch:</strong> Ready-to-ship sarees dispatch within 24 to 48 hours.</p>
-                      <p>• <strong>Metro Cities:</strong> Delivered in 2-4 Business Days (Delhi, Mumbai, Bengaluru, Hyderabad, Chennai, Kolkata).</p>
-                      <p>• <strong>Tier 2 & 3 Cities:</strong> Delivered in 4-6 Business Days via BlueDart, Delhivery, or DTDC.</p>
+                      <p>• <strong>Metro Cities:</strong> Delivered in 3-5 Business Days (Delhi, Mumbai, Bengaluru, Hyderabad, Chennai, Kolkata).</p>
+                      <p>• <strong>Tier 2 & 3 Cities:</strong> Delivered in 5-7 Business Days via BlueDart, Delhivery, or DTDC.</p>
+                      <p className="text-[11px] text-neutral-500 pt-1 border-t border-[#FAF7F2]">
+                        Note: Orders placed through this prototype storefront are local simulations for evaluation and do not trigger physical courier dispatch.
+                      </p>
                     </div>
 
                     <div className="p-4 bg-white rounded-xs border border-[#E8E2D9] space-y-1.5">

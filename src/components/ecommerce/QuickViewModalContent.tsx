@@ -33,7 +33,7 @@ export const QuickViewModalContent: React.FC<QuickViewModalContentProps> = ({
   const [activeImageIdx, setActiveImageIdx] = useState(0);
   const [selectedColor, setSelectedColor] = useState<string>(product.colors[0]?.name || "");
   const [blouseOption, setBlouseOption] = useState<string>(
-    product.hasBlousePiece ? (product.blouseOptions?.[0] || "Unstitched (Included)") : ""
+    product.hasBlousePiece ? (product.blouseOptions?.[0] || "With Blouse") : ""
   );
   const [quantity, setQuantity] = useState(1);
 
@@ -210,7 +210,7 @@ export const QuickViewModalContent: React.FC<QuickViewModalContentProps> = ({
                       Blouse Option:
                     </label>
                     <div className="grid grid-cols-2 gap-2">
-                      {(product.blouseOptions || ["Unstitched (Included)", "Custom Stitched (+₹1,499)"]).map((opt: string) => (
+                      {(product.blouseOptions || ["With Blouse", "Without Blouse"]).map((opt: string) => (
                         <button
                           key={opt}
                           type="button"

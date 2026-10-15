@@ -107,10 +107,13 @@ export function validateAndNormalizeCart(raw: unknown): CartItem[] {
     const rawBlouse = (item as { blouseOption?: unknown }).blouseOption;
     let blouseOption: string | undefined = undefined;
     if (canonicalProduct.hasBlousePiece && typeof rawBlouse === "string") {
-      const trimmed = rawBlouse.trim();
+      let trimmed = rawBlouse.trim();
+      if (trimmed === "Unstitched (Included)") {
+        trimmed = "With Blouse";
+      }
       const validOptions = canonicalProduct.blouseOptions?.length
         ? canonicalProduct.blouseOptions
-        : ["With Blouse", "Without Blouse", "Unstitched (Included)", "Custom Stitched (+₹1,499)"];
+        : ["With Blouse", "Without Blouse"];
       if (validOptions.includes(trimmed)) {
         blouseOption = trimmed;
       }
@@ -221,12 +224,15 @@ export function validateAndNormalizeOrders(raw: unknown): OrderRecord[] {
       const rawBlouse = p.blouseOption;
       let blouseOption: string | undefined = undefined;
       if (typeof rawBlouse === "string") {
-        const trimmed = rawBlouse.trim();
+        let trimmed = rawBlouse.trim();
+        if (trimmed === "Unstitched (Included)") {
+          trimmed = "With Blouse";
+        }
         const canonicalProduct = PRODUCTS.find((prod) => prod.id === id);
         if (!canonicalProduct || canonicalProduct.hasBlousePiece) {
           const supportedOptions = canonicalProduct?.blouseOptions?.length
             ? canonicalProduct.blouseOptions
-            : ["With Blouse", "Without Blouse", "Unstitched (Included)", "Custom Stitched (+₹1,499)"];
+            : ["With Blouse", "Without Blouse"];
           if (supportedOptions.includes(trimmed)) {
             blouseOption = trimmed;
           }
@@ -394,7 +400,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         }
       } else {
         // Seed initial cart item for instant e-commerce demonstration
-        setCart([{ product: PRODUCTS[0], quantity: 1, selectedColor: "Wine", blouseOption: "Unstitched (Included)" }]);
+        setCart([{ product: PRODUCTS[0], quantity: 1, selectedColor: "Wine", blouseOption: "With Blouse" }]);
       }
     } catch {
       // Storage access error fallback
@@ -512,8 +518,9 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const addToCart = useCallback(
     (product: Product, quantity = 1, selectedColor?: string, blouseOption?: string) => {
       const color = selectedColor || product.color;
+      const resolvedBlouse = blouseOption === "Unstitched (Included)" ? "With Blouse" : blouseOption;
       const finalBlouseOption = product.hasBlousePiece
-        ? (blouseOption ?? product.blouseOptions?.[0] ?? "Unstitched (Included)")
+        ? (resolvedBlouse ?? product.blouseOptions?.[0] ?? "With Blouse")
         : undefined;
       const safeQty = Math.max(1, Math.min(Math.floor(quantity), 99));
 
