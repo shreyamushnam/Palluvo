@@ -113,6 +113,29 @@ export default function CheckoutPage() {
   const [deliveryMethod, setDeliveryMethod] = useState<"standard" | "express">("standard");
   const allSilkMarkItems = cart.length > 0 && cart.every((i) => isSilkMarkCertified(i.product));
   const isJewelryOnly = cart.length > 0 && cart.every((i) => getProductType(i.product) === "jewelry");
+  const hasSarees = useMemo(() => cart.some((i) => getProductType(i.product) === "saree"), [cart]);
+  const hasBlouses = useMemo(() => cart.some((i) => getProductType(i.product) === "blouse"), [cart]);
+  const hasJewelry = useMemo(() => cart.some((i) => getProductType(i.product) === "jewelry"), [cart]);
+
+  const returnPromiseNotice = useMemo(() => {
+    if (cart.length === 0) {
+      return "7-Day Hassle-Free Returns on Eligible Items";
+    }
+    if (hasSarees && !hasBlouses && !hasJewelry) {
+      return "7-Day Hassle-Free Returns on Sarees (Unworn with tags & box intact)";
+    }
+    if (hasJewelry && !hasSarees && !hasBlouses) {
+      return "7-Day Returns on Jewelry (Unworn with intact security seal & pouch)";
+    }
+    if (hasBlouses && !hasSarees && !hasJewelry) {
+      return "7-Day Returns on Blouse Pieces (Uncut, unstitched in original wrap)";
+    }
+    const terms: string[] = [];
+    if (hasSarees) terms.push("Sarees (tags/box intact)");
+    if (hasBlouses) terms.push("Blouses (uncut)");
+    if (hasJewelry) terms.push("Jewelry (security seal intact)");
+    return `7-Day Returns on Eligible Items: ${terms.join(" • ")}`;
+  }, [cart.length, hasSarees, hasBlouses, hasJewelry]);
   const isExpressEligible = appliedCoupon === "PALLUVO10" && subtotal >= 1999;
   const expressFee = deliveryMethod === "express" ? (isExpressEligible ? 0 : 299) : 0;
   const totalShippingFee = shippingFee + expressFee;
@@ -1244,7 +1267,7 @@ export default function CheckoutPage() {
               </div>
 
               <div className="text-[11px] text-neutral-500 pt-2 border-t border-[#E8E2D9] space-y-1">
-                <p>• 7-Day Hassle-Free Returns Guaranteed</p>
+                <p>• {returnPromiseNotice}</p>
                 <p>
                   •{" "}
                   {allSilkMarkItems

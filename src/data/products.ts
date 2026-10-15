@@ -585,3 +585,108 @@ export function getProductMetaDescription(product: Product, maxLength: number = 
 export function isSilkMarkCertified(product: Product): boolean {
   return product.isSilkMark === true;
 }
+
+/**
+ * Curated pairings mapping product IDs to complementary, matching, or styling-related items.
+ * Supports cross-merchandising and useful discovery across sarees, blouses, and jewelry.
+ */
+export const CURATED_RELATED_PRODUCTS: Record<string, string[]> = {
+  // Wine Tissue Silk Saree -> pairs with matching blouse piece, temple jhumkas, and fellow silk/festive drapes
+  "pal-001": ["pal-010", "pal-011", "pal-008", "pal-003"],
+  // Royal Blue Kanjeevaram (Bridal) -> pairs with fellow bridal velvet saree, temple jewelry, and pure silks
+  "pal-002": ["pal-006", "pal-011", "pal-001", "pal-008"],
+  // Forest Green Banarasi (Handloom/Festive) -> pairs with festive chanderi, silk drapes, and temple jhumkas
+  "pal-003": ["pal-005", "pal-001", "pal-011", "pal-008"],
+  // Blush Pink Organza (Festive/Party) -> pairs with party wear georgette, chiffon, and pastel tissue silk
+  "pal-004": ["pal-007", "pal-009", "pal-001", "pal-005"],
+  // Mustard Yellow Chanderi (Festive/Handloom) -> pairs with handloom banarasi, festive organza, and temple jhumkas
+  "pal-005": ["pal-003", "pal-004", "pal-011", "pal-001"],
+  // Maroon Velvet Bridal (Bridal) -> pairs with royal bridal kanjeevaram, temple jhumkas, and rich tissue silk
+  "pal-006": ["pal-002", "pal-011", "pal-001", "pal-008"],
+  // Pastel Mint Floral (Party Wear) -> pairs with lavender chiffon, blush organza, and festive silk
+  "pal-007": ["pal-009", "pal-004", "pal-001", "pal-008"],
+  // Ivory Gold Zari (Silk) -> pairs with wine tissue silk, royal kanjeevaram, temple jhumkas, and banarasi
+  "pal-008": ["pal-001", "pal-002", "pal-011", "pal-003"],
+  // Lavender Chiffon (Party Wear) -> pairs with mint floral georgette, blush organza, and festive silk
+  "pal-009": ["pal-007", "pal-004", "pal-001", "pal-008"],
+  // Matching Wine Blouse Piece -> pairs with its matching wine tissue silk saree, temple jhumkas, and silk drapes
+  "pal-010": ["pal-001", "pal-011", "pal-008", "pal-002"],
+  // Temple Gold Plated Jhumkas (Jewelry) -> pairs with coordinating blouse piece, wine tissue saree, and bridal drapes
+  "pal-011": ["pal-010", "pal-001", "pal-002", "pal-006"],
+};
+
+/**
+ * Selects related product recommendations for a given product.
+ * Prioritizes curated pairings, then scores remaining catalog items by productType,
+ * category, occasion, and tag relevance rather than returning an arbitrary slice.
+ */
+export function getRelatedProducts(product: Product, limit: number = 4): Product[] {
+  const result: Product[] = [];
+  const seenIds = new Set<string>([product.id]);
+
+  // 1. Check curated pairings first
+  const curatedIds = CURATED_RELATED_PRODUCTS[product.id] || [];
+  for (const cid of curatedIds) {
+    if (!seenIds.has(cid)) {
+      const match = PRODUCTS.find((p) => p.id === cid);
+      if (match) {
+        result.push(match);
+        seenIds.add(cid);
+        if (result.length >= limit) return result;
+      }
+    }
+  }
+
+  // 2. Score remaining catalog candidates by relevance
+  const currentType = getProductType(product);
+  const candidates = PRODUCTS.filter((p) => !seenIds.has(p.id));
+
+  const scored = candidates.map((candidate) => {
+    let score = 0;
+    const candidateType = getProductType(candidate);
+
+    // Complementary accessory matching (blouse <-> jewelry or saree <-> accessory)
+    if (
+      (currentType === "blouse" && candidateType === "jewelry") ||
+      (currentType === "jewelry" && candidateType === "blouse")
+    ) {
+      score += 15;
+    }
+
+    // Matching product type (e.g. saree to saree, jewelry to jewelry)
+    if (candidateType === currentType) {
+      score += 12;
+    }
+
+    // Same category (e.g. Bridal to Bridal, Silk to Silk)
+    if (candidate.category === product.category) {
+      score += 20;
+    }
+
+    // Same occasion (e.g. Wedding to Wedding, Festive to Festive)
+    if (candidate.occasion === product.occasion) {
+      score += 10;
+    }
+
+    // Tag overlap
+    const currentTags = product.tags || [];
+    const candidateTags = candidate.tags || [];
+    for (const tag of currentTags) {
+      if (candidateTags.includes(tag)) {
+        score += 3;
+      }
+    }
+
+    return { product: candidate, score };
+  });
+
+  scored.sort((a, b) => b.score - a.score);
+
+  for (const item of scored) {
+    result.push(item.product);
+    seenIds.add(item.product.id);
+    if (result.length >= limit) break;
+  }
+
+  return result;
+}

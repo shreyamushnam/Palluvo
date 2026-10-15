@@ -471,11 +471,12 @@ export const InfoModal: React.FC<InfoModalProps> = ({
                     <div className="p-4 bg-white rounded-xs border border-[#E8E2D9] space-y-2">
                       <strong className="text-neutral-900 font-semibold flex items-center gap-2 text-sm">
                         <ClipboardList className="w-4 h-4 text-[#541920]" />
-                        <span>Return Conditions</span>
+                        <span>Return Conditions by Product Type</span>
                       </strong>
-                      <p>• Saree must be unused, unwashed, and folded with all original tags & Silk Mark tags intact.</p>
-                      <p>• Attached unstitched blouse piece must remain intact and uncut.</p>
-                      <p>• Return in original PALLUVO luxury box with protective wrap.</p>
+                      <p>• <strong>Sarees:</strong> Must be unused, unwashed, and folded with all original tags, Silk Mark tags, and attached unstitched blouse intact.</p>
+                      <p>• <strong>Separate Blouse Pieces:</strong> Must remain unstitched, uncut, and in original protective packaging.</p>
+                      <p>• <strong>Handcrafted Jewelry:</strong> Must be unworn with unbroken tamper-evident security seals and protective pouch intact.</p>
+                      <p>• Return in original PALLUVO luxury box or keepsake pouch with protective wrap.</p>
                     </div>
 
                     <div className="p-4 bg-white rounded-xs border border-[#E8E2D9] space-y-2">

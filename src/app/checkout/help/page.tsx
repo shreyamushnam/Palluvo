@@ -73,7 +73,7 @@ const HELP_SECTIONS = [
       },
       {
         question: "What is your return and exchange policy?",
-        answer: "We provide a 7-day hassle-free return and exchange window. Sarees must remain unworn, unwashed, with all original security tags, Silk Mark labels, and packaging intact."
+        answer: "We provide a 7-day hassle-free return and exchange window for eligible items. Sarees must remain unworn and unwashed with all original security tags, Silk Mark labels, and packaging intact. Separate unstitched blouse pieces must remain uncut in original protective wrap. Handcrafted jewelry must remain unworn with unbroken security seals and keepsake pouches intact."
       }
     ]
   },

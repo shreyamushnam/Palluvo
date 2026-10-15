@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState, useRef, useEffect, useMemo } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -15,7 +15,7 @@ import {
   ZoomIn,
   ZoomOut,
 } from "lucide-react";
-import { Product, PRODUCTS, getProductType } from "@/data/products";
+import { Product, getProductType, getRelatedProducts } from "@/data/products";
 import { getCategoryHref } from "@/data/categories";
 import { useStore } from "@/context/StoreContext";
 import { ProductCard } from "@/components/ecommerce/ProductCard";
@@ -134,7 +134,7 @@ export const ProductDetailView: React.FC<ProductDetailViewProps> = ({
     }
   };
 
-  const relatedProducts = PRODUCTS.filter((p) => p.id !== product.id).slice(0, 4);
+  const relatedProducts = useMemo(() => getRelatedProducts(product, 4), [product]);
 
   return (
     <div className="min-h-screen bg-[#FAF7F2] pb-24 lg:pb-12">

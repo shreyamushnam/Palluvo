@@ -625,7 +625,7 @@ export const OrderReturnsClient: React.FC<OrderReturnsClientProps> = ({
             Order Returns & Exchanges
           </h1>
           <p className="text-xs sm:text-sm text-neutral-600 mt-2 max-w-2xl font-sans leading-relaxed">
-            Every PALLUVO drape is backed by our 7-day complimentary reverse pickup policy. We ensure your return or exchange is seamless and transparent.
+            Every PALLUVO drape and handcrafted accessory is backed by our 7-day complimentary reverse pickup policy. We ensure your return or exchange is seamless and transparent.
           </p>
         </div>
 
@@ -841,11 +841,12 @@ export const OrderReturnsClient: React.FC<OrderReturnsClientProps> = ({
         <section aria-labelledby="conditions-heading" className="bg-[#FAF7F2] rounded-sm border border-[#E8E2D9] p-5 sm:p-6 mb-8 space-y-3">
           <h2 id="conditions-heading" className="flex items-center gap-2 text-xs uppercase tracking-wider font-semibold text-[#541920]">
             <ShieldCheck className="w-4 h-4" aria-hidden="true" />
-            <span>Important Condition Requirements</span>
+            <span>Important Condition Requirements by Product Type</span>
           </h2>
           <ul className="text-xs text-neutral-600 font-sans space-y-1.5 list-disc pl-5 leading-relaxed">
-            <li>Sarees must be unworn, undamaged, unwashed, and in original folded condition.</li>
-            <li>All original Silk Mark Organisation tags, security loops, and blouse pieces must remain attached.</li>
+            <li><strong>Sarees:</strong> Must be unworn, undamaged, unwashed, and in original folded condition with all Silk Mark Organisation tags, security loops, and attached blouse pieces intact.</li>
+            <li><strong>Separate Blouse Pieces:</strong> Must remain unstitched, uncut, unwashed, and in original protective wrap with tags intact.</li>
+            <li><strong>Jewelry & Accessories:</strong> Must remain unworn with tamper-evident security seals, hygiene tags, and original protective keepsake pouch intact.</li>
             <li>Original wooden keepsake box or luxury packaging must be returned during reverse pickup.</li>
             <li>Refunds are credited to original payment source (UPI / Cards / Bank) within 24–48 hours of quality inspection.</li>
           </ul>
