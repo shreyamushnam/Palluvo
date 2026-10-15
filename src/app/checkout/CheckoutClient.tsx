@@ -231,6 +231,7 @@ export default function CheckoutPage() {
         price: i.product.price,
         quantity: i.quantity,
         color: i.selectedColor || "Standard",
+        blouseOption: i.blouseOption,
       })),
       totalAmount: effectiveTotal,
       shippingAddress: `${shippingAddress.fullName}, ${shippingAddress.addressLine1}${shippingAddress.landmark ? `, ${shippingAddress.landmark}` : ""}, ${shippingAddress.city}, ${shippingAddress.state} - ${shippingAddress.pincode} (Ph: ${shippingAddress.phone})`,
@@ -1213,7 +1214,7 @@ export default function CheckoutPage() {
 
               <div className="space-y-3 max-h-72 overflow-y-auto divide-y divide-[#EFEAE1]">
                 {cart.map((item) => (
-                  <div key={`${item.product.id}-${item.selectedColor || 'def'}`} className="pt-3 first:pt-0 flex gap-3">
+                  <div key={`${item.product.id}-${item.selectedColor || 'def'}-${item.blouseOption || 'none'}`} className="pt-3 first:pt-0 flex gap-3">
                     <div className="relative w-14 h-18 shrink-0 rounded-xs overflow-hidden bg-neutral-100">
                       <Image
                         src={item.product.images[0]}
@@ -1228,7 +1229,7 @@ export default function CheckoutPage() {
                         {item.product.name}
                       </p>
                       <p className="text-[11px] text-neutral-500 tabular-nums">
-                        Qty: {item.quantity} {item.selectedColor && `• ${item.selectedColor}`}
+                        Qty: {item.quantity} {item.selectedColor && `• ${item.selectedColor}`} {item.blouseOption && `• ${item.blouseOption}`}
                       </p>
                       <p className="text-xs font-bold text-[#541920] mt-1 tabular-nums">
                         {formatPrice(item.product.price * item.quantity)}

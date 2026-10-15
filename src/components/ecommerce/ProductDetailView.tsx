@@ -359,8 +359,13 @@ export const ProductDetailView: React.FC<ProductDetailViewProps> = ({
                 </span>
                 <button
                   type="button"
-                  onClick={() => setQuantity((q) => q + 1)}
-                  className="w-11 h-11 min-w-[44px] min-h-[44px] flex items-center justify-center text-sm font-medium text-neutral-600 hover:bg-neutral-100 hover:text-neutral-900 transition-colors cursor-pointer focus-visible:ring-2 focus-visible:ring-[#541920] focus-visible:outline-none"
+                  disabled={quantity >= 99}
+                  onClick={() => setQuantity((q) => Math.min(99, q + 1))}
+                  className={`w-11 h-11 min-w-[44px] min-h-[44px] flex items-center justify-center text-sm font-medium transition-colors focus-visible:ring-2 focus-visible:ring-[#541920] focus-visible:outline-none ${
+                    quantity >= 99
+                      ? "text-neutral-300 cursor-not-allowed"
+                      : "text-neutral-600 hover:bg-neutral-100 hover:text-neutral-900 cursor-pointer"
+                  }`}
                   aria-label="Increase quantity"
                 >
                   +

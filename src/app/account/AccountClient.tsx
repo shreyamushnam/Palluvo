@@ -762,7 +762,7 @@ export default function AccountPage() {
                                     {item.name}
                                   </h3>
                                   <p className="text-xs text-neutral-500 mt-0.5">
-                                    Qty: {item.quantity} {item.color && `• Color: ${item.color}`}
+                                    Qty: {item.quantity} {item.color && `• Color: ${item.color}`} {item.blouseOption && `• ${item.blouseOption}`}
                                   </p>
                                   <p className="text-xs font-semibold text-[#541920] mt-1 tabular-nums">
                                     {formatPrice((item.price || 0) * (item.quantity || 1))}

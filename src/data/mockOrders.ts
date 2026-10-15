@@ -5,6 +5,7 @@ export interface OrderProductItem {
   price: number;
   quantity: number;
   color: string;
+  blouseOption?: string;
 }
 
 export interface OrderRecord {

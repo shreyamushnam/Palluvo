@@ -40,8 +40,8 @@ interface StoreContextType {
   login: (user?: { name: string; email: string }) => void;
   logout: () => void;
   addToCart: (product: Product, quantity?: number, selectedColor?: string, blouseOption?: string) => void;
-  removeFromCart: (productId: string, selectedColor?: string) => void;
-  updateQuantity: (productId: string, quantity: number, selectedColor?: string) => void;
+  removeFromCart: (productId: string, selectedColor?: string, blouseOption?: string) => void;
+  updateQuantity: (productId: string, quantity: number, selectedColor?: string, blouseOption?: string) => void;
   clearCart: () => void;
   toggleWishlist: (productId: string) => void;
   isInWishlist: (productId: string) => boolean;
@@ -490,6 +490,8 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       const finalBlouseOption = product.hasBlousePiece
         ? (blouseOption ?? product.blouseOptions?.[0] ?? "Unstitched (Included)")
         : undefined;
+      const safeQty = Math.max(1, Math.min(Math.floor(quantity), 99));
+
       setCart((prev) => {
         const existingIndex = prev.findIndex(
           (item) =>
@@ -499,10 +501,10 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         );
         if (existingIndex > -1) {
           const next = [...prev];
-          next[existingIndex].quantity += quantity;
+          next[existingIndex].quantity = Math.min(next[existingIndex].quantity + safeQty, 99);
           return next;
         }
-        return [...prev, { product, quantity, selectedColor: color, blouseOption: finalBlouseOption }];
+        return [...prev, { product, quantity: safeQty, selectedColor: color, blouseOption: finalBlouseOption }];
       });
       setIsCartOpen(true);
       showToast(`Added ${product.name} to Bag!`);
@@ -511,13 +513,12 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   );
 
   const removeFromCart = useCallback(
-    (productId: string, selectedColor?: string) => {
+    (productId: string, selectedColor?: string, blouseOption?: string) => {
       setCart((prev) =>
         prev.filter((item) => {
-          if (selectedColor) {
-            return !(item.product.id === productId && item.selectedColor === selectedColor);
-          }
-          return item.product.id !== productId;
+          const colorMatch = selectedColor === undefined || item.selectedColor === selectedColor;
+          const blouseMatch = blouseOption === undefined || item.blouseOption === blouseOption;
+          return !(item.product.id === productId && colorMatch && blouseMatch);
         })
       );
       showToast("Item removed from Bag", "info");
@@ -526,17 +527,19 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   );
 
   const updateQuantity = useCallback(
-    (productId: string, quantity: number, selectedColor?: string) => {
+    (productId: string, quantity: number, selectedColor?: string, blouseOption?: string) => {
       if (quantity <= 0) {
-        removeFromCart(productId, selectedColor);
+        removeFromCart(productId, selectedColor, blouseOption);
         return;
       }
+      const safeQty = Math.max(1, Math.min(Math.floor(quantity), 99));
       setCart((prev) =>
         prev.map((item) => {
-          const matches = selectedColor
-            ? item.product.id === productId && item.selectedColor === selectedColor
-            : item.product.id === productId;
-          return matches ? { ...item, quantity } : item;
+          const matches =
+            item.product.id === productId &&
+            (selectedColor === undefined || item.selectedColor === selectedColor) &&
+            (blouseOption === undefined || item.blouseOption === blouseOption);
+          return matches ? { ...item, quantity: safeQty } : item;
         })
       );
     },

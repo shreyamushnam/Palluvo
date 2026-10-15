@@ -203,7 +203,7 @@ export const CartDrawer: React.FC = () => {
               </div>
             ) : (
               cart.map((item) => (
-                <div key={`${item.product.id}-${item.selectedColor || 'def'}`} className="pt-4 first:pt-0 flex gap-3.5">
+                <div key={`${item.product.id}-${item.selectedColor || 'def'}-${item.blouseOption || 'none'}`} className="pt-4 first:pt-0 flex gap-3.5">
                   {/* Thumbnail */}
                   <Link
                     href={`/product/${item.product.id}`}
@@ -231,7 +231,7 @@ export const CartDrawer: React.FC = () => {
                           {item.product.name}
                         </Link>
                         <button
-                          onClick={() => removeFromCart(item.product.id, item.selectedColor)}
+                          onClick={() => removeFromCart(item.product.id, item.selectedColor, item.blouseOption)}
                           className="w-11 h-11 min-w-[44px] min-h-[44px] -mr-2 -mt-2 inline-flex items-center justify-center text-neutral-600 hover:text-red-600 transition-colors shrink-0"
                           title="Remove item"
                           aria-label={`Remove ${item.product.name} from cart`}
@@ -266,7 +266,7 @@ export const CartDrawer: React.FC = () => {
                       <div className="flex items-center border border-[#DCD5C9] rounded-xs bg-white">
                         <button
                           type="button"
-                          onClick={() => updateQuantity(item.product.id, item.quantity - 1, item.selectedColor)}
+                          onClick={() => updateQuantity(item.product.id, item.quantity - 1, item.selectedColor, item.blouseOption)}
                           className="w-11 h-11 min-w-[44px] min-h-[44px] flex items-center justify-center text-neutral-600 hover:text-black hover:bg-neutral-100 transition-colors cursor-pointer focus-visible:ring-2 focus-visible:ring-[#541920] focus-visible:outline-none"
                           aria-label={`Decrease quantity of ${item.product.name}`}
                         >
@@ -277,8 +277,13 @@ export const CartDrawer: React.FC = () => {
                         </span>
                         <button
                           type="button"
-                          onClick={() => updateQuantity(item.product.id, item.quantity + 1, item.selectedColor)}
-                          className="w-11 h-11 min-w-[44px] min-h-[44px] flex items-center justify-center text-neutral-600 hover:text-black hover:bg-neutral-100 transition-colors cursor-pointer focus-visible:ring-2 focus-visible:ring-[#541920] focus-visible:outline-none"
+                          disabled={item.quantity >= 99}
+                          onClick={() => updateQuantity(item.product.id, Math.min(99, item.quantity + 1), item.selectedColor, item.blouseOption)}
+                          className={`w-11 h-11 min-w-[44px] min-h-[44px] flex items-center justify-center transition-colors focus-visible:ring-2 focus-visible:ring-[#541920] focus-visible:outline-none ${
+                            item.quantity >= 99
+                              ? "text-neutral-300 cursor-not-allowed"
+                              : "text-neutral-600 hover:text-black hover:bg-neutral-100 cursor-pointer"
+                          }`}
                           aria-label={`Increase quantity of ${item.product.name}`}
                         >
                           <Plus className="w-3.5 h-3.5" />

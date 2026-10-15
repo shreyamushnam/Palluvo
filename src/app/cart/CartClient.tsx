@@ -42,9 +42,9 @@ export default function CartPage() {
     }
   };
 
-  const handleMoveToWishlist = (productId: string, selectedColor?: string) => {
+  const handleMoveToWishlist = (productId: string, selectedColor?: string, blouseOption?: string) => {
     toggleWishlist(productId);
-    removeFromCart(productId, selectedColor);
+    removeFromCart(productId, selectedColor, blouseOption);
   };
 
   return (
@@ -147,7 +147,7 @@ export default function CartPage() {
               {/* Items Card */}
               <div className="bg-white rounded-sm border border-[#E8E2D9] divide-y divide-[#EFEAE1]">
                 {cart.map((item) => (
-                  <div key={`${item.product.id}-${item.selectedColor || 'def'}`} className="p-4 sm:p-6 flex flex-col sm:flex-row gap-4 sm:gap-6">
+                  <div key={`${item.product.id}-${item.selectedColor || 'def'}-${item.blouseOption || 'none'}`} className="p-4 sm:p-6 flex flex-col sm:flex-row gap-4 sm:gap-6">
                     {/* Image */}
                     <Link
                       href={`/product/${item.product.id}`}
@@ -213,7 +213,7 @@ export default function CartPage() {
                         {/* Stepper */}
                         <div className="flex items-center border border-[#DCD5C9] rounded-xs bg-white">
                           <button
-                            onClick={() => updateQuantity(item.product.id, item.quantity - 1, item.selectedColor)}
+                            onClick={() => updateQuantity(item.product.id, item.quantity - 1, item.selectedColor, item.blouseOption)}
                             className="w-11 h-11 min-w-[44px] min-h-[44px] flex items-center justify-center text-neutral-600 hover:text-black hover:bg-neutral-100 transition-colors cursor-pointer focus-visible:ring-2 focus-visible:ring-[#541920] focus-visible:outline-none"
                             aria-label={`Decrease quantity of ${item.product.name}`}
                           >
@@ -221,8 +221,13 @@ export default function CartPage() {
                           </button>
                           <span className="min-w-[28px] px-2 text-center text-xs font-semibold tabular-nums" aria-label={`Quantity: ${item.quantity}`}>{item.quantity}</span>
                           <button
-                            onClick={() => updateQuantity(item.product.id, item.quantity + 1, item.selectedColor)}
-                            className="w-11 h-11 min-w-[44px] min-h-[44px] flex items-center justify-center text-neutral-600 hover:text-black hover:bg-neutral-100 transition-colors cursor-pointer focus-visible:ring-2 focus-visible:ring-[#541920] focus-visible:outline-none"
+                            disabled={item.quantity >= 99}
+                            onClick={() => updateQuantity(item.product.id, Math.min(99, item.quantity + 1), item.selectedColor, item.blouseOption)}
+                            className={`w-11 h-11 min-w-[44px] min-h-[44px] flex items-center justify-center transition-colors focus-visible:ring-2 focus-visible:ring-[#541920] focus-visible:outline-none ${
+                              item.quantity >= 99
+                                ? "text-neutral-300 cursor-not-allowed"
+                                : "text-neutral-600 hover:text-black hover:bg-neutral-100 cursor-pointer"
+                            }`}
                             aria-label={`Increase quantity of ${item.product.name}`}
                           >
                             <Plus className="w-3.5 h-3.5" />
@@ -232,7 +237,7 @@ export default function CartPage() {
                         {/* Action buttons */}
                         <div className="flex items-center gap-3 sm:gap-4 text-xs font-medium">
                           <button
-                            onClick={() => handleMoveToWishlist(item.product.id, item.selectedColor)}
+                            onClick={() => handleMoveToWishlist(item.product.id, item.selectedColor, item.blouseOption)}
                             className="min-h-[44px] py-2 px-1 text-neutral-600 hover:text-[#541920] inline-flex items-center justify-center gap-1.5 transition-colors cursor-pointer focus-visible:ring-2 focus-visible:ring-[#541920] focus-visible:outline-none"
                             aria-label={`Save ${item.product.name} to Wishlist`}
                           >
@@ -240,7 +245,7 @@ export default function CartPage() {
                             <span>Save to Wishlist</span>
                           </button>
                           <button
-                            onClick={() => removeFromCart(item.product.id, item.selectedColor)}
+                            onClick={() => removeFromCart(item.product.id, item.selectedColor, item.blouseOption)}
                             className="min-h-[44px] py-2 px-1 text-neutral-600 hover:text-red-600 inline-flex items-center justify-center gap-1.5 transition-colors cursor-pointer focus-visible:ring-2 focus-visible:ring-[#541920] focus-visible:outline-none"
                             aria-label={`Remove ${item.product.name} from cart`}
                           >
