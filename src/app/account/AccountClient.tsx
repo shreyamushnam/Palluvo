@@ -676,14 +676,16 @@ export default function AccountPage() {
           <div className="lg:col-span-9">
             
             {/* Orders Tab */}
-            {activeTab === "orders" && (
-              <div
-                id="account-panel-orders"
-                role="tabpanel"
-                aria-labelledby="account-tab-orders"
-                tabIndex={0}
-                className="space-y-6 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#541920] focus-visible:ring-offset-2 rounded-xs"
-              >
+            <div
+              id="account-panel-orders"
+              role="tabpanel"
+              aria-labelledby="account-tab-orders"
+              tabIndex={0}
+              hidden={activeTab !== "orders"}
+              className={`space-y-6 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#541920] focus-visible:ring-offset-2 rounded-xs ${
+                activeTab === "orders" ? "block" : "hidden"
+              }`}
+            >
                 <div className="flex items-center justify-between gap-3 flex-wrap">
                   <div>
                     <h2 className="font-serif text-xl text-neutral-900">Order History</h2>
@@ -797,17 +799,18 @@ export default function AccountPage() {
                   </div>
                 )}
               </div>
-            )}
 
             {/* Saved Addresses Tab */}
-            {activeTab === "addresses" && (
-              <div
-                id="account-panel-addresses"
-                role="tabpanel"
-                aria-labelledby="account-tab-addresses"
-                tabIndex={0}
-                className="space-y-6 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#541920] focus-visible:ring-offset-2 rounded-xs"
-              >
+            <div
+              id="account-panel-addresses"
+              role="tabpanel"
+              aria-labelledby="account-tab-addresses"
+              tabIndex={0}
+              hidden={activeTab !== "addresses"}
+              className={`space-y-6 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#541920] focus-visible:ring-offset-2 rounded-xs ${
+                activeTab === "addresses" ? "block" : "hidden"
+              }`}
+            >
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
                   <div>
                     <h2 className="font-serif text-xl text-neutral-900">Saved Delivery Addresses</h2>
@@ -903,17 +906,18 @@ export default function AccountPage() {
                   </div>
                 )}
               </div>
-            )}
 
             {/* Profile Tab */}
-            {activeTab === "profile" && (
-              <div
-                id="account-panel-profile"
-                role="tabpanel"
-                aria-labelledby="account-tab-profile"
-                tabIndex={0}
-                className="bg-white p-6 rounded-sm border border-[#E8E2D9] space-y-6 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#541920] focus-visible:ring-offset-2"
-              >
+            <div
+              id="account-panel-profile"
+              role="tabpanel"
+              aria-labelledby="account-tab-profile"
+              tabIndex={0}
+              hidden={activeTab !== "profile"}
+              className={`bg-white p-6 rounded-sm border border-[#E8E2D9] space-y-6 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#541920] focus-visible:ring-offset-2 ${
+                activeTab === "profile" ? "block" : "hidden"
+              }`}
+            >
                 <div>
                   <h2 className="font-serif text-xl text-neutral-900 pb-1">
                     Profile & Settings
@@ -1016,7 +1020,6 @@ export default function AccountPage() {
                   </div>
                 </form>
               </div>
-            )}
 
           </div>
 

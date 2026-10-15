@@ -28,7 +28,7 @@ export function useFocusTrap<T extends HTMLElement = HTMLDivElement>({
       const container = containerRef.current;
       if (!container) return [];
       const focusableSelector =
-        'a[href], button:not([disabled]), textarea:not([disabled]), input:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])';
+        'a[href]:not([tabindex="-1"]), button:not([disabled]):not([tabindex="-1"]), textarea:not([disabled]):not([tabindex="-1"]), input:not([disabled]):not([tabindex="-1"]), select:not([disabled]):not([tabindex="-1"]), [tabindex]:not([tabindex="-1"])';
       const elements = Array.from(
         container.querySelectorAll<HTMLElement>(focusableSelector)
       );

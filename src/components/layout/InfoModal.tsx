@@ -1,10 +1,19 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { X, Mail, Phone, Truck, RotateCcw, HelpCircle, BookOpen, Sparkles, ChevronDown, ChevronUp, Clock, Gift, ClipboardList, CreditCard, Info } from "lucide-react";
 import { useFocusTrap } from "@/hooks/useFocusTrap";
 
 export type InfoModalTab = "contact" | "shipping" | "returns" | "faqs" | "story" | "craftsmanship";
+
+export const INFO_MODAL_TABS: { id: InfoModalTab; label: string; icon: React.ComponentType<{ className?: string }> }[] = [
+  { id: "contact", label: "Contact Us", icon: Phone },
+  { id: "shipping", label: "Shipping Policy", icon: Truck },
+  { id: "returns", label: "Returns & Exchanges", icon: RotateCcw },
+  { id: "faqs", label: "Frequently Asked Questions", icon: HelpCircle },
+  { id: "story", label: "Our Story & Heritage", icon: BookOpen },
+  { id: "craftsmanship", label: "Artisan Craftsmanship", icon: Sparkles },
+];
 
 interface InfoModalProps {
   isOpen: boolean;
@@ -18,6 +27,7 @@ export const InfoModal: React.FC<InfoModalProps> = ({
   onClose,
 }) => {
   const [activeTab, setActiveTab] = useState<InfoModalTab>(initialTab);
+  const tabRefs = useRef<(HTMLButtonElement | null)[]>([]);
 
   const modalRef = useFocusTrap<HTMLDivElement>({
     isOpen,
@@ -27,6 +37,29 @@ export const InfoModal: React.FC<InfoModalProps> = ({
   useEffect(() => {
     setActiveTab(initialTab);
   }, [initialTab]);
+
+  const handleTabKeyDown = (e: React.KeyboardEvent, index: number) => {
+    let targetIndex = -1;
+    if (e.key === "ArrowDown") {
+      e.preventDefault();
+      targetIndex = (index + 1) % INFO_MODAL_TABS.length;
+    } else if (e.key === "ArrowUp") {
+      e.preventDefault();
+      targetIndex = (index - 1 + INFO_MODAL_TABS.length) % INFO_MODAL_TABS.length;
+    } else if (e.key === "Home") {
+      e.preventDefault();
+      targetIndex = 0;
+    } else if (e.key === "End") {
+      e.preventDefault();
+      targetIndex = INFO_MODAL_TABS.length - 1;
+    }
+
+    if (targetIndex !== -1) {
+      const nextTab = INFO_MODAL_TABS[targetIndex];
+      setActiveTab(nextTab.id);
+      tabRefs.current[targetIndex]?.focus();
+    }
+  };
 
   const [openFaqIndex, setOpenFaqIndex] = useState<number | null>(0);
   const [contactFormSubmitted, setContactFormSubmitted] = useState(false);
@@ -120,27 +153,26 @@ export const InfoModal: React.FC<InfoModalProps> = ({
             <div
               role="tablist"
               aria-label="Information topics"
+              aria-orientation="vertical"
               className="md:col-span-4 bg-[#EFEAE1]/60 p-4 border-b md:border-b-0 md:border-r border-[#E8E2D9] space-y-1"
             >
-              {[
-                { id: "contact", label: "Contact Us", icon: Phone },
-                { id: "shipping", label: "Shipping Policy", icon: Truck },
-                { id: "returns", label: "Returns & Exchanges", icon: RotateCcw },
-                { id: "faqs", label: "Frequently Asked Questions", icon: HelpCircle },
-                { id: "story", label: "Our Story & Heritage", icon: BookOpen },
-                { id: "craftsmanship", label: "Artisan Craftsmanship", icon: Sparkles },
-              ].map((tab) => {
+              {INFO_MODAL_TABS.map((tab, index) => {
                 const Icon = tab.icon;
                 const isActive = activeTab === tab.id;
                 return (
                   <button
                     key={tab.id}
+                    ref={(el) => {
+                      tabRefs.current[index] = el;
+                    }}
                     id={`info-tab-${tab.id}`}
                     role="tab"
                     type="button"
+                    tabIndex={isActive ? 0 : -1}
                     aria-selected={isActive}
                     aria-controls={`info-panel-${tab.id}`}
-                    onClick={() => setActiveTab(tab.id as InfoModalTab)}
+                    onKeyDown={(e) => handleTabKeyDown(e, index)}
+                    onClick={() => setActiveTab(tab.id)}
                     className={`w-full flex items-center gap-3 px-3.5 py-3 min-h-[44px] text-xs font-semibold rounded-xs transition-colors text-left cursor-pointer focus-visible:ring-2 focus-visible:ring-[#541920] focus-visible:outline-none ${
                       isActive
                         ? "bg-[#541920] text-white shadow-xs"
@@ -154,17 +186,24 @@ export const InfoModal: React.FC<InfoModalProps> = ({
               })}
             </div>
 
-            {/* Content Area */}
-            <div
-              id={`info-panel-${activeTab}`}
-              role="tabpanel"
-              aria-labelledby={`info-tab-${activeTab}`}
-              tabIndex={0}
-              className="md:col-span-8 p-6 sm:p-8 max-h-[70vh] overflow-y-auto focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#541920] focus-visible:ring-offset-2 rounded-xs"
-            >
+            {/* Content Area - All panels rendered with hidden state to keep tab/panel aria-controls references valid */}
+            {INFO_MODAL_TABS.map((tab) => {
+              const isSelected = activeTab === tab.id;
+              return (
+                <div
+                  key={tab.id}
+                  id={`info-panel-${tab.id}`}
+                  role="tabpanel"
+                  aria-labelledby={`info-tab-${tab.id}`}
+                  tabIndex={0}
+                  hidden={!isSelected}
+                  className={`md:col-span-8 p-6 sm:p-8 max-h-[70vh] overflow-y-auto focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#541920] focus-visible:ring-offset-2 rounded-xs ${
+                    isSelected ? "block" : "hidden"
+                  }`}
+                >
               
               {/* CONTACT US */}
-              {activeTab === "contact" && (
+              {tab.id === "contact" && (
                 <div className="space-y-6">
                   <div>
                     <h3 className="font-serif text-2xl text-neutral-900">Get in Touch with Us</h3>
@@ -404,7 +443,7 @@ export const InfoModal: React.FC<InfoModalProps> = ({
               )}
 
               {/* SHIPPING POLICY */}
-              {activeTab === "shipping" && (
+              {tab.id === "shipping" && (
                 <div className="space-y-5">
                   <div>
                     <h3 className="font-serif text-2xl text-neutral-900">Shipping & Delivery Policy</h3>
@@ -448,7 +487,7 @@ export const InfoModal: React.FC<InfoModalProps> = ({
               )}
 
               {/* RETURNS & EXCHANGES */}
-              {activeTab === "returns" && (
+              {tab.id === "returns" && (
                 <div className="space-y-5">
                   <div>
                     <h3 className="font-serif text-2xl text-neutral-900">7-Day Return & Exchange</h3>
@@ -493,7 +532,7 @@ export const InfoModal: React.FC<InfoModalProps> = ({
               )}
 
               {/* FAQS */}
-              {activeTab === "faqs" && (
+              {tab.id === "faqs" && (
                 <div className="space-y-5">
                   <div>
                     <h3 className="font-serif text-2xl text-neutral-900">Frequently Asked Questions</h3>
@@ -539,7 +578,7 @@ export const InfoModal: React.FC<InfoModalProps> = ({
               )}
 
               {/* OUR STORY */}
-              {activeTab === "story" && (
+              {tab.id === "story" && (
                 <div className="space-y-5">
                   <div>
                     <span className="text-[10px] uppercase font-bold tracking-[0.25em] text-[#7C5C26] block">
@@ -563,7 +602,7 @@ export const InfoModal: React.FC<InfoModalProps> = ({
               )}
 
               {/* CRAFTSMANSHIP */}
-              {activeTab === "craftsmanship" && (
+              {tab.id === "craftsmanship" && (
                 <div className="space-y-5">
                   <div>
                     <span className="text-[10px] uppercase font-bold tracking-[0.25em] text-[#7C5C26] block">
@@ -612,7 +651,9 @@ export const InfoModal: React.FC<InfoModalProps> = ({
                 </div>
               )}
 
-            </div>
+                </div>
+              );
+            })}
           </div>
 
           {/* Modal Footer */}

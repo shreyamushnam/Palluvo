@@ -105,10 +105,16 @@ export function validateAndNormalizeCart(raw: unknown): CartItem[] {
         : canonicalProduct.color;
 
     const rawBlouse = (item as { blouseOption?: unknown }).blouseOption;
-    const blouseOption =
-      typeof rawBlouse === "string" && rawBlouse.trim().length > 0
-        ? rawBlouse.trim()
-        : undefined;
+    let blouseOption: string | undefined = undefined;
+    if (canonicalProduct.hasBlousePiece && typeof rawBlouse === "string") {
+      const trimmed = rawBlouse.trim();
+      const validOptions = canonicalProduct.blouseOptions?.length
+        ? canonicalProduct.blouseOptions
+        : ["With Blouse", "Without Blouse", "Unstitched (Included)", "Custom Stitched (+₹1,499)"];
+      if (validOptions.includes(trimmed)) {
+        blouseOption = trimmed;
+      }
+    }
 
     normalized.push({
       product: canonicalProduct,
@@ -194,7 +200,10 @@ export function validateAndNormalizeOrders(raw: unknown): OrderRecord[] {
       const p = rawProduct as Record<string, unknown>;
 
       if (typeof p.id !== "string" || p.id.trim().length === 0) continue;
+      const id = p.id.trim();
+
       if (typeof p.name !== "string" || p.name.trim().length === 0) continue;
+      const name = p.name.trim();
 
       const rawPrice = p.price;
       const price = typeof rawPrice === "number" && Number.isFinite(rawPrice) && rawPrice >= 0 ? rawPrice : 0;
@@ -209,13 +218,29 @@ export function validateAndNormalizeOrders(raw: unknown): OrderRecord[] {
 
       const color = typeof p.color === "string" ? p.color.trim() : "";
 
+      const rawBlouse = p.blouseOption;
+      let blouseOption: string | undefined = undefined;
+      if (typeof rawBlouse === "string") {
+        const trimmed = rawBlouse.trim();
+        const canonicalProduct = PRODUCTS.find((prod) => prod.id === id);
+        if (!canonicalProduct || canonicalProduct.hasBlousePiece) {
+          const supportedOptions = canonicalProduct?.blouseOptions?.length
+            ? canonicalProduct.blouseOptions
+            : ["With Blouse", "Without Blouse", "Unstitched (Included)", "Custom Stitched (+₹1,499)"];
+          if (supportedOptions.includes(trimmed)) {
+            blouseOption = trimmed;
+          }
+        }
+      }
+
       validItems.push({
-        id: p.id.trim(),
-        name: p.name.trim(),
+        id,
+        name,
         image,
         price,
         quantity,
         color,
+        ...(blouseOption ? { blouseOption } : {}),
       });
     }
 
