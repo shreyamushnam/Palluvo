@@ -5,7 +5,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Package, MapPin, User, Truck, CheckCircle2, ShieldCheck, Plus, X, Edit2, Trash2, Check, RotateCcw, LogOut, Sparkles, Award, Headphones, ArrowRight, Lock, Info } from "lucide-react";
-import { useStore, lookupAccountId, registerAccountAlias, unregisterAccountAlias, generateAccountId, encodeIdentifierToId, migrateLegacyAccountAliases } from "@/context/StoreContext";
+import { useStore, lookupAccountId, registerAccountAlias, unregisterAccountAlias, generateAccountId, encodeIdentifierToId, migrateLegacyAccountAliases, isLegacyCollisionProneEmailId } from "@/context/StoreContext";
 import { SavedAddress, OrderRecord } from "@/data/mockOrders";
 import { useFocusTrap } from "@/hooks/useFocusTrap";
 import { formatStoredPhone, isValidIndianMobile } from "@/utils/phone";
@@ -215,7 +215,7 @@ export default function AccountPage() {
       migrateLegacyAccountAliases();
       const safeEmail = encodeIdentifierToId(trimmedId);
       const existingId = lookupAccountId(trimmedId);
-      const isLegacyEmailId = existingId && existingId.startsWith("usr_email_") && existingId !== `usr_email_${safeEmail}`;
+      const isLegacyEmailId = existingId && isLegacyCollisionProneEmailId(existingId);
       accountId = (trimmedId.toLowerCase() === "radhika.sharma@example.com")
         ? "usr_demo_radhika"
         : (!isLegacyEmailId && existingId ? existingId : `usr_email_${safeEmail}`);

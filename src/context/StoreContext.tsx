@@ -158,9 +158,25 @@ export function encodeIdentifierToId(str: string): string {
 }
 
 /**
+ * Positively identifies whether an account ID uses the old legacy collision-prone encoding.
+ * Old legacy email IDs were formed by replacing [^a-z0-9_.-] with _ (e.g. "usr_email_nina_orders_example.com"),
+ * which never contained the injective "@" hex token "_40_" and often contained literal dots ".".
+ * Valid injective IDs always contain "_40_" and contain no literal dots.
+ */
+export function isLegacyCollisionProneEmailId(id?: string | null): boolean {
+  if (!id || typeof id !== "string") return false;
+  const trimmed = id.trim();
+  if (!trimmed.startsWith("usr_email_")) return false;
+  // If it does not contain the injective "@" token "_40_", or contains literal dots,
+  // it is positively identified as using the old collision-prone encoding.
+  return !trimmed.includes("_40_") || trimmed.includes(".");
+}
+
+/**
  * Migrates existing legacy collision-prone email and phone aliases in palluvo_account_identity_map
  * to distinct injective IDs, and invalidates any stale/invalid aliases so colliding identifiers
  * resolve to distinct, non-shared namespaces.
+ * Preserves valid aliases pointing to existing immutable account IDs.
  */
 export function migrateLegacyAccountAliases(): void {
   if (typeof window === "undefined" || !window.localStorage) return;
@@ -182,13 +198,12 @@ export function migrateLegacyAccountAliases(): void {
       const lowerKey = key.toLowerCase().trim();
 
       if (lowerKey.includes("@")) {
-        const expectedId = lowerKey === "radhika.sharma@example.com"
-          ? "usr_demo_radhika"
-          : `usr_email_${encodeIdentifierToId(lowerKey)}`;
-        // If the alias was stored with the legacy sanitized scheme (e.g. usr_email_nina_orders_example.com)
-        // or collided with another account's ID, migrate it to the injective distinct ID.
-        if (trimmedVal.startsWith("usr_email_") && trimmedVal !== expectedId) {
-          map[key] = expectedId;
+        // Only migrate if positively identified as using the old collision-prone encoding
+        if (isLegacyCollisionProneEmailId(trimmedVal)) {
+          const distinctId = lowerKey === "radhika.sharma@example.com"
+            ? "usr_demo_radhika"
+            : `usr_email_${encodeIdentifierToId(lowerKey)}`;
+          map[key] = distinctId;
           modified = true;
         }
       } else if (trimmedVal.startsWith("usr_phone_")) {
@@ -208,7 +223,7 @@ export function migrateLegacyAccountAliases(): void {
 
 /**
  * Returns a known immutable account ID mapped to an identifier (email or phone digits), if any.
- * Migrates or invalidates legacy collision-prone aliases before lookup.
+ * Migrates or invalidates legacy collision-prone aliases before lookup while preserving valid aliases.
  */
 export function lookupAccountId(identifier?: string | null): string | null {
   if (!identifier || typeof identifier !== "string") return null;
@@ -221,17 +236,17 @@ export function lookupAccountId(identifier?: string | null): string | null {
     if (map && typeof map === "object" && typeof map[key] === "string" && map[key].trim().length > 0) {
       const val = map[key].trim();
 
-      // Migrate or invalidate legacy collision-prone aliases before returning
+      // Migrate legacy collision-prone aliases before returning
       if (key.includes("@")) {
-        const expectedId = key === "radhika.sharma@example.com"
-          ? "usr_demo_radhika"
-          : `usr_email_${encodeIdentifierToId(key)}`;
-        if (val.startsWith("usr_email_") && val !== expectedId) {
-          map[key] = expectedId;
+        if (isLegacyCollisionProneEmailId(val)) {
+          const distinctId = key === "radhika.sharma@example.com"
+            ? "usr_demo_radhika"
+            : `usr_email_${encodeIdentifierToId(key)}`;
+          map[key] = distinctId;
           try {
             localStorage.setItem(ACCOUNT_MAP_KEY, JSON.stringify(map));
           } catch {}
-          return expectedId;
+          return distinctId;
         }
       } else if (val.startsWith("usr_phone_")) {
         const phoneDigits = val.slice("usr_phone_".length);
@@ -264,12 +279,9 @@ export function registerAccountAlias(identifier: string, accountId: string): boo
     const raw = localStorage.getItem(ACCOUNT_MAP_KEY);
     const map: Record<string, string> = raw ? JSON.parse(raw) : {};
 
-    // Invalidate stale legacy alias for this key if it still points to an old sanitized email ID
+    // Invalidate stale legacy alias for this key only if positively identified as legacy collision-prone
     if (key.includes("@") && map[key] && typeof map[key] === "string") {
-      const expectedId = key === "radhika.sharma@example.com"
-        ? "usr_demo_radhika"
-        : `usr_email_${encodeIdentifierToId(key)}`;
-      if (map[key].startsWith("usr_email_") && map[key] !== expectedId) {
+      if (isLegacyCollisionProneEmailId(map[key])) {
         delete map[key];
       }
     }
@@ -312,21 +324,14 @@ export function unregisterAccountAlias(identifier?: string | null, accountId?: s
  * - Email identity: "usr_email_<collision_resistant_encoded_email>"
  */
 export function generateAccountId(user: { id?: string; email?: string; mobile?: string }): string {
-  const email = (user.email || "").toLowerCase().trim();
-  const expectedEmailId = email === "radhika.sharma@example.com"
-    ? "usr_demo_radhika"
-    : email.includes("@")
-    ? `usr_email_${encodeIdentifierToId(email)}`
-    : null;
-
   if (user.id && user.id.trim()) {
     const trimmedId = user.id.trim();
-    // Do not return legacy collision-prone email IDs
-    if (expectedEmailId && trimmedId.startsWith("usr_email_") && trimmedId !== expectedEmailId) {
-      return expectedEmailId;
+    // Preserve any valid account ID; do not rewrite if it differs from the encoded email
+    if (!isLegacyCollisionProneEmailId(trimmedId)) {
+      return trimmedId;
     }
-    return trimmedId;
   }
+  const email = (user.email || "").toLowerCase().trim();
   if (email === "radhika.sharma@example.com") {
     return "usr_demo_radhika";
   }
@@ -351,8 +356,8 @@ export function generateAccountId(user: { id?: string; email?: string; mobile?: 
       return `usr_phone_${digits.slice(-10)}`;
     }
   }
-  if (expectedEmailId) {
-    return expectedEmailId;
+  if (email && email.includes("@")) {
+    return `usr_email_${encodeIdentifierToId(email)}`;
   }
   return `usr_acc_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
 }
@@ -417,13 +422,9 @@ export function validateAndNormalizeAuth(raw: unknown): {
       : undefined;
 
   let id = rawId;
-  if (email && email.includes("@")) {
-    const expectedEmailId = email.toLowerCase() === "radhika.sharma@example.com"
-      ? "usr_demo_radhika"
-      : `usr_email_${encodeIdentifierToId(email)}`;
-    if (id && id.startsWith("usr_email_") && id !== expectedEmailId) {
-      id = expectedEmailId;
-    }
+  // Only upgrade stored id if it was positively identified as using the old collision-prone encoding
+  if (isLegacyCollisionProneEmailId(id)) {
+    id = generateAccountId({ email, mobile });
   }
   if (!id) {
     id = generateAccountId({ email, mobile });
@@ -819,13 +820,9 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     setUser((prevUser) => {
       if (userData) {
         let id = userData.id || prevUser?.id || generateAccountId(userData);
-        if (userData.email && userData.email.includes("@")) {
-          const expectedEmailId = userData.email.toLowerCase().trim() === "radhika.sharma@example.com"
-            ? "usr_demo_radhika"
-            : `usr_email_${encodeIdentifierToId(userData.email)}`;
-          if (id.startsWith("usr_email_") && id !== expectedEmailId) {
-            id = expectedEmailId;
-          }
+        // Only replace id if it was positively identified as a legacy collision-prone email ID
+        if (isLegacyCollisionProneEmailId(id)) {
+          id = generateAccountId(userData);
         }
         if (userData.email) registerAccountAlias(userData.email, id);
         if (userData.mobile) {
