@@ -158,25 +158,20 @@ export function encodeIdentifierToId(str: string): string {
 }
 
 /**
- * Positively identifies whether an account ID uses the old legacy collision-prone encoding.
- * Old legacy email IDs were formed by replacing [^a-z0-9_.-] with _ (e.g. "usr_email_nina_orders_example.com"),
- * which never contained the injective "@" hex token "_40_" and often contained literal dots ".".
- * Valid injective IDs always contain "_40_" and contain no literal dots.
+ * Returns the exact direct legacy sanitized account ID formula used in pre-migration releases:
+ * usr_email_${email.toLowerCase().trim().replace(/[^a-z0-9_.-]/g, "_")}
  */
-export function isLegacyCollisionProneEmailId(id?: string | null): boolean {
-  if (!id || typeof id !== "string") return false;
-  const trimmed = id.trim();
-  if (!trimmed.startsWith("usr_email_")) return false;
-  // If it does not contain the injective "@" token "_40_", or contains literal dots,
-  // it is positively identified as using the old collision-prone encoding.
-  return !trimmed.includes("_40_") || trimmed.includes(".");
+export function getDirectLegacyEmailId(email: string): string {
+  return `usr_email_${email.toLowerCase().trim().replace(/[^a-z0-9_.-]/g, "_")}`;
 }
 
 /**
  * Migrates existing legacy collision-prone email and phone aliases in palluvo_account_identity_map
- * to distinct injective IDs, and invalidates any stale/invalid aliases so colliding identifiers
- * resolve to distinct, non-shared namespaces.
- * Preserves valid aliases pointing to existing immutable account IDs.
+ * to distinct injective IDs.
+ * Make migration key-aware: only remaps aliases proven to be direct legacy mappings for that same email
+ * (or belonging to confirmed collision groups where multiple distinct emails point to the same ID),
+ * and strictly preserves aliases pointing to an existing immutable account ID (such as when a customer
+ * changed their email before the migration).
  */
 export function migrateLegacyAccountAliases(): void {
   if (typeof window === "undefined" || !window.localStorage) return;
@@ -186,6 +181,17 @@ export function migrateLegacyAccountAliases(): void {
     const map = JSON.parse(raw);
     if (!map || typeof map !== "object" || Array.isArray(map)) return;
     let modified = false;
+
+    // Build collision frequency map for email aliases to detect confirmed collision groups
+    const collisionCounts = new Map<string, string[]>();
+    for (const [k, v] of Object.entries(map)) {
+      if (typeof v === "string" && k.toLowerCase().includes("@")) {
+        const trimmedVal = v.trim();
+        const list = collisionCounts.get(trimmedVal) || [];
+        list.push(k.toLowerCase().trim());
+        collisionCounts.set(trimmedVal, list);
+      }
+    }
 
     for (const key of Object.keys(map)) {
       const val = map[key];
@@ -198,12 +204,18 @@ export function migrateLegacyAccountAliases(): void {
       const lowerKey = key.toLowerCase().trim();
 
       if (lowerKey.includes("@")) {
-        // Only migrate if positively identified as using the old collision-prone encoding
-        if (isLegacyCollisionProneEmailId(trimmedVal)) {
-          const distinctId = lowerKey === "radhika.sharma@example.com"
-            ? "usr_demo_radhika"
-            : `usr_email_${encodeIdentifierToId(lowerKey)}`;
-          map[key] = distinctId;
+        const expectedInjectiveId = lowerKey === "radhika.sharma@example.com"
+          ? "usr_demo_radhika"
+          : `usr_email_${encodeIdentifierToId(lowerKey)}`;
+
+        // Only remap aliases proven to be direct legacy mappings for that same email,
+        // or aliases belonging to confirmed collision groups (where multiple distinct emails point to the same ID).
+        // Strictly preserve aliases to an existing immutable account ID.
+        const isDirectLegacy = trimmedVal === getDirectLegacyEmailId(lowerKey) && trimmedVal !== expectedInjectiveId;
+        const isCollisionGroup = (collisionCounts.get(trimmedVal)?.length ?? 0) > 1 && trimmedVal === getDirectLegacyEmailId(lowerKey);
+
+        if (isDirectLegacy || isCollisionGroup) {
+          map[key] = expectedInjectiveId;
           modified = true;
         }
       } else if (trimmedVal.startsWith("usr_phone_")) {
@@ -223,7 +235,8 @@ export function migrateLegacyAccountAliases(): void {
 
 /**
  * Returns a known immutable account ID mapped to an identifier (email or phone digits), if any.
- * Migrates or invalidates legacy collision-prone aliases before lookup while preserving valid aliases.
+ * Key-aware: remaps proven direct legacy mappings for that same email or confirmed collision groups,
+ * and preserves valid aliases pointing to existing immutable account IDs.
  */
 export function lookupAccountId(identifier?: string | null): string | null {
   if (!identifier || typeof identifier !== "string") return null;
@@ -236,17 +249,27 @@ export function lookupAccountId(identifier?: string | null): string | null {
     if (map && typeof map === "object" && typeof map[key] === "string" && map[key].trim().length > 0) {
       const val = map[key].trim();
 
-      // Migrate legacy collision-prone aliases before returning
       if (key.includes("@")) {
-        if (isLegacyCollisionProneEmailId(val)) {
-          const distinctId = key === "radhika.sharma@example.com"
-            ? "usr_demo_radhika"
-            : `usr_email_${encodeIdentifierToId(key)}`;
-          map[key] = distinctId;
+        const expectedInjectiveId = key === "radhika.sharma@example.com"
+          ? "usr_demo_radhika"
+          : `usr_email_${encodeIdentifierToId(key)}`;
+
+        let count = 0;
+        for (const [k, v] of Object.entries(map)) {
+          if (typeof v === "string" && v.trim() === val && k.toLowerCase().includes("@")) {
+            count++;
+          }
+        }
+
+        const isDirectLegacy = val === getDirectLegacyEmailId(key) && val !== expectedInjectiveId;
+        const isCollisionGroup = count > 1 && val === getDirectLegacyEmailId(key);
+
+        if (isDirectLegacy || isCollisionGroup) {
+          map[key] = expectedInjectiveId;
           try {
             localStorage.setItem(ACCOUNT_MAP_KEY, JSON.stringify(map));
           } catch {}
-          return distinctId;
+          return expectedInjectiveId;
         }
       } else if (val.startsWith("usr_phone_")) {
         const phoneDigits = val.slice("usr_phone_".length);
@@ -279,9 +302,14 @@ export function registerAccountAlias(identifier: string, accountId: string): boo
     const raw = localStorage.getItem(ACCOUNT_MAP_KEY);
     const map: Record<string, string> = raw ? JSON.parse(raw) : {};
 
-    // Invalidate stale legacy alias for this key only if positively identified as legacy collision-prone
+    // Invalidate stale alias if it was a direct legacy mapping for this key being upgraded to injective ID
     if (key.includes("@") && map[key] && typeof map[key] === "string") {
-      if (isLegacyCollisionProneEmailId(map[key])) {
+      const existingVal = map[key].trim();
+      const expectedInjectiveId = key === "radhika.sharma@example.com"
+        ? "usr_demo_radhika"
+        : `usr_email_${encodeIdentifierToId(key)}`;
+      const isDirectLegacy = existingVal === getDirectLegacyEmailId(key) && existingVal !== expectedInjectiveId;
+      if (isDirectLegacy && val === expectedInjectiveId) {
         delete map[key];
       }
     }
@@ -324,12 +352,9 @@ export function unregisterAccountAlias(identifier?: string | null, accountId?: s
  * - Email identity: "usr_email_<collision_resistant_encoded_email>"
  */
 export function generateAccountId(user: { id?: string; email?: string; mobile?: string }): string {
+  // If an immutable account ID is already provided on user, strictly preserve it!
   if (user.id && user.id.trim()) {
-    const trimmedId = user.id.trim();
-    // Preserve any valid account ID; do not rewrite if it differs from the encoded email
-    if (!isLegacyCollisionProneEmailId(trimmedId)) {
-      return trimmedId;
-    }
+    return user.id.trim();
   }
   const email = (user.email || "").toLowerCase().trim();
   if (email === "radhika.sharma@example.com") {
@@ -422,12 +447,21 @@ export function validateAndNormalizeAuth(raw: unknown): {
       : undefined;
 
   let id = rawId;
-  // Only upgrade stored id if it was positively identified as using the old collision-prone encoding
-  if (isLegacyCollisionProneEmailId(id)) {
-    id = generateAccountId({ email, mobile });
-  }
   if (!id) {
-    id = generateAccountId({ email, mobile });
+    id = (email && lookupAccountId(email)) || generateAccountId({ email, mobile });
+  } else if (email && email.includes("@")) {
+    const expectedInjectiveId = email.toLowerCase() === "radhika.sharma@example.com"
+      ? "usr_demo_radhika"
+      : `usr_email_${encodeIdentifierToId(email)}`;
+    // Only upgrade if rawId was a direct legacy mapping for this same email
+    // and lookupAccountId migrated it to the injective ID.
+    // Strictly preserve aliases pointing to existing immutable account IDs.
+    if (id === getDirectLegacyEmailId(email) && id !== expectedInjectiveId) {
+      const remapped = lookupAccountId(email);
+      if (remapped === expectedInjectiveId) {
+        id = expectedInjectiveId;
+      }
+    }
   }
 
   return {
@@ -819,11 +853,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     setIsLoggedIn(true);
     setUser((prevUser) => {
       if (userData) {
-        let id = userData.id || prevUser?.id || generateAccountId(userData);
-        // Only replace id if it was positively identified as a legacy collision-prone email ID
-        if (isLegacyCollisionProneEmailId(id)) {
-          id = generateAccountId(userData);
-        }
+        const id = userData.id || prevUser?.id || generateAccountId(userData);
         if (userData.email) registerAccountAlias(userData.email, id);
         if (userData.mobile) {
           const digits = userData.mobile.replace(/\D/g, "");
