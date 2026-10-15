@@ -1,11 +1,11 @@
 "use client";
 
-import React, { useState, useCallback, useMemo, useRef } from "react";
+import React, { useState, useCallback, useMemo, useRef, useEffect } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Package, MapPin, User, Truck, CheckCircle2, ShieldCheck, Plus, X, Edit2, Trash2, Check, RotateCcw, LogOut, Sparkles, Award, Headphones, ArrowRight, Lock, Info } from "lucide-react";
-import { useStore, lookupAccountId, registerAccountAlias, unregisterAccountAlias, generateAccountId, encodeIdentifierToId } from "@/context/StoreContext";
+import { useStore, lookupAccountId, registerAccountAlias, unregisterAccountAlias, generateAccountId, encodeIdentifierToId, migrateLegacyAccountAliases } from "@/context/StoreContext";
 import { SavedAddress, OrderRecord } from "@/data/mockOrders";
 import { useFocusTrap } from "@/hooks/useFocusTrap";
 import { formatStoredPhone, isValidIndianMobile } from "@/utils/phone";
@@ -57,6 +57,10 @@ export default function AccountPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const redirectUrl = searchParams.get("redirect");
+
+  useEffect(() => {
+    migrateLegacyAccountAliases();
+  }, []);
 
   const {
     orders,
@@ -208,10 +212,13 @@ export default function AccountPage() {
       resolvedConnoisseur = true;
       resolvedDrape = "Nivi Style / Bengali Festive";
 
+      migrateLegacyAccountAliases();
       const safeEmail = encodeIdentifierToId(trimmedId);
+      const existingId = lookupAccountId(trimmedId);
+      const isLegacyEmailId = existingId && existingId.startsWith("usr_email_") && existingId !== `usr_email_${safeEmail}`;
       accountId = (trimmedId.toLowerCase() === "radhika.sharma@example.com")
         ? "usr_demo_radhika"
-        : (lookupAccountId(trimmedId) || `usr_email_${safeEmail}`);
+        : (!isLegacyEmailId && existingId ? existingId : `usr_email_${safeEmail}`);
       registerAccountAlias(trimmedId, accountId);
     } else {
       // Must be a valid Indian mobile number
@@ -287,6 +294,8 @@ export default function AccountPage() {
       document.getElementById("reg-email")?.focus();
       return;
     }
+
+    migrateLegacyAccountAliases();
 
     if (tenDigits) {
       const existingMobileOwner = lookupAccountId(tenDigits);
@@ -432,6 +441,7 @@ export default function AccountPage() {
     const cleanMobile = profile.mobile.replace(/\D/g, "");
     const mobileTen = cleanMobile.length >= 10 ? cleanMobile.slice(-10) : cleanMobile;
 
+    migrateLegacyAccountAliases();
     const accountId = user?.id || generateAccountId({ email: trimmedEmail, mobile: normalizedMobile });
 
     // Reject if the edited email is already owned by another account

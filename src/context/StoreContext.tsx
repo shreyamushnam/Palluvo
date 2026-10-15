@@ -158,7 +158,57 @@ export function encodeIdentifierToId(str: string): string {
 }
 
 /**
+ * Migrates existing legacy collision-prone email and phone aliases in palluvo_account_identity_map
+ * to distinct injective IDs, and invalidates any stale/invalid aliases so colliding identifiers
+ * resolve to distinct, non-shared namespaces.
+ */
+export function migrateLegacyAccountAliases(): void {
+  if (typeof window === "undefined" || !window.localStorage) return;
+  try {
+    const raw = localStorage.getItem(ACCOUNT_MAP_KEY);
+    if (!raw) return;
+    const map = JSON.parse(raw);
+    if (!map || typeof map !== "object" || Array.isArray(map)) return;
+    let modified = false;
+
+    for (const key of Object.keys(map)) {
+      const val = map[key];
+      if (typeof val !== "string") {
+        delete map[key];
+        modified = true;
+        continue;
+      }
+      const trimmedVal = val.trim();
+      const lowerKey = key.toLowerCase().trim();
+
+      if (lowerKey.includes("@")) {
+        const expectedId = lowerKey === "radhika.sharma@example.com"
+          ? "usr_demo_radhika"
+          : `usr_email_${encodeIdentifierToId(lowerKey)}`;
+        // If the alias was stored with the legacy sanitized scheme (e.g. usr_email_nina_orders_example.com)
+        // or collided with another account's ID, migrate it to the injective distinct ID.
+        if (trimmedVal.startsWith("usr_email_") && trimmedVal !== expectedId) {
+          map[key] = expectedId;
+          modified = true;
+        }
+      } else if (trimmedVal.startsWith("usr_phone_")) {
+        const phoneDigits = trimmedVal.slice("usr_phone_".length);
+        if (phoneDigits.length < 10) {
+          delete map[key];
+          modified = true;
+        }
+      }
+    }
+
+    if (modified) {
+      localStorage.setItem(ACCOUNT_MAP_KEY, JSON.stringify(map));
+    }
+  } catch {}
+}
+
+/**
  * Returns a known immutable account ID mapped to an identifier (email or phone digits), if any.
+ * Migrates or invalidates legacy collision-prone aliases before lookup.
  */
 export function lookupAccountId(identifier?: string | null): string | null {
   if (!identifier || typeof identifier !== "string") return null;
@@ -169,7 +219,32 @@ export function lookupAccountId(identifier?: string | null): string | null {
     if (!raw) return null;
     const map = JSON.parse(raw);
     if (map && typeof map === "object" && typeof map[key] === "string" && map[key].trim().length > 0) {
-      return map[key].trim();
+      const val = map[key].trim();
+
+      // Migrate or invalidate legacy collision-prone aliases before returning
+      if (key.includes("@")) {
+        const expectedId = key === "radhika.sharma@example.com"
+          ? "usr_demo_radhika"
+          : `usr_email_${encodeIdentifierToId(key)}`;
+        if (val.startsWith("usr_email_") && val !== expectedId) {
+          map[key] = expectedId;
+          try {
+            localStorage.setItem(ACCOUNT_MAP_KEY, JSON.stringify(map));
+          } catch {}
+          return expectedId;
+        }
+      } else if (val.startsWith("usr_phone_")) {
+        const phoneDigits = val.slice("usr_phone_".length);
+        if (phoneDigits.length < 10) {
+          delete map[key];
+          try {
+            localStorage.setItem(ACCOUNT_MAP_KEY, JSON.stringify(map));
+          } catch {}
+          return null;
+        }
+      }
+
+      return val;
     }
   } catch {}
   return null;
@@ -188,6 +263,17 @@ export function registerAccountAlias(identifier: string, accountId: string): boo
   try {
     const raw = localStorage.getItem(ACCOUNT_MAP_KEY);
     const map: Record<string, string> = raw ? JSON.parse(raw) : {};
+
+    // Invalidate stale legacy alias for this key if it still points to an old sanitized email ID
+    if (key.includes("@") && map[key] && typeof map[key] === "string") {
+      const expectedId = key === "radhika.sharma@example.com"
+        ? "usr_demo_radhika"
+        : `usr_email_${encodeIdentifierToId(key)}`;
+      if (map[key].startsWith("usr_email_") && map[key] !== expectedId) {
+        delete map[key];
+      }
+    }
+
     // Reject if already mapped to a different account ID
     if (map[key] && map[key] !== val) {
       return false;
@@ -226,10 +312,21 @@ export function unregisterAccountAlias(identifier?: string | null, accountId?: s
  * - Email identity: "usr_email_<collision_resistant_encoded_email>"
  */
 export function generateAccountId(user: { id?: string; email?: string; mobile?: string }): string {
-  if (user.id && user.id.trim()) {
-    return user.id.trim();
-  }
   const email = (user.email || "").toLowerCase().trim();
+  const expectedEmailId = email === "radhika.sharma@example.com"
+    ? "usr_demo_radhika"
+    : email.includes("@")
+    ? `usr_email_${encodeIdentifierToId(email)}`
+    : null;
+
+  if (user.id && user.id.trim()) {
+    const trimmedId = user.id.trim();
+    // Do not return legacy collision-prone email IDs
+    if (expectedEmailId && trimmedId.startsWith("usr_email_") && trimmedId !== expectedEmailId) {
+      return expectedEmailId;
+    }
+    return trimmedId;
+  }
   if (email === "radhika.sharma@example.com") {
     return "usr_demo_radhika";
   }
@@ -254,9 +351,8 @@ export function generateAccountId(user: { id?: string; email?: string; mobile?: 
       return `usr_phone_${digits.slice(-10)}`;
     }
   }
-  if (email && email.includes("@")) {
-    const safeEmail = encodeIdentifierToId(email);
-    return `usr_email_${safeEmail}`;
+  if (expectedEmailId) {
+    return expectedEmailId;
   }
   return `usr_acc_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
 }
@@ -320,7 +416,18 @@ export function validateAndNormalizeAuth(raw: unknown): {
       ? userObj.preferredDrape.trim()
       : undefined;
 
-  const id = rawId || generateAccountId({ email, mobile });
+  let id = rawId;
+  if (email && email.includes("@")) {
+    const expectedEmailId = email.toLowerCase() === "radhika.sharma@example.com"
+      ? "usr_demo_radhika"
+      : `usr_email_${encodeIdentifierToId(email)}`;
+    if (id && id.startsWith("usr_email_") && id !== expectedEmailId) {
+      id = expectedEmailId;
+    }
+  }
+  if (!id) {
+    id = generateAccountId({ email, mobile });
+  }
 
   return {
     isLoggedIn: true,
@@ -595,6 +702,9 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       // Storage access error fallback
     }
 
+    // Migrate legacy collision-prone aliases to distinct injective IDs
+    migrateLegacyAccountAliases();
+
     // Discard legacy browser-wide keys to prevent unscoped customer data disclosure on upgraded shared browsers
     try {
       localStorage.removeItem("palluvo_ecommerce_orders");
@@ -633,7 +743,6 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     if (activeUserKeyRef.current === currentKey) {
       return;
     }
-    const previousKey = activeUserKeyRef.current;
     activeUserKeyRef.current = currentKey;
 
     if (!isLoggedIn || !user) {
@@ -646,34 +755,39 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     const ordersKey = getUserStorageKey(user, "orders");
     const addressesKey = getUserStorageKey(user, "addresses");
 
+    // Clean up any legacy ambiguous collision-prone keys without copying to avoid attributing shared data to new IDs
+    if (user.email) {
+      const legacySanitized = user.email.toLowerCase().trim().replace(/[^a-z0-9_.-]/g, "_");
+      const legacyEmailOrderKey = `palluvo_ecommerce_orders_${legacySanitized}`;
+      if (legacyEmailOrderKey !== ordersKey) {
+        try {
+          localStorage.removeItem(legacyEmailOrderKey);
+        } catch {}
+      }
+      const legacyPrefixedOrderKey = `palluvo_ecommerce_orders_usr_email_${legacySanitized}`;
+      if (legacyPrefixedOrderKey !== ordersKey) {
+        try {
+          localStorage.removeItem(legacyPrefixedOrderKey);
+        } catch {}
+      }
+
+      const legacyEmailAddrKey = `palluvo_ecommerce_addresses_${legacySanitized}`;
+      if (legacyEmailAddrKey !== addressesKey) {
+        try {
+          localStorage.removeItem(legacyEmailAddrKey);
+        } catch {}
+      }
+      const legacyPrefixedAddrKey = `palluvo_ecommerce_addresses_usr_email_${legacySanitized}`;
+      if (legacyPrefixedAddrKey !== addressesKey) {
+        try {
+          localStorage.removeItem(legacyPrefixedAddrKey);
+        } catch {}
+      }
+    }
+
     // Load user-scoped orders - retain only known mock seed data for demo account; never import unscoped legacy records
     try {
-      let savedOrders = localStorage.getItem(ordersKey);
-
-      // Atomic migration fallback: if empty under immutable account ID, check if records exist under previous session key
-      if (savedOrders === null && previousKey && previousKey !== currentKey) {
-        const prevOrdersKey = `palluvo_ecommerce_orders_${previousKey}`;
-        const prevOrders = localStorage.getItem(prevOrdersKey);
-        if (prevOrders !== null) {
-          savedOrders = prevOrders;
-          localStorage.setItem(ordersKey, prevOrders);
-          localStorage.removeItem(prevOrdersKey);
-        }
-      }
-
-      // Also check legacy email-based key from earlier versions
-      if (savedOrders === null && user.email) {
-        const legacyEmailKey = `palluvo_ecommerce_orders_${user.email.toLowerCase().trim().replace(/[^a-z0-9_.-]/g, "_")}`;
-        if (legacyEmailKey !== ordersKey) {
-          const legacyOrders = localStorage.getItem(legacyEmailKey);
-          if (legacyOrders !== null) {
-            savedOrders = legacyOrders;
-            localStorage.setItem(ordersKey, legacyOrders);
-            localStorage.removeItem(legacyEmailKey);
-          }
-        }
-      }
-
+      const savedOrders = localStorage.getItem(ordersKey);
       if (savedOrders !== null) {
         setOrders(validateAndNormalizeOrders(JSON.parse(savedOrders)));
       } else if (isDemoUser) {
@@ -687,32 +801,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
     // Load user-scoped addresses - retain only known mock seed data for demo account; never import unscoped legacy records
     try {
-      let savedAddresses = localStorage.getItem(addressesKey);
-
-      // Atomic migration fallback: if empty under immutable account ID, check if records exist under previous session key
-      if (savedAddresses === null && previousKey && previousKey !== currentKey) {
-        const prevAddressesKey = `palluvo_ecommerce_addresses_${previousKey}`;
-        const prevAddresses = localStorage.getItem(prevAddressesKey);
-        if (prevAddresses !== null) {
-          savedAddresses = prevAddresses;
-          localStorage.setItem(addressesKey, prevAddresses);
-          localStorage.removeItem(prevAddressesKey);
-        }
-      }
-
-      // Also check legacy email-based key from earlier versions
-      if (savedAddresses === null && user.email) {
-        const legacyEmailKey = `palluvo_ecommerce_addresses_${user.email.toLowerCase().trim().replace(/[^a-z0-9_.-]/g, "_")}`;
-        if (legacyEmailKey !== addressesKey) {
-          const legacyAddresses = localStorage.getItem(legacyEmailKey);
-          if (legacyAddresses !== null) {
-            savedAddresses = legacyAddresses;
-            localStorage.setItem(addressesKey, legacyAddresses);
-            localStorage.removeItem(legacyEmailKey);
-          }
-        }
-      }
-
+      const savedAddresses = localStorage.getItem(addressesKey);
       if (savedAddresses !== null) {
         setAddresses(validateAndNormalizeAddresses(JSON.parse(savedAddresses)));
       } else if (isDemoUser) {
@@ -729,7 +818,15 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     setIsLoggedIn(true);
     setUser((prevUser) => {
       if (userData) {
-        const id = userData.id || prevUser?.id || generateAccountId(userData);
+        let id = userData.id || prevUser?.id || generateAccountId(userData);
+        if (userData.email && userData.email.includes("@")) {
+          const expectedEmailId = userData.email.toLowerCase().trim() === "radhika.sharma@example.com"
+            ? "usr_demo_radhika"
+            : `usr_email_${encodeIdentifierToId(userData.email)}`;
+          if (id.startsWith("usr_email_") && id !== expectedEmailId) {
+            id = expectedEmailId;
+          }
+        }
         if (userData.email) registerAccountAlias(userData.email, id);
         if (userData.mobile) {
           const digits = userData.mobile.replace(/\D/g, "");
