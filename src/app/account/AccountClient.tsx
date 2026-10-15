@@ -5,7 +5,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Package, MapPin, User, Truck, CheckCircle2, ShieldCheck, Plus, X, Edit2, Trash2, Check, RotateCcw, LogOut, Sparkles, Award, Headphones, ArrowRight, Lock, Info } from "lucide-react";
-import { useStore } from "@/context/StoreContext";
+import { useStore, lookupAccountId, registerAccountAlias, generateAccountId } from "@/context/StoreContext";
 import { SavedAddress, OrderRecord } from "@/data/mockOrders";
 import { useFocusTrap } from "@/hooks/useFocusTrap";
 import { formatStoredPhone, isValidIndianMobile } from "@/utils/phone";
@@ -186,6 +186,7 @@ export default function AccountPage() {
     let resolvedConnoisseur = true;
     let resolvedDrape = "Nivi Style / Bengali Festive";
 
+    let accountId = "";
     if (isEmail) {
       if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmedId)) {
         showToast("Please enter a valid email address.", "info");
@@ -206,6 +207,12 @@ export default function AccountPage() {
       resolvedMobile = "+91 98765 43210";
       resolvedConnoisseur = true;
       resolvedDrape = "Nivi Style / Bengali Festive";
+
+      const safeEmail = trimmedId.toLowerCase().trim().replace(/[^a-z0-9_.-]/g, "_");
+      accountId = (trimmedId.toLowerCase() === "radhika.sharma@example.com")
+        ? "usr_demo_radhika"
+        : (lookupAccountId(trimmedId) || `usr_email_${safeEmail}`);
+      registerAccountAlias(trimmedId, accountId);
     } else {
       // Must be a valid Indian mobile number
       if (!isValidIndianMobile(trimmedId)) {
@@ -217,12 +224,18 @@ export default function AccountPage() {
       const tenDigits = digitsOnly.length >= 10 ? digitsOnly.slice(-10) : digitsOnly;
       resolvedMobile = formatStoredPhone(trimmedId);
       resolvedName = "Valued Connoisseur";
-      resolvedEmail = `connoisseur.${tenDigits.slice(-4)}@palluvo.store`;
+      // Use full 10-digit national number to guarantee collision resistance across accounts
+      resolvedEmail = `connoisseur.${tenDigits}@palluvo.store`;
       resolvedConnoisseur = true;
       resolvedDrape = "Nivi Style / Bengali Festive";
+
+      accountId = lookupAccountId(tenDigits) || `usr_phone_${tenDigits}`;
+      registerAccountAlias(tenDigits, accountId);
+      registerAccountAlias(resolvedEmail, accountId);
     }
 
     login({
+      id: accountId,
       name: resolvedName,
       email: resolvedEmail,
       mobile: resolvedMobile,
@@ -245,6 +258,7 @@ export default function AccountPage() {
 
   const handleDemoSignIn = () => {
     login({
+      id: "usr_demo_radhika",
       name: "Radhika Sharma",
       email: "radhika.sharma@example.com",
       mobile: "+91 98765 43210",
@@ -267,7 +281,17 @@ export default function AccountPage() {
     const name = regFullName.trim() || "Valued Connoisseur";
     const email = regEmail.trim() || "member@palluvo.store";
     const mobile = formatStoredPhone(regMobile);
+    const cleanMobile = regMobile.replace(/\D/g, "");
+    const tenDigits = cleanMobile.length >= 10 ? cleanMobile.slice(-10) : cleanMobile;
+    const accountId = tenDigits
+      ? `usr_phone_${tenDigits}`
+      : `usr_email_${email.toLowerCase().trim().replace(/[^a-z0-9_.-]/g, "_")}`;
+
+    if (tenDigits) registerAccountAlias(tenDigits, accountId);
+    if (email) registerAccountAlias(email, accountId);
+
     login({
+      id: accountId,
       name,
       email,
       mobile,
@@ -371,7 +395,15 @@ export default function AccountPage() {
       return;
     }
     const normalizedMobile = formatStoredPhone(profile.mobile);
+    const accountId = user?.id || generateAccountId({ email: profile.email, mobile: normalizedMobile });
+    if (profile.email) registerAccountAlias(profile.email, accountId);
+    if (normalizedMobile) {
+      const digits = normalizedMobile.replace(/\D/g, "");
+      const tenDigits = digits.length >= 10 ? digits.slice(-10) : digits;
+      if (tenDigits) registerAccountAlias(tenDigits, accountId);
+    }
     login({
+      id: accountId,
       name: profile.fullName,
       email: profile.email,
       mobile: normalizedMobile,

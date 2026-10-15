@@ -3,7 +3,7 @@
 import React, { createContext, useContext, useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { Product, PRODUCTS } from "@/data/products";
 import { OrderRecord, OrderProductItem, MOCK_ORDERS, SavedAddress, MOCK_ADDRESSES } from "@/data/mockOrders";
-import { formatStoredPhone } from "@/utils/phone";
+import { formatStoredPhone, isValidIndianMobile } from "@/utils/phone";
 
 export interface CartItem {
   product: Product;
@@ -19,6 +19,7 @@ interface ToastInfo {
 }
 
 export interface UserProfile {
+  id?: string;
   name: string;
   email: string;
   mobile?: string;
@@ -139,6 +140,84 @@ export function validateAndNormalizeCart(raw: unknown): CartItem[] {
   return normalized;
 }
 
+const ACCOUNT_MAP_KEY = "palluvo_account_identity_map";
+
+/**
+ * Returns a known immutable account ID mapped to an identifier (email or phone digits), if any.
+ */
+export function lookupAccountId(identifier?: string | null): string | null {
+  if (!identifier || typeof identifier !== "string") return null;
+  const key = identifier.toLowerCase().trim();
+  if (!key) return null;
+  try {
+    const raw = localStorage.getItem(ACCOUNT_MAP_KEY);
+    if (!raw) return null;
+    const map = JSON.parse(raw);
+    if (map && typeof map === "object" && typeof map[key] === "string" && map[key].trim().length > 0) {
+      return map[key].trim();
+    }
+  } catch {}
+  return null;
+}
+
+/**
+ * Registers an identifier alias (e.g. new email or phone number) pointing to an immutable account ID.
+ */
+export function registerAccountAlias(identifier: string, accountId: string): void {
+  if (!identifier || !accountId) return;
+  const key = identifier.toLowerCase().trim();
+  const val = accountId.trim();
+  if (!key || !val) return;
+  try {
+    const raw = localStorage.getItem(ACCOUNT_MAP_KEY);
+    const map: Record<string, string> = raw ? JSON.parse(raw) : {};
+    map[key] = val;
+    localStorage.setItem(ACCOUNT_MAP_KEY, JSON.stringify(map));
+  } catch {}
+}
+
+/**
+ * Deterministically derives an immutable account ID from an identity.
+ * - Demo account: "usr_demo_radhika"
+ * - Mobile identity: "usr_phone_<10_digits>" (uses the full 10-digit national number, never truncated to last 4)
+ * - Email identity: "usr_email_<safe_email>"
+ */
+export function generateAccountId(user: { id?: string; email?: string; mobile?: string }): string {
+  if (user.id && user.id.trim()) {
+    return user.id.trim();
+  }
+  const email = (user.email || "").toLowerCase().trim();
+  if (email === "radhika.sharma@example.com") {
+    return "usr_demo_radhika";
+  }
+  if (email) {
+    const existing = lookupAccountId(email);
+    if (existing) return existing;
+  }
+  if (user.mobile) {
+    const digits = user.mobile.replace(/\D/g, "");
+    const tenDigits = digits.length >= 10 ? digits.slice(-10) : digits;
+    if (tenDigits) {
+      const existing = lookupAccountId(tenDigits);
+      if (existing) return existing;
+      if (isValidIndianMobile(user.mobile)) {
+        return `usr_phone_${tenDigits}`;
+      }
+    }
+  }
+  if (email && email.startsWith("connoisseur.")) {
+    const digits = email.replace(/\D/g, "");
+    if (digits.length >= 10) {
+      return `usr_phone_${digits.slice(-10)}`;
+    }
+  }
+  if (email && email.includes("@")) {
+    const safeEmail = email.replace(/[^a-z0-9_.-]/g, "_");
+    return `usr_email_${safeEmail}`;
+  }
+  return `usr_acc_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+}
+
 /**
  * Validates and normalizes raw parsed auth data from storage.
  * Handles null, primitives, non-objects, and missing or malformed fields safely.
@@ -164,6 +243,7 @@ export function validateAndNormalizeAuth(raw: unknown): {
     return {
       isLoggedIn: true,
       user: {
+        id: "usr_demo_radhika",
         name: "Radhika Sharma",
         email: "radhika.sharma@example.com",
         mobile: "+91 98765 43210",
@@ -174,6 +254,10 @@ export function validateAndNormalizeAuth(raw: unknown): {
   }
 
   const userObj = rawUser as Record<string, unknown>;
+  const rawId =
+    typeof userObj.id === "string" && userObj.id.trim().length > 0
+      ? userObj.id.trim()
+      : undefined;
   const name =
     typeof userObj.name === "string" && userObj.name.trim().length > 0
       ? userObj.name.trim()
@@ -193,9 +277,12 @@ export function validateAndNormalizeAuth(raw: unknown): {
       ? userObj.preferredDrape.trim()
       : undefined;
 
+  const id = rawId || generateAccountId({ email, mobile });
+
   return {
     isLoggedIn: true,
     user: {
+      id,
       name,
       email,
       ...(mobile !== undefined ? { mobile } : {}),
@@ -384,15 +471,15 @@ export function validateAndNormalizeAddresses(raw: unknown): SavedAddress[] {
 }
 
 /**
- * Derives a safe, stable user-scoped localStorage key so orders and addresses
- * are never shared across different signed-in accounts or guest sessions.
+ * Derives a safe, collision-resistant user-scoped localStorage key keyed by an immutable account ID.
+ * This guarantees that phone numbers never collide and editing a profile email does not change the storage key.
  */
 export function getUserStorageKey(user: UserProfile | null, prefix: string): string {
   if (!user) {
     return `palluvo_ecommerce_${prefix}_guest`;
   }
-  const rawId = (user.email || user.mobile || user.name || "guest").toLowerCase().trim();
-  const safeId = rawId.replace(/[^a-z0-9_.-]/g, "_");
+  const accountId = user.id && user.id.trim() ? user.id.trim() : generateAccountId(user);
+  const safeId = accountId.toLowerCase().replace(/[^a-z0-9_.-]/g, "_");
   return `palluvo_ecommerce_${prefix}_${safeId}`;
 }
 
@@ -497,12 +584,13 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     if (!isHydrated || !isHydratedRef.current) return;
 
     const currentKey = user && isLoggedIn
-      ? (user.email || user.mobile || user.name || "anon").toLowerCase().trim()
+      ? (user.id || generateAccountId(user)).toLowerCase().trim()
       : null;
 
     if (activeUserKeyRef.current === currentKey) {
       return;
     }
+    const previousKey = activeUserKeyRef.current;
     activeUserKeyRef.current = currentKey;
 
     if (!isLoggedIn || !user) {
@@ -511,13 +599,38 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       return;
     }
 
-    const isDemoUser = (user.email || "").toLowerCase() === "radhika.sharma@example.com";
+    const isDemoUser = (user.id === "usr_demo_radhika") || (user.email || "").toLowerCase() === "radhika.sharma@example.com";
     const ordersKey = getUserStorageKey(user, "orders");
     const addressesKey = getUserStorageKey(user, "addresses");
 
     // Load user-scoped orders - retain only known mock seed data for demo account; never import unscoped legacy records
     try {
-      const savedOrders = localStorage.getItem(ordersKey);
+      let savedOrders = localStorage.getItem(ordersKey);
+
+      // Atomic migration fallback: if empty under immutable account ID, check if records exist under previous session key
+      if (savedOrders === null && previousKey && previousKey !== currentKey) {
+        const prevOrdersKey = `palluvo_ecommerce_orders_${previousKey}`;
+        const prevOrders = localStorage.getItem(prevOrdersKey);
+        if (prevOrders !== null) {
+          savedOrders = prevOrders;
+          localStorage.setItem(ordersKey, prevOrders);
+          localStorage.removeItem(prevOrdersKey);
+        }
+      }
+
+      // Also check legacy email-based key from earlier versions
+      if (savedOrders === null && user.email) {
+        const legacyEmailKey = `palluvo_ecommerce_orders_${user.email.toLowerCase().trim().replace(/[^a-z0-9_.-]/g, "_")}`;
+        if (legacyEmailKey !== ordersKey) {
+          const legacyOrders = localStorage.getItem(legacyEmailKey);
+          if (legacyOrders !== null) {
+            savedOrders = legacyOrders;
+            localStorage.setItem(ordersKey, legacyOrders);
+            localStorage.removeItem(legacyEmailKey);
+          }
+        }
+      }
+
       if (savedOrders !== null) {
         setOrders(validateAndNormalizeOrders(JSON.parse(savedOrders)));
       } else if (isDemoUser) {
@@ -531,7 +644,32 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
     // Load user-scoped addresses - retain only known mock seed data for demo account; never import unscoped legacy records
     try {
-      const savedAddresses = localStorage.getItem(addressesKey);
+      let savedAddresses = localStorage.getItem(addressesKey);
+
+      // Atomic migration fallback: if empty under immutable account ID, check if records exist under previous session key
+      if (savedAddresses === null && previousKey && previousKey !== currentKey) {
+        const prevAddressesKey = `palluvo_ecommerce_addresses_${previousKey}`;
+        const prevAddresses = localStorage.getItem(prevAddressesKey);
+        if (prevAddresses !== null) {
+          savedAddresses = prevAddresses;
+          localStorage.setItem(addressesKey, prevAddresses);
+          localStorage.removeItem(prevAddressesKey);
+        }
+      }
+
+      // Also check legacy email-based key from earlier versions
+      if (savedAddresses === null && user.email) {
+        const legacyEmailKey = `palluvo_ecommerce_addresses_${user.email.toLowerCase().trim().replace(/[^a-z0-9_.-]/g, "_")}`;
+        if (legacyEmailKey !== addressesKey) {
+          const legacyAddresses = localStorage.getItem(legacyEmailKey);
+          if (legacyAddresses !== null) {
+            savedAddresses = legacyAddresses;
+            localStorage.setItem(addressesKey, legacyAddresses);
+            localStorage.removeItem(legacyEmailKey);
+          }
+        }
+      }
+
       if (savedAddresses !== null) {
         setAddresses(validateAndNormalizeAddresses(JSON.parse(savedAddresses)));
       } else if (isDemoUser) {
@@ -546,15 +684,29 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
   const login = useCallback((userData?: UserProfile) => {
     setIsLoggedIn(true);
-    setUser(
-      userData || {
+    setUser((prevUser) => {
+      if (userData) {
+        const id = userData.id || prevUser?.id || generateAccountId(userData);
+        if (userData.email) registerAccountAlias(userData.email, id);
+        if (userData.mobile) {
+          const digits = userData.mobile.replace(/\D/g, "");
+          const tenDigits = digits.length >= 10 ? digits.slice(-10) : digits;
+          if (tenDigits) registerAccountAlias(tenDigits, id);
+        }
+        return {
+          ...userData,
+          id,
+        };
+      }
+      return {
+        id: "usr_demo_radhika",
         name: "Radhika Sharma",
         email: "radhika.sharma@example.com",
         mobile: "+91 98765 43210",
         isConnoisseur: true,
         preferredDrape: "Nivi Style / Bengali Festive",
-      }
-    );
+      };
+    });
   }, []);
 
   const logout = useCallback(() => {
