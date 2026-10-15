@@ -163,16 +163,67 @@ export default function AccountPage() {
 
   const handleSignInSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    const name = loginIdentifier ? loginIdentifier.split("@")[0] : "Radhika Sharma";
-    const email = loginIdentifier.includes("@") ? loginIdentifier : `${loginIdentifier || "radhika"}@palluvo.store`;
-    const formattedName = name.charAt(0).toUpperCase() + name.slice(1);
+    const trimmedId = loginIdentifier.trim();
+    const isEmail = trimmedId.includes("@");
+    const digitsOnly = trimmedId.replace(/\D/g, "");
+    const isPhone = !isEmail && digitsOnly.length >= 7;
+
+    let resolvedName = "Valued Connoisseur";
+    let resolvedEmail = "member@palluvo.store";
+    let resolvedMobile = profile.mobile || "+91 98765 43210";
+
+    if (isPhone) {
+      if (trimmedId.startsWith("+")) {
+        resolvedMobile = trimmedId.replace(/\s+/g, " ");
+      } else if (digitsOnly.length === 10) {
+        resolvedMobile = `+91 ${digitsOnly.slice(0, 5)} ${digitsOnly.slice(5)}`;
+      } else if (digitsOnly.length === 12 && digitsOnly.startsWith("91")) {
+        resolvedMobile = `+91 ${digitsOnly.slice(2, 7)} ${digitsOnly.slice(7)}`;
+      } else {
+        resolvedMobile = `+91 ${digitsOnly}`;
+      }
+
+      resolvedName = profile.fullName && profile.fullName !== "Radhika Sharma"
+        ? profile.fullName
+        : "Valued Connoisseur";
+
+      resolvedEmail = profile.email && profile.email !== "radhika.sharma@example.com"
+        ? profile.email
+        : `connoisseur.${digitsOnly.slice(-4)}@palluvo.store`;
+    } else if (isEmail) {
+      resolvedEmail = trimmedId;
+      const localPart = trimmedId.split("@")[0].replace(/[._+-]+/g, " ").trim();
+      if (localPart) {
+        resolvedName = localPart
+          .split(" ")
+          .filter(Boolean)
+          .map((w) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
+          .join(" ");
+      } else {
+        resolvedName = profile.fullName || "Valued Connoisseur";
+      }
+      resolvedMobile = profile.mobile || "+91 98765 43210";
+    } else {
+      resolvedName = trimmedId
+        ? trimmedId.charAt(0).toUpperCase() + trimmedId.slice(1)
+        : (profile.fullName || "Valued Connoisseur");
+      resolvedEmail = trimmedId ? `${trimmedId.toLowerCase().replace(/[^a-z0-9]/g, "")}@palluvo.store` : "member@palluvo.store";
+      resolvedMobile = profile.mobile || "+91 98765 43210";
+    }
+
     login({
-      name: formattedName,
-      email,
-      mobile: profile.mobile || "+91 98765 43210",
+      name: resolvedName,
+      email: resolvedEmail,
+      mobile: resolvedMobile,
       isConnoisseur: profile.isConnoisseur ?? true,
       preferredDrape: profile.preferredDrape,
     });
+    setProfile((prev) => ({
+      ...prev,
+      fullName: resolvedName,
+      email: resolvedEmail,
+      mobile: resolvedMobile,
+    }));
     showToast("Signed in to prototype session (local demo mode).");
     const targetRedirect = getSafeRedirectUrl(redirectUrl);
     router.push(targetRedirect);

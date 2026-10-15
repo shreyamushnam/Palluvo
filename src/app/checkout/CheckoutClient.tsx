@@ -43,6 +43,7 @@ export default function CheckoutPage() {
     addresses,
     isLoggedIn,
     user,
+    isHydrated,
   } = useStore();
 
   const [step, setStep] = useState<1 | 2 | 3>(1);
@@ -112,6 +113,29 @@ export default function CheckoutPage() {
       }
     }
   }, [isLoggedIn, validAddresses, selectedAddressId, user?.email, user?.mobile]);
+
+  // Sync profile contact fields after auth hydration when no saved address is selected, without overwriting customer edits
+  useEffect(() => {
+    if (isLoggedIn && user && (!selectedAddressId || validAddresses.length === 0)) {
+      setShippingAddress((prev) => {
+        const needsName = !prev.fullName.trim() && Boolean(user.name);
+        const needsEmail = !prev.email.trim() && Boolean(user.email);
+        const formattedMobile = user.mobile ? user.mobile.replace("+91 ", "").replace(/\s/g, "") : "";
+        const needsPhone = !prev.phone.trim() && Boolean(formattedMobile);
+
+        if (!needsName && !needsEmail && !needsPhone) {
+          return prev;
+        }
+
+        return {
+          ...prev,
+          fullName: needsName ? user.name : prev.fullName,
+          email: needsEmail ? user.email : prev.email,
+          phone: needsPhone ? formattedMobile : prev.phone,
+        };
+      });
+    }
+  }, [isLoggedIn, user, selectedAddressId, validAddresses.length, isHydrated]);
 
   // Delivery & Payment selection
   const [deliveryMethod, setDeliveryMethod] = useState<"standard" | "express">("standard");
