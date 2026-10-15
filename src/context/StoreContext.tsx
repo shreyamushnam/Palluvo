@@ -124,6 +124,7 @@ export function validateAndNormalizeCart(raw: unknown): CartItem[] {
 /**
  * Validates and normalizes raw parsed auth data from storage.
  * Handles null, primitives, non-objects, and missing or malformed fields safely.
+ * Only accepts literal booleans for isLoggedIn, defaulting malformed/non-boolean values to false.
  */
 export function validateAndNormalizeAuth(raw: unknown): {
   isLoggedIn: boolean;
@@ -134,7 +135,7 @@ export function validateAndNormalizeAuth(raw: unknown): {
   }
 
   const rawAuth = raw as { isLoggedIn?: unknown; user?: unknown };
-  const isLoggedIn = typeof rawAuth.isLoggedIn === "boolean" ? rawAuth.isLoggedIn : Boolean(rawAuth.isLoggedIn);
+  const isLoggedIn = typeof rawAuth.isLoggedIn === "boolean" ? rawAuth.isLoggedIn : false;
 
   if (!isLoggedIn) {
     return { isLoggedIn: false, user: null };

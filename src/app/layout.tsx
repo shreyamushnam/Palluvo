@@ -136,7 +136,7 @@ export default function RootLayout({
             is shown/hidden via CSS without shifting layout after hydration. */}
         <script
           dangerouslySetInnerHTML={{
-            __html: `try{var a=JSON.parse(localStorage.getItem("palluvo_ecommerce_auth")||"null");document.documentElement.setAttribute("data-auth",a&&a.isLoggedIn?"in":"out")}catch(e){document.documentElement.setAttribute("data-auth","out")}`,
+            __html: `try{var a=JSON.parse(localStorage.getItem("palluvo_ecommerce_auth")||"null");var isLoggedIn=a&&typeof a.isLoggedIn==="boolean"?a.isLoggedIn:false;document.documentElement.setAttribute("data-auth",isLoggedIn?"in":"out")}catch(e){document.documentElement.setAttribute("data-auth","out")}`,
           }}
         />
         <script

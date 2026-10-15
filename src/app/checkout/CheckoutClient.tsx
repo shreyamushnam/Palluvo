@@ -7,6 +7,7 @@ import { CheckCircle2, ShieldCheck, ArrowLeft, ArrowRight, ChevronRight, Lock, C
 import { useStore } from "@/context/StoreContext";
 import { OrderRecord, SavedAddress } from "@/data/mockOrders";
 import { getProductType, isSilkMarkCertified } from "@/data/products";
+import { scrollIntoView } from "@/utils/scroll";
 
 const POPULAR_BANKS = [
   { id: "hdfc", name: "HDFC Bank" },
@@ -60,7 +61,7 @@ export default function CheckoutPage() {
     const timer = setTimeout(() => {
       const targetRef = step === 1 ? step1Ref : step === 2 ? step2Ref : step3Ref;
       if (targetRef.current) {
-        targetRef.current.scrollIntoView({ behavior: "smooth", block: "start" });
+        scrollIntoView(targetRef.current, { behavior: "smooth", block: "start" });
       }
     }, 60);
     return () => clearTimeout(timer);
