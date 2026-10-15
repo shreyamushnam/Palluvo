@@ -141,6 +141,53 @@ export function validateAndNormalizeCart(raw: unknown): CartItem[] {
 }
 
 const ACCOUNT_MAP_KEY = "palluvo_account_identity_map";
+const ACCOUNT_META_KEY = "palluvo_account_identity_metadata";
+const MIGRATION_META_KEY = "palluvo_account_migration_meta";
+
+export interface AccountAliasMeta {
+  accountId: string;
+  type?: "primary" | "changed_email" | "phone";
+  createdAt?: number;
+  updatedAt?: number;
+}
+
+export function getAccountMetadata(): Record<string, AccountAliasMeta> {
+  if (typeof window === "undefined" || !window.localStorage) return {};
+  try {
+    const raw = localStorage.getItem(ACCOUNT_META_KEY);
+    return raw ? JSON.parse(raw) : {};
+  } catch {
+    return {};
+  }
+}
+
+export function setAccountMetadata(meta: Record<string, AccountAliasMeta>): void {
+  if (typeof window === "undefined" || !window.localStorage) return;
+  try {
+    localStorage.setItem(ACCOUNT_META_KEY, JSON.stringify(meta));
+  } catch {}
+}
+
+export interface MigrationMeta {
+  migratedCollisionIds: Record<string, string[]>;
+}
+
+export function getMigrationMetadata(): MigrationMeta {
+  if (typeof window === "undefined" || !window.localStorage) return { migratedCollisionIds: {} };
+  try {
+    const raw = localStorage.getItem(MIGRATION_META_KEY);
+    return raw ? JSON.parse(raw) : { migratedCollisionIds: {} };
+  } catch {
+    return { migratedCollisionIds: {} };
+  }
+}
+
+export function setMigrationMetadata(meta: MigrationMeta): void {
+  if (typeof window === "undefined" || !window.localStorage) return;
+  try {
+    localStorage.setItem(MIGRATION_META_KEY, JSON.stringify(meta));
+  } catch {}
+}
 
 /**
  * Encodes an identifier (such as an email address) into a safe, collision-resistant string.
@@ -166,12 +213,11 @@ export function getDirectLegacyEmailId(email: string): string {
 }
 
 /**
- * Migrates existing legacy collision-prone email and phone aliases in palluvo_account_identity_map
+ * Migrates existing legacy colliding email aliases in palluvo_account_identity_map
  * to distinct injective IDs.
- * Make migration key-aware: only remaps aliases proven to be direct legacy mappings for that same email
- * (or belonging to confirmed collision groups where multiple distinct emails point to the same ID),
- * and strictly preserves aliases pointing to an existing immutable account ID (such as when a customer
- * changed their email before the migration).
+ * Does not infer a direct identity mapping solely from equality with the lossy legacy encoding.
+ * Strictly preserves aliases pointing to an existing immutable account ID (such as when a customer
+ * changed their email before or after the migration) using explicit metadata and session signals.
  */
 export function migrateLegacyAccountAliases(): void {
   if (typeof window === "undefined" || !window.localStorage) return;
@@ -182,14 +228,32 @@ export function migrateLegacyAccountAliases(): void {
     if (!map || typeof map !== "object" || Array.isArray(map)) return;
     let modified = false;
 
-    // Build collision frequency map for email aliases to detect confirmed collision groups
-    const collisionCounts = new Map<string, string[]>();
+    const meta = getAccountMetadata();
+    const migrationMeta = getMigrationMetadata();
+
+    // Check currently active authenticated user session if available
+    let activeAuthUser: { id?: string; email?: string } | null = null;
+    try {
+      const authRaw = localStorage.getItem("palluvo_ecommerce_auth");
+      if (authRaw) {
+        const parsed = JSON.parse(authRaw);
+        if (parsed?.isLoggedIn && parsed?.user && typeof parsed.user === "object") {
+          activeAuthUser = parsed.user;
+        }
+      }
+    } catch {}
+
+    const activeUserEmail = activeAuthUser?.email ? activeAuthUser.email.toLowerCase().trim() : null;
+    const activeUserId = activeAuthUser?.id ? activeAuthUser.id.trim() : null;
+
+    // Detect confirmed collision groups: multiple distinct emails mapped to the exact same value in identity map
+    const emailKeysByVal = new Map<string, Set<string>>();
     for (const [k, v] of Object.entries(map)) {
       if (typeof v === "string" && k.toLowerCase().includes("@")) {
         const trimmedVal = v.trim();
-        const list = collisionCounts.get(trimmedVal) || [];
-        list.push(k.toLowerCase().trim());
-        collisionCounts.set(trimmedVal, list);
+        const set = emailKeysByVal.get(trimmedVal) || new Set<string>();
+        set.add(k.toLowerCase().trim());
+        emailKeysByVal.set(trimmedVal, set);
       }
     }
 
@@ -197,6 +261,7 @@ export function migrateLegacyAccountAliases(): void {
       const val = map[key];
       if (typeof val !== "string") {
         delete map[key];
+        delete meta[key.toLowerCase().trim()];
         modified = true;
         continue;
       }
@@ -208,20 +273,48 @@ export function migrateLegacyAccountAliases(): void {
           ? "usr_demo_radhika"
           : `usr_email_${encodeIdentifierToId(lowerKey)}`;
 
-        // Only remap aliases proven to be direct legacy mappings for that same email,
-        // or aliases belonging to confirmed collision groups (where multiple distinct emails point to the same ID).
-        // Strictly preserve aliases to an existing immutable account ID.
-        const isDirectLegacy = trimmedVal === getDirectLegacyEmailId(lowerKey) && trimmedVal !== expectedInjectiveId;
-        const isCollisionGroup = (collisionCounts.get(trimmedVal)?.length ?? 0) > 1 && trimmedVal === getDirectLegacyEmailId(lowerKey);
+        // Check if this key is known as a changed-email alias or actively authenticated user
+        const isKnownChangedEmail = meta[lowerKey]?.type === "changed_email" && meta[lowerKey]?.accountId === trimmedVal;
+        const isActiveAuthOwnership = activeUserEmail === lowerKey && activeUserId === trimmedVal;
 
-        if (isDirectLegacy || isCollisionGroup) {
-          map[key] = expectedInjectiveId;
-          modified = true;
+        if (isKnownChangedEmail || isActiveAuthOwnership) {
+          if (!meta[lowerKey]) {
+            meta[lowerKey] = { accountId: trimmedVal, type: "changed_email", updatedAt: Date.now() };
+          }
+          continue;
         }
+
+        // A confirmed collision occurs when multiple distinct emails are mapped to the same ID in the identity map
+        const collisionEmails = emailKeysByVal.get(trimmedVal);
+        const isCollisionGroup = (collisionEmails?.size ?? 0) > 1;
+
+        if (isCollisionGroup) {
+          const groupHasOwner = Array.from(collisionEmails!).some(
+            (e) => (activeUserEmail === e && activeUserId === trimmedVal) || (meta[e]?.type === "changed_email" && meta[e]?.accountId === trimmedVal)
+          );
+
+          if (groupHasOwner) {
+            const isOwner = (activeUserEmail === lowerKey && activeUserId === trimmedVal) || (meta[lowerKey]?.type === "changed_email" && meta[lowerKey]?.accountId === trimmedVal);
+            if (!isOwner) {
+              map[key] = expectedInjectiveId;
+              modified = true;
+            }
+          } else {
+            // Neither email is proven owner; both collided under the legacy sanitizer
+            map[key] = expectedInjectiveId;
+            modified = true;
+            if (!migrationMeta.migratedCollisionIds[trimmedVal]) {
+              migrationMeta.migratedCollisionIds[trimmedVal] = Array.from(collisionEmails!);
+            }
+          }
+        }
+        // If there is NO collision (only 1 email mapped to trimmedVal), NEVER remap!
+        // Preserve aliases to an existing immutable account ID!
       } else if (trimmedVal.startsWith("usr_phone_")) {
         const phoneDigits = trimmedVal.slice("usr_phone_".length);
         if (phoneDigits.length < 10) {
           delete map[key];
+          delete meta[lowerKey];
           modified = true;
         }
       }
@@ -229,14 +322,15 @@ export function migrateLegacyAccountAliases(): void {
 
     if (modified) {
       localStorage.setItem(ACCOUNT_MAP_KEY, JSON.stringify(map));
+      setMigrationMetadata(migrationMeta);
     }
+    setAccountMetadata(meta);
   } catch {}
 }
 
 /**
  * Returns a known immutable account ID mapped to an identifier (email or phone digits), if any.
- * Key-aware: remaps proven direct legacy mappings for that same email or confirmed collision groups,
- * and preserves valid aliases pointing to existing immutable account IDs.
+ * Preserves aliases pointing to an existing immutable account ID and only remaps confirmed collision records.
  */
 export function lookupAccountId(identifier?: string | null): string | null {
   if (!identifier || typeof identifier !== "string") return null;
@@ -254,23 +348,65 @@ export function lookupAccountId(identifier?: string | null): string | null {
           ? "usr_demo_radhika"
           : `usr_email_${encodeIdentifierToId(key)}`;
 
-        let count = 0;
+        const meta = getAccountMetadata();
+        const migrationMeta = getMigrationMetadata();
+
+        let activeAuthUser: { id?: string; email?: string } | null = null;
+        try {
+          const authRaw = localStorage.getItem("palluvo_ecommerce_auth");
+          if (authRaw) {
+            const parsed = JSON.parse(authRaw);
+            if (parsed?.isLoggedIn && parsed?.user && typeof parsed.user === "object") {
+              activeAuthUser = parsed.user;
+            }
+          }
+        } catch {}
+
+        const activeUserEmail = activeAuthUser?.email ? activeAuthUser.email.toLowerCase().trim() : null;
+        const activeUserId = activeAuthUser?.id ? activeAuthUser.id.trim() : null;
+
+        const isKnownChangedEmail = meta[key]?.type === "changed_email" && meta[key]?.accountId === val;
+        const isActiveAuthOwnership = activeUserEmail === key && activeUserId === val;
+
+        if (isKnownChangedEmail || isActiveAuthOwnership) {
+          return val;
+        }
+
+        // Count distinct emails in map pointing to this val
+        let collisionCount = 0;
+        let otherEmailHasOwner = false;
         for (const [k, v] of Object.entries(map)) {
           if (typeof v === "string" && v.trim() === val && k.toLowerCase().includes("@")) {
-            count++;
+            collisionCount++;
+            const otherKey = k.toLowerCase().trim();
+            if (otherKey !== key && ((activeUserEmail === otherKey && activeUserId === val) || meta[otherKey]?.type === "changed_email")) {
+              otherEmailHasOwner = true;
+            }
           }
         }
 
-        const isDirectLegacy = val === getDirectLegacyEmailId(key) && val !== expectedInjectiveId;
-        const isCollisionGroup = count > 1 && val === getDirectLegacyEmailId(key);
-
-        if (isDirectLegacy || isCollisionGroup) {
+        if (otherEmailHasOwner) {
           map[key] = expectedInjectiveId;
           try {
             localStorage.setItem(ACCOUNT_MAP_KEY, JSON.stringify(map));
           } catch {}
           return expectedInjectiveId;
         }
+
+        if (collisionCount > 1) {
+          map[key] = expectedInjectiveId;
+          try {
+            localStorage.setItem(ACCOUNT_MAP_KEY, JSON.stringify(map));
+            migrationMeta.migratedCollisionIds[val] = migrationMeta.migratedCollisionIds[val] || [];
+            if (!migrationMeta.migratedCollisionIds[val].includes(key)) {
+              migrationMeta.migratedCollisionIds[val].push(key);
+            }
+            setMigrationMetadata(migrationMeta);
+          } catch {}
+          return expectedInjectiveId;
+        }
+
+        return val;
       } else if (val.startsWith("usr_phone_")) {
         const phoneDigits = val.slice("usr_phone_".length);
         if (phoneDigits.length < 10) {
@@ -291,9 +427,13 @@ export function lookupAccountId(identifier?: string | null): string | null {
 /**
  * Registers an identifier alias (e.g. new email or phone number) pointing to an immutable account ID.
  * Strictly rejects rebinding if the identifier is already registered to a different account ID.
- * Returns true if registered successfully (or already owned by accountId); false if owned by another account.
+ * Supports explicit metadata tracking for changed-email aliases.
  */
-export function registerAccountAlias(identifier: string, accountId: string): boolean {
+export function registerAccountAlias(
+  identifier: string,
+  accountId: string,
+  options?: { type?: "primary" | "changed_email" | "phone" }
+): boolean {
   if (!identifier || !accountId) return false;
   const key = identifier.toLowerCase().trim();
   const val = accountId.trim();
@@ -301,25 +441,22 @@ export function registerAccountAlias(identifier: string, accountId: string): boo
   try {
     const raw = localStorage.getItem(ACCOUNT_MAP_KEY);
     const map: Record<string, string> = raw ? JSON.parse(raw) : {};
-
-    // Invalidate stale alias if it was a direct legacy mapping for this key being upgraded to injective ID
-    if (key.includes("@") && map[key] && typeof map[key] === "string") {
-      const existingVal = map[key].trim();
-      const expectedInjectiveId = key === "radhika.sharma@example.com"
-        ? "usr_demo_radhika"
-        : `usr_email_${encodeIdentifierToId(key)}`;
-      const isDirectLegacy = existingVal === getDirectLegacyEmailId(key) && existingVal !== expectedInjectiveId;
-      if (isDirectLegacy && val === expectedInjectiveId) {
-        delete map[key];
-      }
-    }
+    const meta = getAccountMetadata();
 
     // Reject if already mapped to a different account ID
     if (map[key] && map[key] !== val) {
       return false;
     }
+
     map[key] = val;
+    meta[key] = {
+      accountId: val,
+      type: options?.type || meta[key]?.type || "primary",
+      updatedAt: Date.now(),
+    };
+
     localStorage.setItem(ACCOUNT_MAP_KEY, JSON.stringify(map));
+    setAccountMetadata(meta);
     return true;
   } catch {
     return false;
@@ -338,9 +475,12 @@ export function unregisterAccountAlias(identifier?: string | null, accountId?: s
     const raw = localStorage.getItem(ACCOUNT_MAP_KEY);
     if (!raw) return;
     const map: Record<string, string> = JSON.parse(raw);
+    const meta = getAccountMetadata();
     if (map[key] === val) {
       delete map[key];
+      delete meta[key];
       localStorage.setItem(ACCOUNT_MAP_KEY, JSON.stringify(map));
+      setAccountMetadata(meta);
     }
   } catch {}
 }
@@ -450,17 +590,19 @@ export function validateAndNormalizeAuth(raw: unknown): {
   if (!id) {
     id = (email && lookupAccountId(email)) || generateAccountId({ email, mobile });
   } else if (email && email.includes("@")) {
-    const expectedInjectiveId = email.toLowerCase() === "radhika.sharma@example.com"
+    const lowerEmail = email.toLowerCase().trim();
+    const expectedInjectiveId = lowerEmail === "radhika.sharma@example.com"
       ? "usr_demo_radhika"
-      : `usr_email_${encodeIdentifierToId(email)}`;
-    // Only upgrade if rawId was a direct legacy mapping for this same email
-    // and lookupAccountId migrated it to the injective ID.
-    // Strictly preserve aliases pointing to existing immutable account IDs.
-    if (id === getDirectLegacyEmailId(email) && id !== expectedInjectiveId) {
-      const remapped = lookupAccountId(email);
-      if (remapped === expectedInjectiveId) {
-        id = expectedInjectiveId;
-      }
+      : `usr_email_${encodeIdentifierToId(lowerEmail)}`;
+
+    // Strictly preserve existing immutable account IDs!
+    // Only upgrade if lookupAccountId determined this account was part of a confirmed collision
+    // that was migrated to a distinct injective ID.
+    const migrationMeta = getMigrationMetadata();
+    const wasMigratedCollision = (migrationMeta.migratedCollisionIds[id] || []).includes(lowerEmail);
+
+    if (wasMigratedCollision) {
+      id = expectedInjectiveId;
     }
   }
 

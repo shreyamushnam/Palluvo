@@ -475,9 +475,9 @@ export default function AccountPage() {
       }
     }
 
-    registerAccountAlias(trimmedEmail, accountId);
+    registerAccountAlias(trimmedEmail, accountId, { type: "changed_email" });
     if (mobileTen) {
-      registerAccountAlias(mobileTen, accountId);
+      registerAccountAlias(mobileTen, accountId, { type: "phone" });
     }
 
     login({
