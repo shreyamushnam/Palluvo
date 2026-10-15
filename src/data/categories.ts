@@ -80,7 +80,13 @@ export function matchesCategory(product: Product, category: string): boolean {
   if (norm.includes("new arrival") || norm.includes("new")) {
     return !!product.isNewArrival;
   } else if (norm.includes("silk") && !norm.includes("cotton")) {
-    return isSaree && (product.category.toLowerCase() === "silk" || product.fabric.toLowerCase().includes("silk"));
+    return (
+      isSaree &&
+      (product.category.toLowerCase() === "silk" ||
+        (product.fabric.toLowerCase().includes("silk") &&
+          !product.fabric.toLowerCase().includes("cotton") &&
+          product.category.toLowerCase() !== "cotton"))
+    );
   } else if (norm.includes("handloom")) {
     return isSaree && (product.category.toLowerCase() === "handloom" || product.fabric.toLowerCase().includes("handloom"));
   } else if (norm.includes("cotton")) {
@@ -157,7 +163,7 @@ export function getCategoryDescription(categoryOrQuery?: string): string {
     return "Explore curated designer blouse pieces crafted in fine silk with intricate zari embroidery to complete your ensemble.";
   }
   if (norm.includes("silk") && !norm.includes("cotton")) {
-    return "Explore authentic pure silk sarees and opulent zari brocades curated with certified Silk Mark purity.";
+    return "Explore lustrous silk weaves, rich zari brocades, and festive drapes crafted across celebrated handloom traditions.";
   }
   if (norm.includes("handloom")) {
     return "Discover heritage handloom weaves and timeless artisan drapes crafted with authentic weaving traditions.";
@@ -180,7 +186,7 @@ export function getCategoryDescription(categoryOrQuery?: string): string {
   if (norm.includes("new")) {
     return "Explore the latest handcrafted drapes, designer blouses, and artisanal accessories fresh from our master weavers.";
   }
-  return "Explore authentic zari brocades, handloom weaves, and royal silk drapes curated with Silk Mark purity.";
+  return "Explore handcrafted drapes, designer blouses, and artisanal accessories curated with traditional craftsmanship.";
 }
 
 const CATEGORY_DEFINITIONS: Omit<Category, "itemCount">[] = [
