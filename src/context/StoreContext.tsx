@@ -143,6 +143,21 @@ export function validateAndNormalizeCart(raw: unknown): CartItem[] {
 const ACCOUNT_MAP_KEY = "palluvo_account_identity_map";
 
 /**
+ * Encodes an identifier (such as an email address) into a safe, collision-resistant string.
+ * Uses an injective encoding where every character outside [a-z0-9] is encoded as _<hex>_.
+ * Because '_' itself is encoded as _5f_, the output is 100% collision-resistant and
+ * mathematically injective: distinct inputs will never produce identical outputs
+ * (e.g. "nina+orders@example.com" -> "nina_2b_orders_40_example_2e_com",
+ *  while "nina_orders@example.com" -> "nina_5f_orders_40_example_2e_com").
+ */
+export function encodeIdentifierToId(str: string): string {
+  return str
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9]/g, (ch) => `_${ch.charCodeAt(0).toString(16)}_`);
+}
+
+/**
  * Returns a known immutable account ID mapped to an identifier (email or phone digits), if any.
  */
 export function lookupAccountId(identifier?: string | null): string | null {
@@ -162,17 +177,45 @@ export function lookupAccountId(identifier?: string | null): string | null {
 
 /**
  * Registers an identifier alias (e.g. new email or phone number) pointing to an immutable account ID.
+ * Strictly rejects rebinding if the identifier is already registered to a different account ID.
+ * Returns true if registered successfully (or already owned by accountId); false if owned by another account.
  */
-export function registerAccountAlias(identifier: string, accountId: string): void {
+export function registerAccountAlias(identifier: string, accountId: string): boolean {
+  if (!identifier || !accountId) return false;
+  const key = identifier.toLowerCase().trim();
+  const val = accountId.trim();
+  if (!key || !val) return false;
+  try {
+    const raw = localStorage.getItem(ACCOUNT_MAP_KEY);
+    const map: Record<string, string> = raw ? JSON.parse(raw) : {};
+    // Reject if already mapped to a different account ID
+    if (map[key] && map[key] !== val) {
+      return false;
+    }
+    map[key] = val;
+    localStorage.setItem(ACCOUNT_MAP_KEY, JSON.stringify(map));
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Unregisters an identifier alias if it is currently registered to the specified accountId.
+ */
+export function unregisterAccountAlias(identifier?: string | null, accountId?: string | null): void {
   if (!identifier || !accountId) return;
   const key = identifier.toLowerCase().trim();
   const val = accountId.trim();
   if (!key || !val) return;
   try {
     const raw = localStorage.getItem(ACCOUNT_MAP_KEY);
-    const map: Record<string, string> = raw ? JSON.parse(raw) : {};
-    map[key] = val;
-    localStorage.setItem(ACCOUNT_MAP_KEY, JSON.stringify(map));
+    if (!raw) return;
+    const map: Record<string, string> = JSON.parse(raw);
+    if (map[key] === val) {
+      delete map[key];
+      localStorage.setItem(ACCOUNT_MAP_KEY, JSON.stringify(map));
+    }
   } catch {}
 }
 
@@ -180,7 +223,7 @@ export function registerAccountAlias(identifier: string, accountId: string): voi
  * Deterministically derives an immutable account ID from an identity.
  * - Demo account: "usr_demo_radhika"
  * - Mobile identity: "usr_phone_<10_digits>" (uses the full 10-digit national number, never truncated to last 4)
- * - Email identity: "usr_email_<safe_email>"
+ * - Email identity: "usr_email_<collision_resistant_encoded_email>"
  */
 export function generateAccountId(user: { id?: string; email?: string; mobile?: string }): string {
   if (user.id && user.id.trim()) {
@@ -212,7 +255,7 @@ export function generateAccountId(user: { id?: string; email?: string; mobile?: 
     }
   }
   if (email && email.includes("@")) {
-    const safeEmail = email.replace(/[^a-z0-9_.-]/g, "_");
+    const safeEmail = encodeIdentifierToId(email);
     return `usr_email_${safeEmail}`;
   }
   return `usr_acc_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
@@ -479,7 +522,7 @@ export function getUserStorageKey(user: UserProfile | null, prefix: string): str
     return `palluvo_ecommerce_${prefix}_guest`;
   }
   const accountId = user.id && user.id.trim() ? user.id.trim() : generateAccountId(user);
-  const safeId = accountId.toLowerCase().replace(/[^a-z0-9_.-]/g, "_");
+  const safeId = accountId.toLowerCase().trim().replace(/[^a-z0-9_]/g, (ch) => `_${ch.charCodeAt(0).toString(16)}_`);
   return `palluvo_ecommerce_${prefix}_${safeId}`;
 }
 

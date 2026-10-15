@@ -5,7 +5,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Package, MapPin, User, Truck, CheckCircle2, ShieldCheck, Plus, X, Edit2, Trash2, Check, RotateCcw, LogOut, Sparkles, Award, Headphones, ArrowRight, Lock, Info } from "lucide-react";
-import { useStore, lookupAccountId, registerAccountAlias, generateAccountId } from "@/context/StoreContext";
+import { useStore, lookupAccountId, registerAccountAlias, unregisterAccountAlias, generateAccountId, encodeIdentifierToId } from "@/context/StoreContext";
 import { SavedAddress, OrderRecord } from "@/data/mockOrders";
 import { useFocusTrap } from "@/hooks/useFocusTrap";
 import { formatStoredPhone, isValidIndianMobile } from "@/utils/phone";
@@ -208,7 +208,7 @@ export default function AccountPage() {
       resolvedConnoisseur = true;
       resolvedDrape = "Nivi Style / Bengali Festive";
 
-      const safeEmail = trimmedId.toLowerCase().trim().replace(/[^a-z0-9_.-]/g, "_");
+      const safeEmail = encodeIdentifierToId(trimmedId);
       accountId = (trimmedId.toLowerCase() === "radhika.sharma@example.com")
         ? "usr_demo_radhika"
         : (lookupAccountId(trimmedId) || `usr_email_${safeEmail}`);
@@ -278,14 +278,40 @@ export default function AccountPage() {
       document.getElementById("reg-mobile")?.focus();
       return;
     }
+    const cleanMobile = regMobile.replace(/\D/g, "");
+    const tenDigits = cleanMobile.length >= 10 ? cleanMobile.slice(-10) : cleanMobile;
+
+    const trimmedEmail = regEmail.toLowerCase().trim();
+    if (trimmedEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmedEmail)) {
+      showToast("Please enter a valid email address.", "info");
+      document.getElementById("reg-email")?.focus();
+      return;
+    }
+
+    if (tenDigits) {
+      const existingMobileOwner = lookupAccountId(tenDigits);
+      if (existingMobileOwner) {
+        showToast("This mobile number is already registered. Please sign in instead.", "info");
+        document.getElementById("reg-mobile")?.focus();
+        return;
+      }
+    }
+
+    if (trimmedEmail) {
+      const existingEmailOwner = lookupAccountId(trimmedEmail);
+      if (existingEmailOwner) {
+        showToast("This email address is already registered. Please sign in instead.", "info");
+        document.getElementById("reg-email")?.focus();
+        return;
+      }
+    }
+
     const name = regFullName.trim() || "Valued Connoisseur";
     const email = regEmail.trim() || "member@palluvo.store";
     const mobile = formatStoredPhone(regMobile);
-    const cleanMobile = regMobile.replace(/\D/g, "");
-    const tenDigits = cleanMobile.length >= 10 ? cleanMobile.slice(-10) : cleanMobile;
     const accountId = tenDigits
       ? `usr_phone_${tenDigits}`
-      : `usr_email_${email.toLowerCase().trim().replace(/[^a-z0-9_.-]/g, "_")}`;
+      : `usr_email_${encodeIdentifierToId(email)}`;
 
     if (tenDigits) registerAccountAlias(tenDigits, accountId);
     if (email) registerAccountAlias(email, accountId);
@@ -394,14 +420,57 @@ export default function AccountPage() {
       document.getElementById("profile-mobile")?.focus();
       return;
     }
-    const normalizedMobile = formatStoredPhone(profile.mobile);
-    const accountId = user?.id || generateAccountId({ email: profile.email, mobile: normalizedMobile });
-    if (profile.email) registerAccountAlias(profile.email, accountId);
-    if (normalizedMobile) {
-      const digits = normalizedMobile.replace(/\D/g, "");
-      const tenDigits = digits.length >= 10 ? digits.slice(-10) : digits;
-      if (tenDigits) registerAccountAlias(tenDigits, accountId);
+
+    const trimmedEmail = profile.email.toLowerCase().trim();
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmedEmail)) {
+      showToast("Please enter a valid email address.", "info");
+      document.getElementById("profile-email")?.focus();
+      return;
     }
+
+    const normalizedMobile = formatStoredPhone(profile.mobile);
+    const cleanMobile = profile.mobile.replace(/\D/g, "");
+    const mobileTen = cleanMobile.length >= 10 ? cleanMobile.slice(-10) : cleanMobile;
+
+    const accountId = user?.id || generateAccountId({ email: trimmedEmail, mobile: normalizedMobile });
+
+    // Reject if the edited email is already owned by another account
+    const existingEmailOwner = lookupAccountId(trimmedEmail);
+    if (existingEmailOwner && existingEmailOwner !== accountId) {
+      showToast("This email address is already associated with another account.", "info");
+      document.getElementById("profile-email")?.focus();
+      return;
+    }
+
+    // Reject if the edited mobile is already owned by another account
+    if (mobileTen) {
+      const existingMobileOwner = lookupAccountId(mobileTen);
+      if (existingMobileOwner && existingMobileOwner !== accountId) {
+        showToast("This mobile number is already associated with another account.", "info");
+        document.getElementById("profile-mobile")?.focus();
+        return;
+      }
+    }
+
+    // If customer changed their email, release previous alias
+    if (user?.email && user.email.toLowerCase().trim() !== trimmedEmail) {
+      unregisterAccountAlias(user.email, accountId);
+    }
+
+    // If customer changed their mobile, release previous mobile alias
+    if (user?.mobile) {
+      const prevDigits = user.mobile.replace(/\D/g, "");
+      const prevTen = prevDigits.length >= 10 ? prevDigits.slice(-10) : prevDigits;
+      if (prevTen && prevTen !== mobileTen) {
+        unregisterAccountAlias(prevTen, accountId);
+      }
+    }
+
+    registerAccountAlias(trimmedEmail, accountId);
+    if (mobileTen) {
+      registerAccountAlias(mobileTen, accountId);
+    }
+
     login({
       id: accountId,
       name: profile.fullName,
