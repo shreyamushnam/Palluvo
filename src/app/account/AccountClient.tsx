@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useCallback, useMemo } from "react";
+import React, { useState, useCallback, useMemo, useRef } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -75,6 +75,34 @@ export default function AccountPage() {
   );
 
   const [activeTab, setActiveTab] = useState<"orders" | "addresses" | "profile">("orders");
+  const tabRefs = useRef<{ [key in "orders" | "addresses" | "profile"]?: HTMLButtonElement | null }>({});
+
+  const handleTabKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
+    const tabs: ("orders" | "addresses" | "profile")[] = ["orders", "addresses", "profile"];
+    const currentIndex = tabs.indexOf(activeTab);
+    if (currentIndex === -1) return;
+
+    let targetIndex = -1;
+    if (e.key === "ArrowDown" || e.key === "ArrowRight") {
+      e.preventDefault();
+      targetIndex = (currentIndex + 1) % tabs.length;
+    } else if (e.key === "ArrowUp" || e.key === "ArrowLeft") {
+      e.preventDefault();
+      targetIndex = (currentIndex - 1 + tabs.length) % tabs.length;
+    } else if (e.key === "Home") {
+      e.preventDefault();
+      targetIndex = 0;
+    } else if (e.key === "End") {
+      e.preventDefault();
+      targetIndex = tabs.length - 1;
+    }
+
+    if (targetIndex !== -1) {
+      const nextTab = tabs[targetIndex];
+      setActiveTab(nextTab);
+      tabRefs.current[nextTab]?.focus();
+    }
+  };
 
   // Unauthenticated Auth Card state
   const [authTab, setAuthTab] = useState<"signin" | "register">("signin");
@@ -488,7 +516,7 @@ export default function AccountPage() {
             <div className="bg-white p-4 rounded-sm border border-[#E8E2D9] text-center flex flex-col items-center">
               <Award className="w-5 h-5 text-[#C5A575] mb-2" />
               <h3 className="text-xs font-semibold text-neutral-900 mb-0.5 font-serif">Silk Mark Authenticity</h3>
-              <p className="text-[11px] text-neutral-600 leading-relaxed font-sans">Every saree certified 100% pure silk with government hallmarks.</p>
+              <p className="text-[11px] text-neutral-600 leading-relaxed font-sans">Certified pure silk drapes hallmarked with authentic government Silk Mark assurance.</p>
             </div>
             <div className="bg-white p-4 rounded-sm border border-[#E8E2D9] text-center flex flex-col items-center">
               <RotateCcw className="w-5 h-5 text-[#C5A575] mb-2" />
@@ -555,80 +583,93 @@ export default function AccountPage() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-12">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 sm:gap-8 items-start">
           
-          {/* Left Navigation Tabs */}
-          <div
-            role="tablist"
-            aria-label="Account sections"
-            className="lg:col-span-3 bg-white p-2 sm:p-3 rounded-sm border border-[#E8E2D9] flex flex-col space-y-1"
-          >
-            <button
-              id="account-tab-orders"
-              role="tab"
-              aria-selected={activeTab === "orders"}
-              aria-controls="account-panel-orders"
-              type="button"
-              onClick={() => setActiveTab("orders")}
-              className={`w-full flex items-center justify-start gap-3 px-3.5 sm:px-4 py-2.5 sm:py-3 min-h-[44px] text-xs font-semibold rounded-xs transition-colors cursor-pointer focus-visible:ring-2 focus-visible:ring-[#541920] focus-visible:outline-none ${
-                activeTab === "orders"
-                  ? "bg-[#541920] text-white shadow-xs"
-                  : "text-neutral-700 hover:bg-[#F4EFE6]"
-              }`}
+          {/* Left Navigation Tabs & Actions */}
+          <div className="lg:col-span-3 bg-white p-2 sm:p-3 rounded-sm border border-[#E8E2D9] flex flex-col space-y-1">
+            <div
+              role="tablist"
+              aria-label="Account sections"
+              aria-orientation="vertical"
+              onKeyDown={handleTabKeyDown}
+              className="flex flex-col space-y-1"
             >
-              <Package className="w-4 h-4 shrink-0" />
-              <span>My Orders ({validOrders.length})</span>
-            </button>
+              <button
+                ref={(el) => { tabRefs.current["orders"] = el; }}
+                id="account-tab-orders"
+                role="tab"
+                aria-selected={activeTab === "orders"}
+                aria-controls="account-panel-orders"
+                tabIndex={activeTab === "orders" ? 0 : -1}
+                type="button"
+                onClick={() => setActiveTab("orders")}
+                className={`w-full flex items-center justify-start gap-3 px-3.5 sm:px-4 py-2.5 sm:py-3 min-h-[44px] text-xs font-semibold rounded-xs transition-colors cursor-pointer focus-visible:ring-2 focus-visible:ring-[#541920] focus-visible:outline-none ${
+                  activeTab === "orders"
+                    ? "bg-[#541920] text-white shadow-xs"
+                    : "text-neutral-700 hover:bg-[#F4EFE6]"
+                }`}
+              >
+                <Package className="w-4 h-4 shrink-0" />
+                <span>My Orders ({validOrders.length})</span>
+              </button>
 
-            <Link
-              href="/account/returns"
-              className="w-full flex items-center justify-start gap-3 px-3.5 sm:px-4 py-2.5 sm:py-3 min-h-[44px] text-xs font-semibold rounded-xs transition-colors cursor-pointer text-neutral-700 hover:bg-[#F4EFE6] hover:text-[#541920] focus-visible:ring-2 focus-visible:ring-[#541920] focus-visible:outline-none"
-              aria-label="Order Returns and Exchanges"
-            >
-              <RotateCcw className="w-4 h-4 shrink-0 text-[#541920]" />
-              <span>Order Returns</span>
-            </Link>
+              <button
+                ref={(el) => { tabRefs.current["addresses"] = el; }}
+                id="account-tab-addresses"
+                role="tab"
+                aria-selected={activeTab === "addresses"}
+                aria-controls="account-panel-addresses"
+                tabIndex={activeTab === "addresses" ? 0 : -1}
+                type="button"
+                onClick={() => setActiveTab("addresses")}
+                className={`w-full flex items-center justify-start gap-3 px-3.5 sm:px-4 py-2.5 sm:py-3 min-h-[44px] text-xs font-semibold rounded-xs transition-colors cursor-pointer focus-visible:ring-2 focus-visible:ring-[#541920] focus-visible:outline-none ${
+                  activeTab === "addresses"
+                    ? "bg-[#541920] text-white shadow-xs"
+                    : "text-neutral-700 hover:bg-[#F4EFE6]"
+                }`}
+              >
+                <MapPin className="w-4 h-4 shrink-0" />
+                <span>Saved Addresses ({validAddresses.length})</span>
+              </button>
 
-            <button
-              id="account-tab-addresses"
-              role="tab"
-              aria-selected={activeTab === "addresses"}
-              aria-controls="account-panel-addresses"
-              type="button"
-              onClick={() => setActiveTab("addresses")}
-              className={`w-full flex items-center justify-start gap-3 px-3.5 sm:px-4 py-2.5 sm:py-3 min-h-[44px] text-xs font-semibold rounded-xs transition-colors cursor-pointer focus-visible:ring-2 focus-visible:ring-[#541920] focus-visible:outline-none ${
-                activeTab === "addresses"
-                  ? "bg-[#541920] text-white shadow-xs"
-                  : "text-neutral-700 hover:bg-[#F4EFE6]"
-              }`}
-            >
-              <MapPin className="w-4 h-4 shrink-0" />
-              <span>Saved Addresses ({validAddresses.length})</span>
-            </button>
+              <button
+                ref={(el) => { tabRefs.current["profile"] = el; }}
+                id="account-tab-profile"
+                role="tab"
+                aria-selected={activeTab === "profile"}
+                aria-controls="account-panel-profile"
+                tabIndex={activeTab === "profile" ? 0 : -1}
+                type="button"
+                onClick={() => setActiveTab("profile")}
+                className={`w-full flex items-center justify-start gap-3 px-3.5 sm:px-4 py-2.5 sm:py-3 min-h-[44px] text-xs font-semibold rounded-xs transition-colors cursor-pointer focus-visible:ring-2 focus-visible:ring-[#541920] focus-visible:outline-none ${
+                  activeTab === "profile"
+                    ? "bg-[#541920] text-white shadow-xs"
+                    : "text-neutral-700 hover:bg-[#F4EFE6]"
+                }`}
+              >
+                <User className="w-4 h-4 shrink-0" />
+                <span>Profile & Settings</span>
+              </button>
+            </div>
 
-            <button
-              id="account-tab-profile"
-              role="tab"
-              aria-selected={activeTab === "profile"}
-              aria-controls="account-panel-profile"
-              type="button"
-              onClick={() => setActiveTab("profile")}
-              className={`w-full flex items-center justify-start gap-3 px-3.5 sm:px-4 py-2.5 sm:py-3 min-h-[44px] text-xs font-semibold rounded-xs transition-colors cursor-pointer focus-visible:ring-2 focus-visible:ring-[#541920] focus-visible:outline-none ${
-                activeTab === "profile"
-                  ? "bg-[#541920] text-white shadow-xs"
-                  : "text-neutral-700 hover:bg-[#F4EFE6]"
-              }`}
-            >
-              <User className="w-4 h-4 shrink-0" />
-              <span>Profile & Settings</span>
-            </button>
+            {/* Quick Links & Actions outside role=tablist */}
+            <div className="border-t border-[#E8E2D9] mt-2 pt-2 space-y-1">
+              <Link
+                href="/account/returns"
+                className="w-full flex items-center justify-start gap-3 px-3.5 sm:px-4 py-2.5 sm:py-3 min-h-[44px] text-xs font-semibold rounded-xs transition-colors cursor-pointer text-neutral-700 hover:bg-[#F4EFE6] hover:text-[#541920] focus-visible:ring-2 focus-visible:ring-[#541920] focus-visible:outline-none"
+                aria-label="Order Returns and Exchanges"
+              >
+                <RotateCcw className="w-4 h-4 shrink-0 text-[#541920]" />
+                <span>Order Returns</span>
+              </Link>
 
-            <button
-              type="button"
-              onClick={handleSignOut}
-              className="w-full flex items-center justify-start gap-3 px-3.5 sm:px-4 py-2.5 sm:py-3 min-h-[44px] text-xs font-semibold rounded-xs transition-colors cursor-pointer text-red-700 hover:bg-red-50 focus-visible:ring-2 focus-visible:ring-red-600 focus-visible:outline-none border-t border-[#E8E2D9] mt-2 pt-3"
-            >
-              <LogOut className="w-4 h-4 shrink-0 text-red-600" />
-              <span>Sign Out</span>
-            </button>
+              <button
+                type="button"
+                onClick={handleSignOut}
+                className="w-full flex items-center justify-start gap-3 px-3.5 sm:px-4 py-2.5 sm:py-3 min-h-[44px] text-xs font-semibold rounded-xs transition-colors cursor-pointer text-red-700 hover:bg-red-50 focus-visible:ring-2 focus-visible:ring-red-600 focus-visible:outline-none"
+              >
+                <LogOut className="w-4 h-4 shrink-0 text-red-600" />
+                <span>Sign Out</span>
+              </button>
+            </div>
           </div>
 
           {/* Right Content Body */}
