@@ -465,6 +465,12 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       // Storage access error fallback
     }
 
+    // Discard legacy browser-wide keys to prevent unscoped customer data disclosure on upgraded shared browsers
+    try {
+      localStorage.removeItem("palluvo_ecommerce_orders");
+      localStorage.removeItem("palluvo_ecommerce_addresses");
+    } catch {}
+
     // Mark initial client storage hydration complete (cart, wishlist, auth)
     isHydratedRef.current = true;
     setIsHydrated(true);
@@ -509,18 +515,13 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     const ordersKey = getUserStorageKey(user, "orders");
     const addressesKey = getUserStorageKey(user, "addresses");
 
-    // Load user-scoped orders
+    // Load user-scoped orders - retain only known mock seed data for demo account; never import unscoped legacy records
     try {
       const savedOrders = localStorage.getItem(ordersKey);
       if (savedOrders !== null) {
         setOrders(validateAndNormalizeOrders(JSON.parse(savedOrders)));
       } else if (isDemoUser) {
-        const legacy = localStorage.getItem("palluvo_ecommerce_orders");
-        if (legacy !== null) {
-          setOrders(validateAndNormalizeOrders(JSON.parse(legacy)));
-        } else {
-          setOrders(MOCK_ORDERS);
-        }
+        setOrders(MOCK_ORDERS);
       } else {
         setOrders([]);
       }
@@ -528,18 +529,13 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       setOrders(isDemoUser ? MOCK_ORDERS : []);
     }
 
-    // Load user-scoped addresses
+    // Load user-scoped addresses - retain only known mock seed data for demo account; never import unscoped legacy records
     try {
       const savedAddresses = localStorage.getItem(addressesKey);
       if (savedAddresses !== null) {
         setAddresses(validateAndNormalizeAddresses(JSON.parse(savedAddresses)));
       } else if (isDemoUser) {
-        const legacy = localStorage.getItem("palluvo_ecommerce_addresses");
-        if (legacy !== null) {
-          setAddresses(validateAndNormalizeAddresses(JSON.parse(legacy)));
-        } else {
-          setAddresses(MOCK_ADDRESSES);
-        }
+        setAddresses(MOCK_ADDRESSES);
       } else {
         setAddresses([]);
       }
