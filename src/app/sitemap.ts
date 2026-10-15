@@ -1,10 +1,11 @@
 import type { MetadataRoute } from "next";
 import { PRODUCTS } from "@/data/products";
+import { SITE_URL } from "@/data/site";
 
 // lastModified is intentionally omitted: per-page modification dates are not
 // tracked, and an inaccurate lastmod (e.g. build time) is discouraged by search engines.
 export default function sitemap(): MetadataRoute.Sitemap {
-  const baseUrl = "https://palluvo.com";
+  const baseUrl = SITE_URL;
 
   const staticRoutes: MetadataRoute.Sitemap = [
     {

@@ -64,6 +64,10 @@ export function matchesCategory(product: Product, category: string): boolean {
     return product.category.toLowerCase() === "party wear" || product.occasion.toLowerCase() === "party";
   } else if (norm.includes("printed")) {
     return isSaree && product.category.toLowerCase() === "printed";
+  } else if (norm.includes("blouse")) {
+    return getProductType(product) === "blouse";
+  } else if (norm.includes("jewel") || norm.includes("jhumka") || norm.includes("accessor")) {
+    return getProductType(product) === "jewelry";
   } else {
     const isSareeQuery = norm.includes("saree");
     if (isSareeQuery && !isSaree) return false;
@@ -122,11 +126,14 @@ export function matchesPrice(product: Product, priceRangeIndex: number | null): 
 
 export function matchesSearch(product: Product, query: string): boolean {
   if (!query) return true;
-  const q = query.toLowerCase();
+  const q = query.toLowerCase().trim();
+  const type = getProductType(product);
   return (
     product.name.toLowerCase().includes(q) ||
     product.fabric.toLowerCase().includes(q) ||
-    product.category.toLowerCase().includes(q)
+    product.category.toLowerCase().includes(q) ||
+    type.toLowerCase().includes(q) ||
+    (product.tags || []).some((t) => t.toLowerCase().includes(q))
   );
 }
 

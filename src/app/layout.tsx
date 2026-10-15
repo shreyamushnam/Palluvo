@@ -10,6 +10,7 @@ import { CartDrawer } from "@/components/ecommerce/CartDrawer";
 import { SearchOverlay } from "@/components/ecommerce/SearchOverlay";
 import dynamic from "next/dynamic";
 import { Toast } from "@/components/ecommerce/Toast";
+import { SITE_URL } from "@/data/site";
 
 const QuickViewModal = dynamic(
   () => import("@/components/ecommerce/QuickViewModal").then((mod) => mod.QuickViewModal)
@@ -30,7 +31,7 @@ const montserrat = Montserrat({
 });
 
 export const metadata: Metadata = {
-  metadataBase: new URL("https://palluvo.com"),
+  metadataBase: new URL(SITE_URL),
   title: "PALLUVO | Buy Designer Sarees Online | Pure Silk, Handloom, & Bridal",
   description:
     "Shop premium Indian sarees online at PALLUVO. Discover handwoven Kanjeevaram silk, Banarasi brocades, lightweight organza, and festive party wear. Free shipping on orders of ₹1,999 or more & easy returns.",
@@ -47,7 +48,7 @@ export const metadata: Metadata = {
   openGraph: {
     title: "PALLUVO | Every drape, a little magic",
     description: "Premium Indian sarees online. Authentic handlooms, pure silk, and modern silhouettes.",
-    url: "https://palluvo.com",
+    url: SITE_URL,
     siteName: "PALLUVO",
     images: [
       {
@@ -90,10 +91,10 @@ const organizationAndWebsiteJsonLd = {
   "@graph": [
     {
       "@type": "Organization",
-      "@id": "https://palluvo.com/#organization",
+      "@id": `${SITE_URL}/#organization`,
       "name": "PALLUVO",
-      "url": "https://palluvo.com",
-      "logo": "https://palluvo.com/images/logo.png",
+      "url": SITE_URL,
+      "logo": `${SITE_URL}/images/logo.png`,
       "description": "Premium Indian sarees online. Authentic handlooms, pure silk, and modern silhouettes.",
       "contactPoint": {
         "@type": "ContactPoint",
@@ -105,18 +106,18 @@ const organizationAndWebsiteJsonLd = {
     },
     {
       "@type": "WebSite",
-      "@id": "https://palluvo.com/#website",
-      "url": "https://palluvo.com",
+      "@id": `${SITE_URL}/#website`,
+      "url": SITE_URL,
       "name": "PALLUVO",
       "description": "Buy Designer Sarees Online | Pure Silk, Handloom, & Bridal",
       "publisher": {
-        "@id": "https://palluvo.com/#organization",
+        "@id": `${SITE_URL}/#organization`,
       },
       "potentialAction": {
         "@type": "SearchAction",
         "target": {
           "@type": "EntryPoint",
-          "urlTemplate": "https://palluvo.com/shop?q={search_term_string}",
+          "urlTemplate": `${SITE_URL}/shop?q={search_term_string}`,
         },
         "query-input": "required name=search_term_string",
       },

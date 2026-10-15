@@ -4,6 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { ArrowRight, Sparkles } from "lucide-react";
 import { BackToTopButton } from "@/components/common/BackToTopButton";
+import { SITE_URL } from "@/data/site";
 
 export const metadata: Metadata = {
   title: "Curated Saree Collections & Heritage Edits | PALLUVO",
@@ -16,7 +17,7 @@ export const metadata: Metadata = {
     title: "Curated Saree Collections & Heritage Edits | PALLUVO",
     description:
       "Explore PALLUVO's thematic collections of Indian textiles: The Silk Edit, Midnight Drapes, Festive Stories, and Everyday Poetry.",
-    url: "https://palluvo.com/collections",
+    url: `${SITE_URL}/collections`,
     siteName: "PALLUVO",
     locale: "en_IN",
     type: "website",

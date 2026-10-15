@@ -16,7 +16,7 @@ import {
   ZoomOut,
 } from "lucide-react";
 import { Product, getProductType, getRelatedProducts } from "@/data/products";
-import { getCategoryHref } from "@/data/categories";
+import { getProductBreadcrumb } from "@/data/categories";
 import { useStore } from "@/context/StoreContext";
 import { ProductCard } from "@/components/ecommerce/ProductCard";
 
@@ -135,6 +135,7 @@ export const ProductDetailView: React.FC<ProductDetailViewProps> = ({
   };
 
   const relatedProducts = useMemo(() => getRelatedProducts(product, 4), [product]);
+  const breadcrumb = useMemo(() => getProductBreadcrumb(product), [product]);
 
   return (
     <div className="min-h-screen bg-[#FAF7F2] pb-24 lg:pb-12">
@@ -146,8 +147,8 @@ export const ProductDetailView: React.FC<ProductDetailViewProps> = ({
             <span>/</span>
             <Link href="/shop" className="hover:text-black">Shop</Link>
             <span>/</span>
-            <Link href={getCategoryHref(product.category)} className="hover:text-black">
-              {product.category}
+            <Link href={breadcrumb.href} className="hover:text-black">
+              {breadcrumb.label}
             </Link>
             <span>/</span>
             <span className="text-neutral-900 font-medium truncate max-w-xs">{product.name}</span>

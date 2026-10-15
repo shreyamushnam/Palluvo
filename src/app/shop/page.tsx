@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
 import { ShopContent } from "./ShopClient";
+import { SITE_URL } from "@/data/site";
 
 export const metadata: Metadata = {
   title: "Handcrafted Luxury Sarees, Blouses & Jewelry | PALLUVO",
@@ -13,7 +14,7 @@ export const metadata: Metadata = {
     title: "Handcrafted Luxury Sarees, Blouses & Jewelry | PALLUVO",
     description:
       "Explore PALLUVO's curated collection of authentic Indian handcrafted products. Pure silk & handloom sarees, embroidered designer blouses, and temple jewelry.",
-    url: "https://palluvo.com/shop",
+    url: `${SITE_URL}/shop`,
     siteName: "PALLUVO",
     locale: "en_IN",
     type: "website",

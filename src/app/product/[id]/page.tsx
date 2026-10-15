@@ -1,8 +1,9 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { PRODUCTS, getProductMetaDescription } from "@/data/products";
-import { getCategoryHref } from "@/data/categories";
+import { getProductBreadcrumb } from "@/data/categories";
 import { ProductDetailView } from "@/components/ecommerce/ProductDetailView";
+import { SITE_URL } from "@/data/site";
 
 interface ProductPageProps {
   params: Promise<{ id: string }>;
@@ -20,7 +21,7 @@ export async function generateMetadata({
 
   const title = `${product.name} | PALLUVO`;
   const description = getProductMetaDescription(product);
-  const canonicalUrl = `https://palluvo.com/product/${product.id}`;
+  const canonicalUrl = `${SITE_URL}/product/${product.id}`;
 
   return {
     title,
@@ -71,16 +72,18 @@ export default async function ProductDetailPage({ params }: ProductPageProps) {
     notFound();
   }
 
+  const breadcrumb = getProductBreadcrumb(product);
+
   const productAndBreadcrumbJsonLd = {
     "@context": "https://schema.org",
     "@graph": [
       {
         "@type": "Product",
-        "@id": `https://palluvo.com/product/${product.id}#product`,
+        "@id": `${SITE_URL}/product/${product.id}#product`,
         name: product.name,
         description: product.description,
         image: product.images.map((img) =>
-          img.startsWith("http") ? img : `https://palluvo.com${img}`
+          img.startsWith("http") ? img : `${SITE_URL}${img}`
         ),
         sku: product.id,
         category: product.category,
@@ -96,7 +99,7 @@ export default async function ProductDetailPage({ params }: ProductPageProps) {
           availability: product.inStock !== false
             ? "https://schema.org/InStock"
             : "https://schema.org/OutOfStock",
-          url: `https://palluvo.com/product/${product.id}`,
+          url: `${SITE_URL}/product/${product.id}`,
           seller: {
             "@type": "Organization",
             name: "PALLUVO",
@@ -105,31 +108,31 @@ export default async function ProductDetailPage({ params }: ProductPageProps) {
       },
       {
         "@type": "BreadcrumbList",
-        "@id": `https://palluvo.com/product/${product.id}#breadcrumb`,
+        "@id": `${SITE_URL}/product/${product.id}#breadcrumb`,
         itemListElement: [
           {
             "@type": "ListItem",
             position: 1,
             name: "Home",
-            item: "https://palluvo.com",
+            item: SITE_URL,
           },
           {
             "@type": "ListItem",
             position: 2,
             name: "Shop",
-            item: "https://palluvo.com/shop",
+            item: `${SITE_URL}/shop`,
           },
           {
             "@type": "ListItem",
             position: 3,
-            name: product.category,
-            item: `https://palluvo.com${getCategoryHref(product.category)}`,
+            name: breadcrumb.label,
+            item: `${SITE_URL}${breadcrumb.href}`,
           },
           {
             "@type": "ListItem",
             position: 4,
             name: product.name,
-            item: `https://palluvo.com/product/${product.id}`,
+            item: `${SITE_URL}/product/${product.id}`,
           },
         ],
       },

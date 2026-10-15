@@ -132,7 +132,7 @@ export default function AccountPage() {
   const handleSignInSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     const name = loginIdentifier ? loginIdentifier.split("@")[0] : "Radhika Sharma";
-    const email = loginIdentifier.includes("@") ? loginIdentifier : `${loginIdentifier || "radhika"}@palluvo.com`;
+    const email = loginIdentifier.includes("@") ? loginIdentifier : `${loginIdentifier || "radhika"}@palluvo.store`;
     login({ name: name.charAt(0).toUpperCase() + name.slice(1), email });
     showToast("Signed in to prototype session (local demo mode).");
     const targetRedirect = getSafeRedirectUrl(redirectUrl);
@@ -149,7 +149,7 @@ export default function AccountPage() {
   const handleRegisterSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     const name = regFullName.trim() || "Valued Connoisseur";
-    const email = regEmail.trim() || "member@palluvo.com";
+    const email = regEmail.trim() || "member@palluvo.store";
     login({ name, email });
     showToast("Prototype profile created in local session.");
     const targetRedirect = getSafeRedirectUrl(redirectUrl);

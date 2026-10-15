@@ -28,10 +28,43 @@ export function getCategoryCanonicalQuery(categoryNameOrQuery: string): string {
     return "Party+Wear";
   } else if (norm.includes("printed")) {
     return "Printed";
+  } else if (norm.includes("blouse")) {
+    return "Blouses";
+  } else if (norm.includes("jewel") || norm.includes("jhumka") || norm.includes("accessor")) {
+    return "Jewelry";
   } else {
     const root = norm.replace(/sarees?/g, "").trim();
     return root ? encodeURIComponent(root) : "";
   }
+}
+
+export interface ProductBreadcrumb {
+  label: string;
+  href: string;
+}
+
+/**
+ * Returns product-type-aware breadcrumb metadata for PDP navigation and JSON-LD structured data.
+ * Prevents non-sarees (such as blouses and jewelry) from linking to saree-only category filters.
+ */
+export function getProductBreadcrumb(product: Product): ProductBreadcrumb {
+  const type = getProductType(product);
+  if (type === "blouse") {
+    return {
+      label: "Blouses",
+      href: "/shop?category=Blouses",
+    };
+  }
+  if (type === "jewelry") {
+    return {
+      label: "Jewelry",
+      href: "/shop?category=Jewelry",
+    };
+  }
+  return {
+    label: product.category,
+    href: getCategoryHref(product.category),
+  };
 }
 
 export function getCategoryHref(categoryNameOrQuery: string): string {
@@ -60,6 +93,10 @@ export function matchesCategory(product: Product, category: string): boolean {
     return product.category.toLowerCase() === "party wear" || product.occasion.toLowerCase() === "party";
   } else if (norm.includes("printed")) {
     return isSaree && product.category.toLowerCase() === "printed";
+  } else if (norm.includes("blouse")) {
+    return getProductType(product) === "blouse";
+  } else if (norm.includes("jewel") || norm.includes("jhumka") || norm.includes("accessor")) {
+    return getProductType(product) === "jewelry";
   } else {
     const isSareeQuery = norm.includes("saree");
     if (isSareeQuery && !isSaree) return false;
