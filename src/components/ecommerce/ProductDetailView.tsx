@@ -555,7 +555,7 @@ export const ProductDetailView: React.FC<ProductDetailViewProps> = ({
                     aria-labelledby="accordion-trigger-shipping"
                   >
                     <p className="pb-3 text-neutral-600 leading-relaxed font-sans">
-                      Free standard shipping on all orders of ₹1,999 or more. Dispatches within 24-48 hours. Delivered safely in a tamper-proof luxury keepsake box.
+                      Under our brand shipping policy, orders of ₹1,999 or more receive complimentary insured shipping (illustrative delivery: 3–5 business days for metro cities, 5–7 business days pan-India in tamper-proof luxury keepsake packaging). Please note that orders placed through this prototype storefront are local simulations for demonstration and do not trigger physical courier dispatch or real shipments.
                     </p>
                   </div>
                 )}

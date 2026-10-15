@@ -17,6 +17,14 @@ interface ToastInfo {
   type?: "success" | "info";
 }
 
+export interface UserProfile {
+  name: string;
+  email: string;
+  mobile?: string;
+  isConnoisseur?: boolean;
+  preferredDrape?: string;
+}
+
 interface StoreContextType {
   isHydrated: boolean;
   cart: CartItem[];
@@ -36,8 +44,8 @@ interface StoreContextType {
   cartCount: number;
   wishlistCount: number;
   isLoggedIn: boolean;
-  user: { name: string; email: string } | null;
-  login: (user?: { name: string; email: string }) => void;
+  user: UserProfile | null;
+  login: (user?: UserProfile) => void;
   logout: () => void;
   addToCart: (product: Product, quantity?: number, selectedColor?: string, blouseOption?: string) => void;
   removeFromCart: (productId: string, selectedColor?: string, blouseOption?: string) => void;
@@ -137,7 +145,7 @@ export function validateAndNormalizeCart(raw: unknown): CartItem[] {
  */
 export function validateAndNormalizeAuth(raw: unknown): {
   isLoggedIn: boolean;
-  user: { name: string; email: string } | null;
+  user: UserProfile | null;
 } {
   if (!raw || typeof raw !== "object" || Array.isArray(raw)) {
     return { isLoggedIn: false, user: null };
@@ -154,11 +162,17 @@ export function validateAndNormalizeAuth(raw: unknown): {
   if (!rawUser || typeof rawUser !== "object" || Array.isArray(rawUser)) {
     return {
       isLoggedIn: true,
-      user: { name: "Radhika Sharma", email: "radhika.sharma@example.com" },
+      user: {
+        name: "Radhika Sharma",
+        email: "radhika.sharma@example.com",
+        mobile: "+91 98765 43210",
+        isConnoisseur: true,
+        preferredDrape: "Nivi Style / Bengali Festive",
+      },
     };
   }
 
-  const userObj = rawUser as { name?: unknown; email?: unknown };
+  const userObj = rawUser as Record<string, unknown>;
   const name =
     typeof userObj.name === "string" && userObj.name.trim().length > 0
       ? userObj.name.trim()
@@ -167,10 +181,26 @@ export function validateAndNormalizeAuth(raw: unknown): {
     typeof userObj.email === "string" && userObj.email.trim().length > 0
       ? userObj.email.trim()
       : "radhika.sharma@example.com";
+  const mobile =
+    typeof userObj.mobile === "string" && userObj.mobile.trim().length > 0
+      ? userObj.mobile.trim()
+      : undefined;
+  const isConnoisseur =
+    typeof userObj.isConnoisseur === "boolean" ? userObj.isConnoisseur : undefined;
+  const preferredDrape =
+    typeof userObj.preferredDrape === "string" && userObj.preferredDrape.trim().length > 0
+      ? userObj.preferredDrape.trim()
+      : undefined;
 
   return {
     isLoggedIn: true,
-    user: { name, email },
+    user: {
+      name,
+      email,
+      ...(mobile !== undefined ? { mobile } : {}),
+      ...(isConnoisseur !== undefined ? { isConnoisseur } : {}),
+      ...(preferredDrape !== undefined ? { preferredDrape } : {}),
+    },
   };
 }
 
@@ -365,7 +395,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const [appliedCoupon, setAppliedCoupon] = useState<string | null>(null);
   const [toast, setToast] = useState<ToastInfo | null>(null);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
-  const [user, setUser] = useState<{ name: string; email: string } | null>(null);
+  const [user, setUser] = useState<UserProfile | null>(null);
 
   // Load from localStorage on client mount with per-key isolation
   useEffect(() => {
@@ -468,9 +498,17 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     document.documentElement.setAttribute("data-auth", isLoggedIn ? "in" : "out");
   }, [isLoggedIn, isHydrated]);
 
-  const login = useCallback((userData?: { name: string; email: string }) => {
+  const login = useCallback((userData?: UserProfile) => {
     setIsLoggedIn(true);
-    setUser(userData || { name: "Radhika Sharma", email: "radhika.sharma@example.com" });
+    setUser(
+      userData || {
+        name: "Radhika Sharma",
+        email: "radhika.sharma@example.com",
+        mobile: "+91 98765 43210",
+        isConnoisseur: true,
+        preferredDrape: "Nivi Style / Bengali Festive",
+      }
+    );
   }, []);
 
   const logout = useCallback(() => {

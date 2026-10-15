@@ -78,7 +78,9 @@ export default function CheckoutPage() {
   // Address Form State — Dynamic based on auth state (empty for guest checkout)
   const [shippingAddress, setShippingAddress] = useState({
     fullName: defaultAddr ? defaultAddr.name : (isLoggedIn && user?.name ? user.name : ""),
-    phone: defaultAddr && typeof defaultAddr.phone === "string" ? defaultAddr.phone.replace("+91 ", "").replace(/\s/g, "") : "",
+    phone: defaultAddr && typeof defaultAddr.phone === "string"
+      ? defaultAddr.phone.replace("+91 ", "").replace(/\s/g, "")
+      : (isLoggedIn && user?.mobile ? user.mobile.replace("+91 ", "").replace(/\s/g, "") : ""),
     email: isLoggedIn && user?.email ? user.email : "",
     addressLine1: defaultAddr ? defaultAddr.addressLine : "",
     landmark: "",
@@ -98,7 +100,9 @@ export default function CheckoutPage() {
         setShippingAddress((prev) => ({
           ...prev,
           fullName: active.name || "",
-          phone: typeof active.phone === "string" ? active.phone.replace("+91 ", "").replace(/\s/g, "") : "",
+          phone: typeof active.phone === "string"
+            ? active.phone.replace("+91 ", "").replace(/\s/g, "")
+            : (prev.phone || (user?.mobile ? user.mobile.replace("+91 ", "").replace(/\s/g, "") : "")),
           email: prev.email || user?.email || "",
           addressLine1: active.addressLine || "",
           city: active.city || "",
@@ -107,7 +111,7 @@ export default function CheckoutPage() {
         }));
       }
     }
-  }, [isLoggedIn, validAddresses, selectedAddressId, user?.email]);
+  }, [isLoggedIn, validAddresses, selectedAddressId, user?.email, user?.mobile]);
 
   // Delivery & Payment selection
   const [deliveryMethod, setDeliveryMethod] = useState<"standard" | "express">("standard");

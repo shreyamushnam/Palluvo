@@ -141,18 +141,22 @@ export default function AccountPage() {
   const [profile, setProfile] = useState({
     fullName: user?.name || "Radhika Sharma",
     email: user?.email || "radhika.sharma@example.com",
-    mobile: "+91 98765 43210",
-    preferredDrape: "Nivi Style / Bengali Festive",
+    mobile: user?.mobile || "+91 98765 43210",
+    preferredDrape: user?.preferredDrape || "Nivi Style / Bengali Festive",
+    isConnoisseur: user?.isConnoisseur !== undefined ? user.isConnoisseur : true,
   });
   const [profileSuccessMessage, setProfileSuccessMessage] = useState(false);
 
   // Sync profile when auth user updates
   React.useEffect(() => {
-    if (user?.name || user?.email) {
+    if (user) {
       setProfile((prev) => ({
         ...prev,
         fullName: user.name || prev.fullName,
         email: user.email || prev.email,
+        mobile: user.mobile || prev.mobile,
+        preferredDrape: user.preferredDrape || prev.preferredDrape,
+        isConnoisseur: user.isConnoisseur !== undefined ? user.isConnoisseur : prev.isConnoisseur,
       }));
     }
   }, [user]);
@@ -161,14 +165,27 @@ export default function AccountPage() {
     e.preventDefault();
     const name = loginIdentifier ? loginIdentifier.split("@")[0] : "Radhika Sharma";
     const email = loginIdentifier.includes("@") ? loginIdentifier : `${loginIdentifier || "radhika"}@palluvo.store`;
-    login({ name: name.charAt(0).toUpperCase() + name.slice(1), email });
+    const formattedName = name.charAt(0).toUpperCase() + name.slice(1);
+    login({
+      name: formattedName,
+      email,
+      mobile: profile.mobile || "+91 98765 43210",
+      isConnoisseur: profile.isConnoisseur ?? true,
+      preferredDrape: profile.preferredDrape,
+    });
     showToast("Signed in to prototype session (local demo mode).");
     const targetRedirect = getSafeRedirectUrl(redirectUrl);
     router.push(targetRedirect);
   };
 
   const handleDemoSignIn = () => {
-    login({ name: "Radhika Sharma", email: "radhika.sharma@example.com" });
+    login({
+      name: "Radhika Sharma",
+      email: "radhika.sharma@example.com",
+      mobile: "+91 98765 43210",
+      isConnoisseur: true,
+      preferredDrape: "Nivi Style / Bengali Festive",
+    });
     showToast("Signed in as Radhika Sharma (Demo Account)");
     const targetRedirect = getSafeRedirectUrl(redirectUrl);
     router.push(targetRedirect);
@@ -178,7 +195,21 @@ export default function AccountPage() {
     e.preventDefault();
     const name = regFullName.trim() || "Valued Connoisseur";
     const email = regEmail.trim() || "member@palluvo.store";
-    login({ name, email });
+    const mobile = regMobile.trim() || "+91 98765 43210";
+    login({
+      name,
+      email,
+      mobile,
+      isConnoisseur: regConnoisseur,
+      preferredDrape: "Nivi Style / Bengali Festive",
+    });
+    setProfile({
+      fullName: name,
+      email,
+      mobile,
+      preferredDrape: "Nivi Style / Bengali Festive",
+      isConnoisseur: regConnoisseur,
+    });
     showToast("Prototype profile created in local session.");
     const targetRedirect = getSafeRedirectUrl(redirectUrl);
     router.push(targetRedirect);
@@ -242,6 +273,13 @@ export default function AccountPage() {
   // Profile Actions
   const handleSaveProfile = (e: React.FormEvent) => {
     e.preventDefault();
+    login({
+      name: profile.fullName,
+      email: profile.email,
+      mobile: profile.mobile,
+      isConnoisseur: profile.isConnoisseur,
+      preferredDrape: profile.preferredDrape,
+    });
     setProfileSuccessMessage(true);
     showToast("Profile details updated successfully!");
     setTimeout(() => {
@@ -556,7 +594,9 @@ export default function AccountPage() {
             <div className="flex items-center gap-3">
               <div className="inline-flex items-center gap-2 px-3 py-1 bg-white border border-[#E8E2D9] rounded-full text-xs font-semibold text-[#541920]">
                 <ShieldCheck className="w-3.5 h-3.5 text-[#C5A575]" />
-                <span>Prototype Connoisseur Session</span>
+                <span>
+                  {profile.isConnoisseur ? "Connoisseur Circle Member" : "Standard Member Session"}
+                </span>
               </div>
               <button
                 type="button"
@@ -999,6 +1039,20 @@ export default function AccountPage() {
                         className="w-full min-h-[44px] px-3.5 py-2.5 border border-[#DCD5C9] rounded-xs focus:border-[#541920] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#541920] placeholder:text-neutral-500"
                       />
                     </div>
+                  </div>
+
+                  <div className="pt-1">
+                    <label htmlFor="profile-connoisseur" className="flex items-start gap-2.5 cursor-pointer text-xs text-neutral-700 leading-normal">
+                      <input
+                        id="profile-connoisseur"
+                        name="isConnoisseur"
+                        type="checkbox"
+                        checked={profile.isConnoisseur}
+                        onChange={(e) => setProfile({ ...profile, isConnoisseur: e.target.checked })}
+                        className="w-4 h-4 rounded-xs text-[#541920] focus:ring-[#541920] mt-0.5 shrink-0"
+                      />
+                      <span>Palluvo Connoisseur Circle member (early access to private handloom drops and bridal previews)</span>
+                    </label>
                   </div>
 
                   <div className="pt-2 flex items-center gap-3">
