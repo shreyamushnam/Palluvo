@@ -170,15 +170,24 @@ export function setAccountMetadata(meta: Record<string, AccountAliasMeta>): void
 
 export interface MigrationMeta {
   migratedCollisionIds: Record<string, string[]>;
+  quarantinedCollisionIds: Record<string, string[]>;
+  quarantinedLegacyBuckets: Record<string, { quarantinedAt: number; emails: string[] }>;
 }
 
 export function getMigrationMetadata(): MigrationMeta {
-  if (typeof window === "undefined" || !window.localStorage) return { migratedCollisionIds: {} };
+  if (typeof window === "undefined" || !window.localStorage) {
+    return { migratedCollisionIds: {}, quarantinedCollisionIds: {}, quarantinedLegacyBuckets: {} };
+  }
   try {
     const raw = localStorage.getItem(MIGRATION_META_KEY);
-    return raw ? JSON.parse(raw) : { migratedCollisionIds: {} };
+    const parsed = raw ? JSON.parse(raw) : {};
+    return {
+      migratedCollisionIds: parsed.migratedCollisionIds || {},
+      quarantinedCollisionIds: parsed.quarantinedCollisionIds || {},
+      quarantinedLegacyBuckets: parsed.quarantinedLegacyBuckets || {},
+    };
   } catch {
-    return { migratedCollisionIds: {} };
+    return { migratedCollisionIds: {}, quarantinedCollisionIds: {}, quarantinedLegacyBuckets: {} };
   }
 }
 
@@ -186,6 +195,73 @@ export function setMigrationMetadata(meta: MigrationMeta): void {
   if (typeof window === "undefined" || !window.localStorage) return;
   try {
     localStorage.setItem(MIGRATION_META_KEY, JSON.stringify(meta));
+  } catch {}
+}
+
+/**
+ * Safely quarantines ambiguous or unverified legacy customer data buckets (orders and addresses)
+ * by moving them to dedicated quarantine keys ('palluvo_quarantine_*') and clearing active storage keys.
+ * This guarantees that shared collision buckets or unauthenticated legacy namespaces cannot be hydrated
+ * by an alias or user session that did not definitively own all records in that bucket.
+ */
+export function quarantineLegacyBucket(accountId: string, relatedEmails?: string[]): void {
+  if (typeof window === "undefined" || !window.localStorage) return;
+  try {
+    const trimmedId = accountId.trim();
+    const safeId = trimmedId.toLowerCase().replace(/[^a-z0-9_]/g, (ch) => `_${ch.charCodeAt(0).toString(16)}_`);
+
+    const keysToQuarantine = new Set<string>([
+      `palluvo_ecommerce_orders_${safeId}`,
+      `palluvo_ecommerce_addresses_${safeId}`,
+      `palluvo_ecommerce_orders_${trimmedId}`,
+      `palluvo_ecommerce_addresses_${trimmedId}`,
+    ]);
+
+    if (relatedEmails) {
+      for (const email of relatedEmails) {
+        if (!email) continue;
+        const lowerEmail = email.toLowerCase().trim();
+        const legacySanitized = lowerEmail.replace(/[^a-z0-9_.-]/g, "_");
+        keysToQuarantine.add(`palluvo_ecommerce_orders_${legacySanitized}`);
+        keysToQuarantine.add(`palluvo_ecommerce_orders_usr_email_${legacySanitized}`);
+        keysToQuarantine.add(`palluvo_ecommerce_addresses_${legacySanitized}`);
+        keysToQuarantine.add(`palluvo_ecommerce_addresses_usr_email_${legacySanitized}`);
+        keysToQuarantine.add(`palluvo_ecommerce_orders_${lowerEmail}`);
+        keysToQuarantine.add(`palluvo_ecommerce_addresses_${lowerEmail}`);
+      }
+    }
+
+    for (const key of keysToQuarantine) {
+      try {
+        const val = localStorage.getItem(key);
+        if (val !== null) {
+          try {
+            localStorage.setItem(`palluvo_quarantine_${key}`, val);
+          } catch {}
+          try {
+            localStorage.removeItem(key);
+          } catch {}
+        }
+      } catch {}
+    }
+
+    const migrationMeta = getMigrationMetadata();
+    migrationMeta.quarantinedLegacyBuckets = migrationMeta.quarantinedLegacyBuckets || {};
+    migrationMeta.quarantinedCollisionIds = migrationMeta.quarantinedCollisionIds || {};
+
+    if (!migrationMeta.quarantinedLegacyBuckets[trimmedId]) {
+      migrationMeta.quarantinedLegacyBuckets[trimmedId] = {
+        quarantinedAt: Date.now(),
+        emails: relatedEmails ? Array.from(new Set(relatedEmails.map((e) => e.toLowerCase().trim()))) : [],
+      };
+    }
+    if (relatedEmails && relatedEmails.length > 0) {
+      const existing = migrationMeta.quarantinedCollisionIds[trimmedId] || [];
+      migrationMeta.quarantinedCollisionIds[trimmedId] = Array.from(
+        new Set([...existing, ...relatedEmails.map((e) => e.toLowerCase().trim())])
+      );
+    }
+    setMigrationMetadata(migrationMeta);
   } catch {}
 }
 
@@ -223,7 +299,52 @@ export function migrateLegacyAccountAliases(): void {
   if (typeof window === "undefined" || !window.localStorage) return;
   try {
     const raw = localStorage.getItem(ACCOUNT_MAP_KEY);
-    if (!raw) return;
+    if (!raw) {
+      // Identity map is missing. On older or partially migrated browsers, check if there is an
+      // active/persisted auth session with a collision-prone legacy usr_email_* ID.
+      // When ownership cannot be established from map/metadata, quarantine the legacy namespace
+      // and re-key the session to an injective ID rather than hydrating unverified customer data.
+      let activeAuthUser: { id?: string; email?: string } | null = null;
+      try {
+        const authRaw = localStorage.getItem("palluvo_ecommerce_auth");
+        if (authRaw) {
+          const parsed = JSON.parse(authRaw);
+          if (parsed?.isLoggedIn && parsed?.user && typeof parsed.user === "object") {
+            activeAuthUser = parsed.user;
+          }
+        }
+      } catch {}
+
+      if (activeAuthUser?.email && activeAuthUser?.id) {
+        const lowerEmail = activeAuthUser.email.toLowerCase().trim();
+        const expectedInjectiveId = lowerEmail === "radhika.sharma@example.com"
+          ? "usr_demo_radhika"
+          : `usr_email_${encodeIdentifierToId(lowerEmail)}`;
+
+        if (activeAuthUser.id.startsWith("usr_email_") && activeAuthUser.id !== expectedInjectiveId) {
+          quarantineLegacyBucket(activeAuthUser.id, [lowerEmail]);
+          const newMap: Record<string, string> = { [lowerEmail]: expectedInjectiveId };
+          try {
+            localStorage.setItem(ACCOUNT_MAP_KEY, JSON.stringify(newMap));
+          } catch {}
+          const migrationMeta = getMigrationMetadata();
+          migrationMeta.migratedCollisionIds[activeAuthUser.id] = [lowerEmail];
+          setMigrationMetadata(migrationMeta);
+          try {
+            const authRaw = localStorage.getItem("palluvo_ecommerce_auth");
+            if (authRaw) {
+              const parsed = JSON.parse(authRaw);
+              if (parsed?.user) {
+                parsed.user.id = expectedInjectiveId;
+                localStorage.setItem("palluvo_ecommerce_auth", JSON.stringify(parsed));
+              }
+            }
+          } catch {}
+        }
+      }
+      return;
+    }
+
     const map = JSON.parse(raw);
     if (!map || typeof map !== "object" || Array.isArray(map)) return;
     let modified = false;
@@ -273,22 +394,22 @@ export function migrateLegacyAccountAliases(): void {
           ? "usr_demo_radhika"
           : `usr_email_${encodeIdentifierToId(lowerKey)}`;
 
-        // Check if this key is known as a changed-email alias or actively authenticated user
-        const isKnownChangedEmail = meta[lowerKey]?.type === "changed_email" && meta[lowerKey]?.accountId === trimmedVal;
-        const isActiveAuthOwnership = activeUserEmail === lowerKey && activeUserId === trimmedVal;
-
-        if (isKnownChangedEmail || isActiveAuthOwnership) {
-          if (!meta[lowerKey]) {
-            meta[lowerKey] = { accountId: trimmedVal, type: "changed_email", updatedAt: Date.now() };
-          }
-          continue;
-        }
-
         // A confirmed collision occurs when multiple distinct emails are mapped to the same ID in the identity map
         const collisionEmails = emailKeysByVal.get(trimmedVal);
         const isCollisionGroup = (collisionEmails?.size ?? 0) > 1;
 
         if (isCollisionGroup) {
+          // Always quarantine the ambiguous legacy bucket for this collision group so neither alias loads it
+          if (!migrationMeta.quarantinedLegacyBuckets?.[trimmedVal]) {
+            quarantineLegacyBucket(trimmedVal, Array.from(collisionEmails!));
+            migrationMeta.quarantinedLegacyBuckets[trimmedVal] = {
+              quarantinedAt: Date.now(),
+              emails: Array.from(collisionEmails!),
+            };
+            migrationMeta.quarantinedCollisionIds[trimmedVal] = Array.from(collisionEmails!);
+            modified = true;
+          }
+
           const groupHasOwner = Array.from(collisionEmails!).some(
             (e) => (activeUserEmail === e && activeUserId === trimmedVal) || (meta[e]?.type === "changed_email" && meta[e]?.accountId === trimmedVal)
           );
@@ -298,6 +419,10 @@ export function migrateLegacyAccountAliases(): void {
             if (!isOwner) {
               map[key] = expectedInjectiveId;
               modified = true;
+            } else {
+              if (!meta[lowerKey]) {
+                meta[lowerKey] = { accountId: trimmedVal, type: "changed_email", updatedAt: Date.now() };
+              }
             }
           } else {
             // Neither email is proven owner; both collided under the legacy sanitizer
@@ -307,6 +432,18 @@ export function migrateLegacyAccountAliases(): void {
               migrationMeta.migratedCollisionIds[trimmedVal] = Array.from(collisionEmails!);
             }
           }
+          continue;
+        }
+
+        // Check if this key is known as a changed-email alias or actively authenticated user
+        const isKnownChangedEmail = meta[lowerKey]?.type === "changed_email" && meta[lowerKey]?.accountId === trimmedVal;
+        const isActiveAuthOwnership = activeUserEmail === lowerKey && activeUserId === trimmedVal;
+
+        if (isKnownChangedEmail || isActiveAuthOwnership) {
+          if (!meta[lowerKey]) {
+            meta[lowerKey] = { accountId: trimmedVal, type: "changed_email", updatedAt: Date.now() };
+          }
+          continue;
         }
         // If there is NO collision (only 1 email mapped to trimmedVal), NEVER remap!
         // Preserve aliases to an existing immutable account ID!
@@ -365,24 +502,38 @@ export function lookupAccountId(identifier?: string | null): string | null {
         const activeUserEmail = activeAuthUser?.email ? activeAuthUser.email.toLowerCase().trim() : null;
         const activeUserId = activeAuthUser?.id ? activeAuthUser.id.trim() : null;
 
+        // Count distinct emails in map pointing to this val
+        let collisionCount = 0;
+        let otherEmailHasOwner = false;
+        const collisionEmails: string[] = [];
+        for (const [k, v] of Object.entries(map)) {
+          if (typeof v === "string" && v.trim() === val && k.toLowerCase().includes("@")) {
+            collisionCount++;
+            const otherKey = k.toLowerCase().trim();
+            collisionEmails.push(otherKey);
+            if (otherKey !== key && ((activeUserEmail === otherKey && activeUserId === val) || meta[otherKey]?.type === "changed_email")) {
+              otherEmailHasOwner = true;
+            }
+          }
+        }
+
+        if (collisionCount > 1) {
+          if (!migrationMeta.quarantinedLegacyBuckets?.[val]) {
+            quarantineLegacyBucket(val, collisionEmails);
+            migrationMeta.quarantinedLegacyBuckets[val] = {
+              quarantinedAt: Date.now(),
+              emails: collisionEmails,
+            };
+            migrationMeta.quarantinedCollisionIds[val] = collisionEmails;
+            setMigrationMetadata(migrationMeta);
+          }
+        }
+
         const isKnownChangedEmail = meta[key]?.type === "changed_email" && meta[key]?.accountId === val;
         const isActiveAuthOwnership = activeUserEmail === key && activeUserId === val;
 
         if (isKnownChangedEmail || isActiveAuthOwnership) {
           return val;
-        }
-
-        // Count distinct emails in map pointing to this val
-        let collisionCount = 0;
-        let otherEmailHasOwner = false;
-        for (const [k, v] of Object.entries(map)) {
-          if (typeof v === "string" && v.trim() === val && k.toLowerCase().includes("@")) {
-            collisionCount++;
-            const otherKey = k.toLowerCase().trim();
-            if (otherKey !== key && ((activeUserEmail === otherKey && activeUserId === val) || meta[otherKey]?.type === "changed_email")) {
-              otherEmailHasOwner = true;
-            }
-          }
         }
 
         if (otherEmailHasOwner) {
@@ -597,12 +748,41 @@ export function validateAndNormalizeAuth(raw: unknown): {
 
     // Strictly preserve existing immutable account IDs!
     // Only upgrade if lookupAccountId determined this account was part of a confirmed collision
-    // that was migrated to a distinct injective ID.
+    // that was migrated to a distinct injective ID, or if ownership cannot be established from map/metadata for a legacy usr_email_* ID.
     const migrationMeta = getMigrationMetadata();
     const wasMigratedCollision = (migrationMeta.migratedCollisionIds[id] || []).includes(lowerEmail);
 
     if (wasMigratedCollision) {
       id = expectedInjectiveId;
+    } else if (id.startsWith("usr_email_") && id !== expectedInjectiveId) {
+      let ownershipEstablished = false;
+      try {
+        if (typeof window !== "undefined" && window.localStorage) {
+          const rawMap = localStorage.getItem(ACCOUNT_MAP_KEY);
+          if (rawMap) {
+            const parsedMap = JSON.parse(rawMap);
+            if (parsedMap && typeof parsedMap === "object" && parsedMap[lowerEmail] === id) {
+              const meta = getAccountMetadata();
+              let collisionCount = 0;
+              for (const [k, v] of Object.entries(parsedMap)) {
+                if (typeof v === "string" && v.trim() === id && k.toLowerCase().includes("@")) {
+                  collisionCount++;
+                }
+              }
+              if (collisionCount <= 1 || (meta[lowerEmail]?.type === "changed_email" && meta[lowerEmail]?.accountId === id)) {
+                ownershipEstablished = true;
+              }
+            }
+          }
+        }
+      } catch {}
+
+      if (!ownershipEstablished) {
+        quarantineLegacyBucket(id, [lowerEmail]);
+        migrationMeta.migratedCollisionIds[id] = Array.from(new Set([...(migrationMeta.migratedCollisionIds[id] || []), lowerEmail]));
+        setMigrationMetadata(migrationMeta);
+        id = expectedInjectiveId;
+      }
     }
   }
 
@@ -827,6 +1007,9 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
   // Load from localStorage on client mount with per-key isolation
   useEffect(() => {
+    // Run alias migrations and quarantine ambiguous legacy buckets first
+    migrateLegacyAccountAliases();
+
     // 1. Auth: validate independently so failures never block cart/orders/addresses
     try {
       const savedAuth = localStorage.getItem("palluvo_ecommerce_auth");
@@ -879,9 +1062,6 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       // Storage access error fallback
     }
 
-    // Migrate legacy collision-prone aliases to distinct injective IDs
-    migrateLegacyAccountAliases();
-
     // Discard legacy browser-wide keys to prevent unscoped customer data disclosure on upgraded shared browsers
     try {
       localStorage.removeItem("palluvo_ecommerce_orders");
@@ -931,6 +1111,30 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     const isDemoUser = (user.id === "usr_demo_radhika") || (user.email || "").toLowerCase() === "radhika.sharma@example.com";
     const ordersKey = getUserStorageKey(user, "orders");
     const addressesKey = getUserStorageKey(user, "addresses");
+
+    // Check if user has an unverified legacy usr_email_* ID when map is missing
+    if (user.id && user.id.startsWith("usr_email_") && user.email) {
+      const lowerEmail = user.email.toLowerCase().trim();
+      const expectedInjectiveId = lowerEmail === "radhika.sharma@example.com"
+        ? "usr_demo_radhika"
+        : `usr_email_${encodeIdentifierToId(lowerEmail)}`;
+
+      if (user.id !== expectedInjectiveId) {
+        let mapMissing = false;
+        try {
+          if (!localStorage.getItem(ACCOUNT_MAP_KEY)) {
+            mapMissing = true;
+          }
+        } catch {}
+
+        if (mapMissing) {
+          quarantineLegacyBucket(user.id, [lowerEmail]);
+          setOrders(isDemoUser ? MOCK_ORDERS : []);
+          setAddresses(isDemoUser ? MOCK_ADDRESSES : []);
+          return;
+        }
+      }
+    }
 
     // Clean up any legacy ambiguous collision-prone keys without copying to avoid attributing shared data to new IDs
     if (user.email) {
