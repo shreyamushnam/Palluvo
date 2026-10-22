@@ -218,7 +218,10 @@ export default function AccountPage() {
       accountId = (trimmedId.toLowerCase() === "radhika.sharma@example.com")
         ? "usr_demo_radhika"
         : (existingId || `usr_email_${safeEmail}`);
-      registerAccountAlias(trimmedId, accountId);
+      registerAccountAlias(trimmedId, accountId, {
+        type: "primary",
+        ownerEmail: trimmedId.toLowerCase().trim(),
+      });
     } else {
       // Must be a valid Indian mobile number
       if (!isValidIndianMobile(trimmedId)) {
@@ -241,8 +244,21 @@ export default function AccountPage() {
       if (linkedEmail) {
         resolvedEmail = linkedEmail;
       }
-      registerAccountAlias(tenDigits, accountId);
-      registerAccountAlias(resolvedEmail, accountId);
+      const isPlaceholder = resolvedEmail.startsWith("connoisseur.") || resolvedEmail.startsWith("member@");
+      const actualOwnerEmail = !isPlaceholder ? resolvedEmail.toLowerCase().trim() : undefined;
+
+      registerAccountAlias(tenDigits, accountId, {
+        type: "phone",
+        ownerEmail: actualOwnerEmail,
+        phone: tenDigits,
+      });
+      if (actualOwnerEmail) {
+        registerAccountAlias(actualOwnerEmail, accountId, {
+          type: "primary",
+          ownerEmail: actualOwnerEmail,
+          phone: tenDigits,
+        });
+      }
     }
 
     login({
@@ -326,8 +342,23 @@ export default function AccountPage() {
       ? `usr_phone_${tenDigits}`
       : `usr_email_${encodeIdentifierToId(email)}`;
 
-    if (tenDigits) registerAccountAlias(tenDigits, accountId);
-    if (email) registerAccountAlias(email, accountId);
+    const isPlaceholderEmail = email.startsWith("member@") || email.startsWith("connoisseur.");
+    const actualOwnerEmail = !isPlaceholderEmail ? email.toLowerCase().trim() : undefined;
+
+    if (tenDigits) {
+      registerAccountAlias(tenDigits, accountId, {
+        type: "phone",
+        ownerEmail: actualOwnerEmail,
+        phone: tenDigits,
+      });
+    }
+    if (actualOwnerEmail) {
+      registerAccountAlias(actualOwnerEmail, accountId, {
+        type: "primary",
+        ownerEmail: actualOwnerEmail,
+        phone: tenDigits || undefined,
+      });
+    }
 
     login({
       id: accountId,
@@ -483,9 +514,15 @@ export default function AccountPage() {
     registerAccountAlias(trimmedEmail, accountId, {
       type: "changed_email",
       previousEmail: user?.email ? user.email.toLowerCase().trim() : undefined,
+      ownerEmail: trimmedEmail,
+      phone: mobileTen || undefined,
     });
     if (mobileTen) {
-      registerAccountAlias(mobileTen, accountId, { type: "phone" });
+      registerAccountAlias(mobileTen, accountId, {
+        type: "phone",
+        ownerEmail: trimmedEmail,
+        phone: mobileTen,
+      });
     }
 
     login({

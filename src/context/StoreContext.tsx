@@ -148,7 +148,12 @@ export interface AccountAliasMeta {
   accountId: string;
   type?: "primary" | "changed_email" | "phone";
   ownerEmail?: string;
+  phone?: string;
   previousEmail?: string;
+  status?: "active" | "unresolved";
+  candidateAccountIds?: string[];
+  candidateEmails?: string[];
+  legacyId?: string;
   createdAt?: number;
   updatedAt?: number;
 }
@@ -177,6 +182,12 @@ export interface MigrationMeta {
   tombstonedKeys?: Record<string, boolean>;
   failedQuarantineKeys?: Record<string, boolean>;
   rekeyedOwnerIds?: Record<string, string>;
+  unresolvedPhoneAliases?: Record<string, {
+    legacyId: string;
+    candidateAccountIds: string[];
+    candidateEmails: string[];
+    quarantinedAt: number;
+  }>;
 }
 
 export function getMigrationMetadata(): MigrationMeta {
@@ -188,6 +199,7 @@ export function getMigrationMetadata(): MigrationMeta {
       tombstonedKeys: {},
       failedQuarantineKeys: {},
       rekeyedOwnerIds: {},
+      unresolvedPhoneAliases: {},
     };
   }
   try {
@@ -200,6 +212,7 @@ export function getMigrationMetadata(): MigrationMeta {
       tombstonedKeys: parsed.tombstonedKeys || {},
       failedQuarantineKeys: parsed.failedQuarantineKeys || {},
       rekeyedOwnerIds: parsed.rekeyedOwnerIds || {},
+      unresolvedPhoneAliases: parsed.unresolvedPhoneAliases || {},
     };
   } catch {
     return {
@@ -209,6 +222,7 @@ export function getMigrationMetadata(): MigrationMeta {
       tombstonedKeys: {},
       failedQuarantineKeys: {},
       rekeyedOwnerIds: {},
+      unresolvedPhoneAliases: {},
     };
   }
 }
@@ -458,15 +472,114 @@ export function lookupEmailByAccountId(accountId?: string | null): string | null
   if (!targetId) return null;
   try {
     const raw = localStorage.getItem(ACCOUNT_MAP_KEY);
-    if (!raw) return null;
-    const map = JSON.parse(raw);
-    if (!map || typeof map !== "object") return null;
-    for (const [k, v] of Object.entries(map)) {
-      if (typeof v === "string" && v.trim() === targetId && k.includes("@") && !k.startsWith("connoisseur.")) {
+    if (raw) {
+      const map = JSON.parse(raw);
+      if (map && typeof map === "object") {
+        for (const [k, v] of Object.entries(map)) {
+          if (typeof v === "string" && v.trim() === targetId && k.includes("@") && !k.startsWith("connoisseur.")) {
+            return k.toLowerCase().trim();
+          }
+        }
+      }
+    }
+    const meta = getAccountMetadata();
+    for (const [k, m] of Object.entries(meta)) {
+      if (m?.accountId === targetId && k.includes("@") && !k.startsWith("connoisseur.")) {
         return k.toLowerCase().trim();
+      }
+      if (m?.accountId === targetId && m?.ownerEmail && !m.ownerEmail.startsWith("connoisseur.")) {
+        return m.ownerEmail.toLowerCase().trim();
       }
     }
   } catch {}
+  return null;
+}
+
+/**
+ * Scans order and address records in the legacy storage bucket or its quarantine backup
+ * to associate a phone alias with an email belonging to candidate account owners.
+ */
+export function findOwnerEmailForPhoneInRecords(
+  phoneDigits: string,
+  candidateEmails: string[],
+  legacyAccountId: string
+): string | null {
+  if (typeof window === "undefined" || !window.localStorage) return null;
+  if (!phoneDigits || !candidateEmails.length || !legacyAccountId) return null;
+
+  const normalizedDigits = phoneDigits.replace(/\D/g, "");
+  const targetPhone = normalizedDigits.length >= 10 ? normalizedDigits.slice(-10) : normalizedDigits;
+  const lowerCandidates = candidateEmails.map((e) => e.toLowerCase().trim());
+
+  const safeLegacyId = legacyAccountId.toLowerCase().trim().replace(/[^a-z0-9_]/g, (ch) => `_${ch.charCodeAt(0).toString(16)}_`);
+
+  const orderKeys = [
+    `palluvo_ecommerce_orders_${safeLegacyId}`,
+    `palluvo_ecommerce_orders_${legacyAccountId}`,
+    `palluvo_quarantine_palluvo_ecommerce_orders_${safeLegacyId}`,
+    `palluvo_quarantine_palluvo_ecommerce_orders_${legacyAccountId}`,
+  ];
+
+  for (const k of orderKeys) {
+    try {
+      const raw = localStorage.getItem(k);
+      if (!raw) continue;
+      const parsed = JSON.parse(raw);
+      if (!Array.isArray(parsed)) continue;
+      for (const ord of parsed) {
+        if (!ord || typeof ord !== "object") continue;
+        const ordObj = ord as Record<string, unknown>;
+        const cust = ordObj.customer as Record<string, unknown> | undefined;
+        const custPhone = typeof cust?.phone === "string" ? cust.phone.replace(/\D/g, "").slice(-10) : "";
+        const custEmail = typeof cust?.email === "string" ? cust.email.toLowerCase().trim() : "";
+        if (custPhone === targetPhone && custEmail && lowerCandidates.includes(custEmail)) {
+          return custEmail;
+        }
+
+        const ordPhone = typeof ordObj.phone === "string" ? ordObj.phone.replace(/\D/g, "").slice(-10) : "";
+        const ordEmail = typeof ordObj.email === "string" ? ordObj.email.toLowerCase().trim() : "";
+        if (ordPhone === targetPhone && ordEmail && lowerCandidates.includes(ordEmail)) {
+          return ordEmail;
+        }
+
+        const shippingStr = typeof ordObj.shippingAddress === "string" ? ordObj.shippingAddress : "";
+        if (shippingStr && shippingStr.replace(/\D/g, "").includes(targetPhone)) {
+          if (custEmail && lowerCandidates.includes(custEmail)) {
+            return custEmail;
+          }
+          if (ordEmail && lowerCandidates.includes(ordEmail)) {
+            return ordEmail;
+          }
+        }
+      }
+    } catch {}
+  }
+
+  const addressKeys = [
+    `palluvo_ecommerce_addresses_${safeLegacyId}`,
+    `palluvo_ecommerce_addresses_${legacyAccountId}`,
+    `palluvo_quarantine_palluvo_ecommerce_addresses_${safeLegacyId}`,
+    `palluvo_quarantine_palluvo_ecommerce_addresses_${legacyAccountId}`,
+  ];
+
+  for (const k of addressKeys) {
+    try {
+      const raw = localStorage.getItem(k);
+      if (!raw) continue;
+      const parsed = JSON.parse(raw);
+      if (!Array.isArray(parsed)) continue;
+      for (const addr of parsed) {
+        if (!addr || typeof addr !== "object") continue;
+        const addrObj = addr as Record<string, unknown>;
+        const addrPhone = typeof addrObj.phone === "string" ? addrObj.phone.replace(/\D/g, "").slice(-10) : "";
+        const addrEmail = typeof addrObj.email === "string" ? addrObj.email.toLowerCase().trim() : "";
+        if (addrPhone === targetPhone && addrEmail && lowerCandidates.includes(addrEmail)) {
+          return addrEmail;
+        }
+      }
+    } catch {}
+  }
+
   return null;
 }
 
@@ -818,15 +931,55 @@ export function migrateLegacyAccountAliases(): void {
           if (redirectedId && !isQuarantinedAccountId(redirectedId)) {
             for (const p of nonEmailKeys) {
               map[p] = redirectedId;
-              meta[p] = { ...meta[p], accountId: redirectedId, type: "phone", updatedAt: Date.now() };
+              meta[p] = { ...meta[p], accountId: redirectedId, type: "phone", status: "active", updatedAt: Date.now() };
               modified = true;
             }
           } else {
-            // Reject tombstoned ID consistently
+            // For non-email keys pointing to a quarantined ID without an active redirect:
+            // Check metadata and historical records before isolating. Do NOT delete!
+            const quarantinedEmails = migrationMeta.quarantinedLegacyBuckets?.[trimmedVal]?.emails ||
+              migrationMeta.quarantinedCollisionIds?.[trimmedVal] || [];
+
             for (const p of nonEmailKeys) {
-              delete map[p];
-              delete meta[p];
-              modified = true;
+              const ownerEmail = meta[p]?.ownerEmail;
+              let targetId: string | undefined;
+              if (ownerEmail && map[ownerEmail] && !isQuarantinedAccountId(map[ownerEmail])) {
+                targetId = map[ownerEmail];
+              }
+              if (!targetId && quarantinedEmails.length > 0) {
+                const foundEmail = findOwnerEmailForPhoneInRecords(p, quarantinedEmails, trimmedVal);
+                if (foundEmail && map[foundEmail] && !isQuarantinedAccountId(map[foundEmail])) {
+                  targetId = map[foundEmail];
+                }
+              }
+
+              if (targetId) {
+                map[p] = targetId;
+                meta[p] = { ...meta[p], accountId: targetId, type: "phone", status: "active", updatedAt: Date.now() };
+                modified = true;
+              } else {
+                // Isolate to safe non-quarantined ID and keep recoverable
+                const safePhoneId = `usr_phone_${p}`;
+                map[p] = safePhoneId;
+                meta[p] = {
+                  ...meta[p],
+                  accountId: safePhoneId,
+                  type: "phone",
+                  phone: p,
+                  status: "unresolved",
+                  legacyId: trimmedVal,
+                  candidateEmails: quarantinedEmails,
+                  updatedAt: Date.now(),
+                };
+                migrationMeta.unresolvedPhoneAliases = migrationMeta.unresolvedPhoneAliases || {};
+                migrationMeta.unresolvedPhoneAliases[p] = {
+                  legacyId: trimmedVal,
+                  candidateAccountIds: [],
+                  candidateEmails: quarantinedEmails,
+                  quarantinedAt: Date.now(),
+                };
+                modified = true;
+              }
             }
           }
         } else if (trimmedVal.startsWith("usr_phone_")) {
@@ -853,11 +1006,23 @@ export function migrateLegacyAccountAliases(): void {
           meta[singleEmail] = {
             accountId: expectedInjectiveId,
             type: meta[singleEmail]?.type || "primary",
+            phone: nonEmailKeys[0] || meta[singleEmail]?.phone,
             updatedAt: Date.now(),
           };
           for (const p of nonEmailKeys) {
             map[p] = expectedInjectiveId;
-            meta[p] = { ...meta[p], accountId: expectedInjectiveId, type: "phone", updatedAt: Date.now() };
+            meta[p] = {
+              ...meta[p],
+              accountId: expectedInjectiveId,
+              type: "phone",
+              ownerEmail: singleEmail,
+              phone: p,
+              status: "active",
+              updatedAt: Date.now(),
+            };
+            if (migrationMeta.unresolvedPhoneAliases?.[p]) {
+              delete migrationMeta.unresolvedPhoneAliases[p];
+            }
           }
           migrationMeta.rekeyedOwnerIds[trimmedVal] = expectedInjectiveId;
           modified = true;
@@ -883,8 +1048,29 @@ export function migrateLegacyAccountAliases(): void {
                 delete map[p];
                 delete meta[p];
                 modified = true;
+                continue;
               }
             }
+            meta[p] = {
+              ...meta[p],
+              accountId: map[singleEmail] || trimmedVal,
+              type: "phone",
+              ownerEmail: singleEmail,
+              phone: p,
+              status: "active",
+              updatedAt: Date.now(),
+            };
+            if (meta[singleEmail]) {
+              meta[singleEmail] = {
+                ...meta[singleEmail],
+                phone: p,
+                updatedAt: Date.now(),
+              };
+            }
+            if (migrationMeta.unresolvedPhoneAliases?.[p]) {
+              delete migrationMeta.unresolvedPhoneAliases[p];
+            }
+            modified = true;
           }
         }
         continue;
@@ -915,10 +1101,24 @@ export function migrateLegacyAccountAliases(): void {
         for (const p of nonEmailKeys) {
           map[p] = canonicalId;
           meta[p] = {
+            ...meta[p],
             accountId: canonicalId,
             type: "phone",
+            ownerEmail: ownerCluster.canonicalEmail,
+            phone: p,
+            status: "active",
             updatedAt: Date.now(),
           };
+          if (meta[ownerCluster.canonicalEmail]) {
+            meta[ownerCluster.canonicalEmail] = {
+              ...meta[ownerCluster.canonicalEmail],
+              phone: p,
+              updatedAt: Date.now(),
+            };
+          }
+          if (migrationMeta.unresolvedPhoneAliases?.[p]) {
+            delete migrationMeta.unresolvedPhoneAliases[p];
+          }
           modified = true;
         }
 
@@ -961,12 +1161,34 @@ export function migrateLegacyAccountAliases(): void {
         }
 
         // Migrate non-email aliases (phones) using owner mapping
+        const assignedPhoneByCluster = new Map<string, string>();
+        const matchedClusterByPhone = new Map<string, typeof partition.clusters[0]>();
+
+        // Pass 1: Direct metadata on phone, reverse metadata on emails, record scanning, active session
         for (const p of nonEmailKeys) {
+          // 1. Direct metadata on phone
           const ownerEmail = meta[p]?.ownerEmail;
           let matchedCluster = ownerEmail
             ? partition.clusters.find((cl) => cl.emails.includes(ownerEmail) || cl.canonicalEmail === ownerEmail)
             : undefined;
 
+          // 2. Reverse phone metadata on emails
+          if (!matchedCluster) {
+            const reverseEmail = emailKeys.find((e) => meta[e]?.phone === p);
+            if (reverseEmail) {
+              matchedCluster = partition.clusters.find((cl) => cl.emails.includes(reverseEmail) || cl.canonicalEmail === reverseEmail);
+            }
+          }
+
+          // 3. Historical order/address records scanning
+          if (!matchedCluster) {
+            const recordEmail = findOwnerEmailForPhoneInRecords(p, emailKeys, trimmedVal);
+            if (recordEmail) {
+              matchedCluster = partition.clusters.find((cl) => cl.emails.includes(recordEmail) || cl.canonicalEmail === recordEmail);
+            }
+          }
+
+          // 4. Active authenticated session
           if (!matchedCluster && activeAuthUser?.mobile) {
             const rawDigits = activeAuthUser.mobile.replace(/\D/g, "");
             const tenDigits = rawDigits.length >= 10 ? rawDigits.slice(-10) : rawDigits;
@@ -976,13 +1198,70 @@ export function migrateLegacyAccountAliases(): void {
           }
 
           if (matchedCluster) {
+            matchedClusterByPhone.set(p, matchedCluster);
+            assignedPhoneByCluster.set(matchedCluster.canonicalId, p);
+          }
+        }
+
+        // Pass 2: Injective 1-to-1 matching for unassigned phones and unassigned clusters
+        const unassignedPhones = nonEmailKeys.filter((p) => !matchedClusterByPhone.has(p));
+        const unassignedClusters = partition.clusters.filter((cl) => !assignedPhoneByCluster.has(cl.canonicalId));
+
+        if (unassignedPhones.length === 1 && unassignedClusters.length === 1) {
+          const onlyPhone = unassignedPhones[0];
+          const onlyCluster = unassignedClusters[0];
+          matchedClusterByPhone.set(onlyPhone, onlyCluster);
+          assignedPhoneByCluster.set(onlyCluster.canonicalId, onlyPhone);
+        }
+
+        // Pass 3: Apply migrations and handle unresolved aliases
+        for (const p of nonEmailKeys) {
+          const matchedCluster = matchedClusterByPhone.get(p);
+          if (matchedCluster) {
             map[p] = matchedCluster.canonicalId;
-            meta[p] = { ...meta[p], accountId: matchedCluster.canonicalId, type: "phone", updatedAt: Date.now() };
+            meta[p] = {
+              ...meta[p],
+              accountId: matchedCluster.canonicalId,
+              type: "phone",
+              ownerEmail: matchedCluster.canonicalEmail,
+              phone: p,
+              status: "active",
+              updatedAt: Date.now(),
+            };
+            if (meta[matchedCluster.canonicalEmail]) {
+              meta[matchedCluster.canonicalEmail] = {
+                ...meta[matchedCluster.canonicalEmail],
+                phone: p,
+                updatedAt: Date.now(),
+              };
+            }
+            if (migrationMeta.unresolvedPhoneAliases?.[p]) {
+              delete migrationMeta.unresolvedPhoneAliases[p];
+            }
             modified = true;
           } else {
-            // Cannot attribute phone cleanly in multi-owner collision; reject tombstoned ID
-            delete map[p];
-            delete meta[p];
+            // Cannot attribute phone cleanly in multi-owner collision.
+            // DO NOT silently discard or delete! Keep recoverable and isolate from ambiguous legacy bucket.
+            const isolatedId = `usr_phone_${p}`;
+            map[p] = isolatedId;
+            meta[p] = {
+              ...meta[p],
+              accountId: isolatedId,
+              type: "phone",
+              phone: p,
+              status: "unresolved",
+              legacyId: trimmedVal,
+              candidateAccountIds: partition.clusters.map((c) => c.canonicalId),
+              candidateEmails: partition.clusters.flatMap((c) => c.emails),
+              updatedAt: Date.now(),
+            };
+            migrationMeta.unresolvedPhoneAliases = migrationMeta.unresolvedPhoneAliases || {};
+            migrationMeta.unresolvedPhoneAliases[p] = {
+              legacyId: trimmedVal,
+              candidateAccountIds: partition.clusters.map((c) => c.canonicalId),
+              candidateEmails: partition.clusters.flatMap((c) => c.emails),
+              quarantinedAt: Date.now(),
+            };
             modified = true;
           }
         }
@@ -1082,7 +1361,33 @@ export function lookupAccountId(identifier?: string | null): string | null {
       }
 
       // For non-email identifier (e.g. phone) without a valid owner redirect:
-      // Reject the tombstoned ID consistently!
+      // Check metadata and historical records before isolating. Do NOT delete!
+      const quarantinedEmails = migrationMeta.quarantinedLegacyBuckets?.[val]?.emails ||
+        migrationMeta.quarantinedCollisionIds?.[val] || [];
+
+      const ownerEmail = meta[key]?.ownerEmail;
+      let targetId: string | undefined;
+      if (ownerEmail && map[ownerEmail] && !isQuarantinedAccountId(map[ownerEmail])) {
+        targetId = map[ownerEmail];
+      }
+      if (!targetId && quarantinedEmails.length > 0) {
+        const foundEmail = findOwnerEmailForPhoneInRecords(key, quarantinedEmails, val);
+        if (foundEmail && map[foundEmail] && !isQuarantinedAccountId(map[foundEmail])) {
+          targetId = map[foundEmail];
+        }
+      }
+
+      if (targetId) {
+        map[key] = targetId;
+        meta[key] = { ...meta[key], accountId: targetId, type: "phone", status: "active", updatedAt: Date.now() };
+        try {
+          localStorage.setItem(ACCOUNT_MAP_KEY, JSON.stringify(map));
+          setAccountMetadata(meta);
+        } catch {}
+        return targetId;
+      }
+
+      // For unowned tombstoned ID without redirect, reject tombstone consistently
       delete map[key];
       delete meta[key];
       try {
@@ -1183,6 +1488,44 @@ export function lookupAccountId(identifier?: string | null): string | null {
         } catch {}
         return null;
       }
+
+      // Check if this phone alias was unresolved and candidate owners can now be disambiguated
+      if (meta[key]?.status === "unresolved" || migrationMeta.unresolvedPhoneAliases?.[key]) {
+        const candidateAccountIds = meta[key]?.candidateAccountIds || migrationMeta.unresolvedPhoneAliases?.[key]?.candidateAccountIds || [];
+        if (candidateAccountIds.length > 0) {
+          // A candidate cluster that already has a different phone mapped in meta/map is ruled out
+          const availableCandidates = candidateAccountIds.filter((cid) => {
+            if (isQuarantinedAccountId(cid)) return false;
+            for (const [otherKey, otherMeta] of Object.entries(meta)) {
+              if (otherKey !== key && !otherKey.includes("@") && (otherMeta?.accountId === cid || map[otherKey] === cid)) {
+                return false;
+              }
+            }
+            return true;
+          });
+
+          if (availableCandidates.length === 1) {
+            const resolvedId = availableCandidates[0];
+            map[key] = resolvedId;
+            meta[key] = {
+              ...meta[key],
+              accountId: resolvedId,
+              status: "active",
+              updatedAt: Date.now(),
+            };
+            if (migrationMeta.unresolvedPhoneAliases?.[key]) {
+              delete migrationMeta.unresolvedPhoneAliases[key];
+              setMigrationMetadata(migrationMeta);
+            }
+            copyCustomerData(`usr_phone_${key}`, resolvedId);
+            try {
+              localStorage.setItem(ACCOUNT_MAP_KEY, JSON.stringify(map));
+              setAccountMetadata(meta);
+            } catch {}
+            return resolvedId;
+          }
+        }
+      }
     }
 
     return val;
@@ -1203,6 +1546,8 @@ export function registerAccountAlias(
     type?: "primary" | "changed_email" | "phone";
     ownerEmail?: string;
     previousEmail?: string;
+    phone?: string;
+    status?: "active" | "unresolved";
   }
 ): boolean {
   if (!identifier || !accountId) return false;
@@ -1223,22 +1568,63 @@ export function registerAccountAlias(
     const map: Record<string, string> = raw ? JSON.parse(raw) : {};
     const meta = getAccountMetadata();
 
-    // Reject if already mapped to a different account ID (unless the existing mapping was quarantined or redirects to same owner)
-    if (map[key] && map[key] !== val && !isQuarantinedAccountId(map[key])) {
+    // Reject if already mapped to a different account ID (unless the existing mapping was quarantined or redirects to same owner, or was an unresolved isolated alias)
+    const isUnresolvedAlias = meta[key]?.status === "unresolved" ||
+      Boolean(migrationMeta.unresolvedPhoneAliases?.[key]) ||
+      (map[key] === `usr_phone_${key}` && !key.includes("@"));
+
+    if (map[key] && map[key] !== val && !isQuarantinedAccountId(map[key]) && !isUnresolvedAlias) {
       const existingRedirect = migrationMeta.rekeyedOwnerIds?.[map[key]];
       if (existingRedirect !== val) {
         return false;
       }
     }
 
+    const isEmail = key.includes("@");
+    let effectiveOwnerEmail = options?.ownerEmail || meta[key]?.ownerEmail;
+    let effectivePhone = options?.phone || meta[key]?.phone;
+
+    if (!isEmail) {
+      if (!effectivePhone) effectivePhone = key;
+      if (!effectiveOwnerEmail) {
+        effectiveOwnerEmail = lookupEmailByAccountId(val) || undefined;
+      }
+    } else {
+      if (!effectiveOwnerEmail) effectiveOwnerEmail = key;
+    }
+
     map[key] = val;
     meta[key] = {
       accountId: val,
-      type: options?.type || meta[key]?.type || (key.includes("@") ? "primary" : "phone"),
-      ownerEmail: options?.ownerEmail || meta[key]?.ownerEmail,
+      type: options?.type || meta[key]?.type || (isEmail ? "primary" : "phone"),
+      ownerEmail: effectiveOwnerEmail,
       previousEmail: options?.previousEmail || meta[key]?.previousEmail,
+      phone: effectivePhone,
+      status: options?.status || "active",
       updatedAt: Date.now(),
     };
+
+    // Bidirectional sync:
+    if (!isEmail && effectiveOwnerEmail && meta[effectiveOwnerEmail]) {
+      meta[effectiveOwnerEmail] = {
+        ...meta[effectiveOwnerEmail],
+        phone: key,
+        updatedAt: Date.now(),
+      };
+    } else if (isEmail && effectivePhone && meta[effectivePhone]) {
+      meta[effectivePhone] = {
+        ...meta[effectivePhone],
+        ownerEmail: key,
+        updatedAt: Date.now(),
+      };
+    }
+
+    // Clean up unresolved tracking if this phone is now registered to an active account
+    if (!isEmail && migrationMeta.unresolvedPhoneAliases?.[key]) {
+      delete migrationMeta.unresolvedPhoneAliases[key];
+      copyCustomerData(`usr_phone_${key}`, val);
+      setMigrationMetadata(migrationMeta);
+    }
 
     localStorage.setItem(ACCOUNT_MAP_KEY, JSON.stringify(map));
     setAccountMetadata(meta);
@@ -1262,8 +1648,16 @@ export function unregisterAccountAlias(identifier?: string | null, accountId?: s
     const map: Record<string, string> = JSON.parse(raw);
     const meta = getAccountMetadata();
     if (map[key] === val) {
+      const prevOwnerEmail = meta[key]?.ownerEmail;
+      const prevPhone = meta[key]?.phone;
       delete map[key];
       delete meta[key];
+      if (prevOwnerEmail && meta[prevOwnerEmail]?.phone === key) {
+        delete meta[prevOwnerEmail].phone;
+      }
+      if (prevPhone && meta[prevPhone]?.ownerEmail === key) {
+        delete meta[prevPhone].ownerEmail;
+      }
       localStorage.setItem(ACCOUNT_MAP_KEY, JSON.stringify(map));
       setAccountMetadata(meta);
     }
@@ -1943,11 +2337,25 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
             id = `usr_phone_${tenDigits}`;
           }
         }
-        if (userData.email) registerAccountAlias(userData.email, id);
-        if (userData.mobile) {
-          const digits = userData.mobile.replace(/\D/g, "");
-          const tenDigits = digits.length >= 10 ? digits.slice(-10) : digits;
-          if (tenDigits) registerAccountAlias(tenDigits, id);
+        const digits = userData.mobile ? userData.mobile.replace(/\D/g, "") : "";
+        const tenDigits = digits.length >= 10 ? digits.slice(-10) : digits;
+        const userEmail = userData.email && !userData.email.startsWith("connoisseur.") && !userData.email.startsWith("member@")
+          ? userData.email.toLowerCase().trim()
+          : undefined;
+
+        if (userEmail) {
+          registerAccountAlias(userEmail, id, {
+            type: "primary",
+            ownerEmail: userEmail,
+            phone: tenDigits || undefined,
+          });
+        }
+        if (tenDigits) {
+          registerAccountAlias(tenDigits, id, {
+            type: "phone",
+            ownerEmail: userEmail,
+            phone: tenDigits,
+          });
         }
         return {
           ...userData,
