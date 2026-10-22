@@ -616,37 +616,52 @@ export function partitionEmailsByAccountOwner(
   const changedEmails = normalized.filter((e) => meta[e]?.type === "changed_email");
   const baseEmails = normalized.filter((e) => meta[e]?.type !== "changed_email");
 
-  // If there is at most one base email, all other emails are explicit changed_email aliases of that single account
+  // If there is at most one base email, verify that changed emails don't belong to a different prior owner
   if (baseEmails.length <= 1) {
-    let canonicalEmail: string;
-    if (activeUserEmail && normalized.includes(activeUserEmail)) {
-      canonicalEmail = activeUserEmail;
-    } else if (changedEmails.length > 0) {
-      // Pick the latest changed email
-      const sorted = [...changedEmails].sort((a, b) => (meta[b]?.updatedAt || 0) - (meta[a]?.updatedAt || 0));
-      canonicalEmail = sorted[0];
-    } else {
-      canonicalEmail = baseEmails[0] || normalized[0];
+    const singleBase = baseEmails[0];
+    const hasConflictingOwner = changedEmails.some((c) => {
+      const rawPrev = meta[c]?.previousEmail?.toLowerCase().trim();
+      const prevEmail = rawPrev && rawPrev !== c ? rawPrev : undefined;
+      const rawOwner = meta[c]?.ownerEmail?.toLowerCase().trim();
+      const ownerEmail = rawOwner && rawOwner !== c ? rawOwner : undefined;
+      const ref = prevEmail || ownerEmail;
+      if (ref && singleBase && ref !== singleBase && !changedEmails.includes(ref)) {
+        return true;
+      }
+      return false;
+    });
+
+    if (!hasConflictingOwner) {
+      let canonicalEmail: string;
+      if (activeUserEmail && normalized.includes(activeUserEmail)) {
+        canonicalEmail = activeUserEmail;
+      } else if (changedEmails.length > 0) {
+        // Pick the latest changed email
+        const sorted = [...changedEmails].sort((a, b) => (meta[b]?.updatedAt || 0) - (meta[a]?.updatedAt || 0));
+        canonicalEmail = sorted[0];
+      } else {
+        canonicalEmail = baseEmails[0] || normalized[0];
+      }
+
+      const canonicalId = canonicalEmail === "radhika.sharma@example.com"
+        ? "usr_demo_radhika"
+        : `usr_email_${encodeIdentifierToId(canonicalEmail)}`;
+
+      return {
+        isSingleOwner: true,
+        clusters: [
+          {
+            canonicalEmail,
+            canonicalId,
+            emails: normalized,
+            isChangedEmailChain: changedEmails.length > 0,
+          },
+        ],
+      };
     }
-
-    const canonicalId = canonicalEmail === "radhika.sharma@example.com"
-      ? "usr_demo_radhika"
-      : `usr_email_${encodeIdentifierToId(canonicalEmail)}`;
-
-    return {
-      isSingleOwner: true,
-      clusters: [
-        {
-          canonicalEmail,
-          canonicalId,
-          emails: normalized,
-          isChangedEmailChain: changedEmails.length > 0,
-        },
-      ],
-    };
   }
 
-  // Multi-owner collision: multiple distinct base emails exist in this group
+  // Multi-owner collision or multiple independent account owners in group
   const clusters: Array<{
     canonicalEmail: string;
     canonicalId: string;
@@ -667,11 +682,33 @@ export function partitionEmailsByAccountOwner(
   }
 
   for (const c of changedEmails) {
-    const ownerEmail = meta[c]?.ownerEmail || meta[c]?.previousEmail;
-    let targetCluster = ownerEmail ? clusters.find((cl) => cl.emails.includes(ownerEmail) || cl.canonicalEmail === ownerEmail) : undefined;
-    if (!targetCluster && activeUserEmail && (activeUserEmail === c || clusters.some((cl) => cl.canonicalEmail === activeUserEmail))) {
-      targetCluster = clusters.find((cl) => cl.canonicalEmail === activeUserEmail);
+    // Prioritize and validate previousEmail first, then ownerEmail (excluding self-references)
+    const rawPrev = meta[c]?.previousEmail?.toLowerCase().trim();
+    const prevEmail = rawPrev && rawPrev !== c ? rawPrev : undefined;
+
+    const rawOwner = meta[c]?.ownerEmail?.toLowerCase().trim();
+    const ownerEmail = rawOwner && rawOwner !== c ? rawOwner : undefined;
+
+    const targetRef = prevEmail || ownerEmail;
+
+    let targetCluster = targetRef
+      ? clusters.find((cl) => cl.emails.includes(targetRef) || cl.canonicalEmail === targetRef)
+      : undefined;
+
+    // Follow chain if targetRef points to another changed_email in a multi-hop chain
+    if (!targetCluster && targetRef) {
+      let currentRef: string | undefined = targetRef;
+      const visited = new Set<string>([c]);
+      while (currentRef && !visited.has(currentRef)) {
+        visited.add(currentRef);
+        targetCluster = clusters.find((cl) => cl.emails.includes(currentRef!) || cl.canonicalEmail === currentRef);
+        if (targetCluster) break;
+        const nextPrev: string | undefined = meta[currentRef]?.previousEmail?.toLowerCase().trim();
+        const nextOwner: string | undefined = meta[currentRef]?.ownerEmail?.toLowerCase().trim();
+        currentRef = (nextPrev && nextPrev !== currentRef) ? nextPrev : ((nextOwner && nextOwner !== currentRef) ? nextOwner : undefined);
+      }
     }
+
     if (targetCluster) {
       targetCluster.emails.push(c);
       targetCluster.isChangedEmailChain = true;
@@ -682,7 +719,8 @@ export function partitionEmailsByAccountOwner(
           : `usr_email_${encodeIdentifierToId(c)}`;
       }
     } else {
-      // Unlinked changed_email: treat as its own account cluster
+      // Unlinked changed_email: do NOT use an unrelated active session as a fallback!
+      // Treat as its own account cluster.
       const canonicalId = c === "radhika.sharma@example.com"
         ? "usr_demo_radhika"
         : `usr_email_${encodeIdentifierToId(c)}`;
@@ -696,7 +734,7 @@ export function partitionEmailsByAccountOwner(
   }
 
   return {
-    isSingleOwner: false,
+    isSingleOwner: clusters.length === 1,
     clusters,
   };
 }
@@ -1590,7 +1628,16 @@ export function registerAccountAlias(
         effectiveOwnerEmail = lookupEmailByAccountId(val) || undefined;
       }
     } else {
-      if (!effectiveOwnerEmail) effectiveOwnerEmail = key;
+      const isChangedEmail = options?.type === "changed_email" || meta[key]?.type === "changed_email";
+      const priorEmail = options?.previousEmail || meta[key]?.previousEmail;
+      if (isChangedEmail && priorEmail && priorEmail.toLowerCase().trim() !== key) {
+        // For a changed email, prioritize the actual owning/base email
+        effectiveOwnerEmail = options?.ownerEmail && options.ownerEmail.toLowerCase().trim() !== key
+          ? options.ownerEmail.toLowerCase().trim()
+          : priorEmail.toLowerCase().trim();
+      } else if (!effectiveOwnerEmail) {
+        effectiveOwnerEmail = key;
+      }
     }
 
     map[key] = val;

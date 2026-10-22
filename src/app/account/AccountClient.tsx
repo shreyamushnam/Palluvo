@@ -5,7 +5,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Package, MapPin, User, Truck, CheckCircle2, ShieldCheck, Plus, X, Edit2, Trash2, Check, RotateCcw, LogOut, Sparkles, Award, Headphones, ArrowRight, Lock, Info } from "lucide-react";
-import { useStore, lookupAccountId, registerAccountAlias, unregisterAccountAlias, generateAccountId, encodeIdentifierToId, migrateLegacyAccountAliases, lookupEmailByAccountId } from "@/context/StoreContext";
+import { useStore, lookupAccountId, registerAccountAlias, unregisterAccountAlias, generateAccountId, encodeIdentifierToId, migrateLegacyAccountAliases, lookupEmailByAccountId, getAccountMetadata } from "@/context/StoreContext";
 import { SavedAddress, OrderRecord } from "@/data/mockOrders";
 import { useFocusTrap } from "@/hooks/useFocusTrap";
 import { formatStoredPhone, isValidIndianMobile } from "@/utils/phone";
@@ -497,9 +497,12 @@ export default function AccountPage() {
       }
     }
 
+    const priorEmail = user?.email ? user.email.toLowerCase().trim() : undefined;
+    const isEmailChanged = Boolean(priorEmail && priorEmail !== trimmedEmail);
+
     // If customer changed their email, release previous alias
-    if (user?.email && user.email.toLowerCase().trim() !== trimmedEmail) {
-      unregisterAccountAlias(user.email, accountId);
+    if (isEmailChanged && priorEmail) {
+      unregisterAccountAlias(priorEmail, accountId);
     }
 
     // If customer changed their mobile, release previous mobile alias
@@ -511,16 +514,24 @@ export default function AccountPage() {
       }
     }
 
+    // Determine the true owning/base email: if this account changed emails, record the prior/base owner
+    const meta = getAccountMetadata();
+    const actualOwnerEmail = isEmailChanged
+      ? (meta[priorEmail!]?.ownerEmail && meta[priorEmail!]?.ownerEmail !== trimmedEmail
+          ? meta[priorEmail!].ownerEmail
+          : priorEmail)
+      : trimmedEmail;
+
     registerAccountAlias(trimmedEmail, accountId, {
-      type: "changed_email",
-      previousEmail: user?.email ? user.email.toLowerCase().trim() : undefined,
-      ownerEmail: trimmedEmail,
+      type: isEmailChanged ? "changed_email" : "primary",
+      previousEmail: isEmailChanged ? priorEmail : undefined,
+      ownerEmail: actualOwnerEmail,
       phone: mobileTen || undefined,
     });
     if (mobileTen) {
       registerAccountAlias(mobileTen, accountId, {
         type: "phone",
-        ownerEmail: trimmedEmail,
+        ownerEmail: actualOwnerEmail,
         phone: mobileTen,
       });
     }
