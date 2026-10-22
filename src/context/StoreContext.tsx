@@ -584,9 +584,64 @@ export function findOwnerEmailForPhoneInRecords(
 }
 
 /**
+ * Resolves the root/canonical base owner for an email alias by following the chain of
+ * ownerEmail and previousEmail metadata references. Cycle-safe and stops at the root base email.
+ * Returns undefined if the alias is marked changed_email but has unresolvable/ambiguous ownership.
+ */
+export function resolveRootOwner(
+  email: string,
+  meta: Record<string, AccountAliasMeta>
+): string | undefined {
+  if (!email || typeof email !== "string") return undefined;
+  let current = email.toLowerCase().trim();
+  if (!current || !current.includes("@")) return undefined;
+
+  const visited = new Set<string>();
+
+  while (current && !visited.has(current)) {
+    visited.add(current);
+    const m = meta[current];
+    // If no metadata exists for current:
+    // If reached from a prior pointer, or starting email without changed_email tag,
+    // current represents an unregistered or implicit base email.
+    if (!m) {
+      return current;
+    }
+
+    // If explicitly marked as NOT a changed_email (e.g. primary or phone), it is a root email
+    if (m.type && m.type !== "changed_email") {
+      return current;
+    }
+
+    // For changed_email, check ownerEmail first, then previousEmail (ignoring self-pointers)
+    const rawOwner = m.ownerEmail?.toLowerCase().trim();
+    const rawPrev = m.previousEmail?.toLowerCase().trim();
+
+    const nextTarget = (rawOwner && rawOwner !== current && rawOwner.includes("@"))
+      ? rawOwner
+      : (rawPrev && rawPrev !== current && rawPrev.includes("@") ? rawPrev : undefined);
+
+    if (!nextTarget) {
+      // Changed email with no predecessor/owner pointer -> unresolvable / ambiguous
+      return undefined;
+    }
+
+    const targetMeta = meta[nextTarget];
+    if (!targetMeta || (targetMeta.type && targetMeta.type !== "changed_email")) {
+      return nextTarget;
+    }
+
+    current = nextTarget;
+  }
+
+  return undefined;
+}
+
+/**
  * Partitions a group of emails mapped to the same ID into distinct account owners.
- * Uses explicit changed_email metadata and active session signals to group aliases belonging
- * to the same account owner together, separating only distinct account owners.
+ * Uses explicit changed_email metadata, root owner resolution, and active session signals to group aliases
+ * belonging to the same account owner together, separating distinct account owners and preserving quarantine
+ * when ownership is ambiguous or split across different original owners.
  */
 export function partitionEmailsByAccountOwner(
   emails: string[],
@@ -601,7 +656,7 @@ export function partitionEmailsByAccountOwner(
     isChangedEmailChain: boolean;
   }>;
 } {
-  const normalized = Array.from(new Set(emails.map((e) => e.toLowerCase().trim()).filter(Boolean)));
+  const normalized = Array.from(new Set(emails.map((e) => e.toLowerCase().trim()).filter((e) => e && e.includes("@"))));
   if (normalized.length <= 1) {
     const singleEmail = normalized[0] || "";
     const canonicalId = singleEmail === "radhika.sharma@example.com"
@@ -616,125 +671,121 @@ export function partitionEmailsByAccountOwner(
   const changedEmails = normalized.filter((e) => meta[e]?.type === "changed_email");
   const baseEmails = normalized.filter((e) => meta[e]?.type !== "changed_email");
 
-  // If there is at most one base email, verify that changed emails don't belong to a different prior owner
-  if (baseEmails.length <= 1) {
+  // Determine whether all aliases in the group verifiably belong to a single account owner
+  let isSingleOwner = false;
+
+  if (baseEmails.length === 1) {
     const singleBase = baseEmails[0];
     const hasConflictingOwner = changedEmails.some((c) => {
-      const rawPrev = meta[c]?.previousEmail?.toLowerCase().trim();
-      const prevEmail = rawPrev && rawPrev !== c ? rawPrev : undefined;
-      const rawOwner = meta[c]?.ownerEmail?.toLowerCase().trim();
-      const ownerEmail = rawOwner && rawOwner !== c ? rawOwner : undefined;
-      const ref = prevEmail || ownerEmail;
-      if (ref && singleBase && ref !== singleBase && !changedEmails.includes(ref)) {
-        return true;
-      }
-      return false;
+      const root = resolveRootOwner(c, meta);
+      return Boolean(root && root !== singleBase);
     });
-
-    if (!hasConflictingOwner) {
-      let canonicalEmail: string;
-      if (activeUserEmail && normalized.includes(activeUserEmail)) {
-        canonicalEmail = activeUserEmail;
-      } else if (changedEmails.length > 0) {
-        // Pick the latest changed email
-        const sorted = [...changedEmails].sort((a, b) => (meta[b]?.updatedAt || 0) - (meta[a]?.updatedAt || 0));
-        canonicalEmail = sorted[0];
-      } else {
-        canonicalEmail = baseEmails[0] || normalized[0];
-      }
-
-      const canonicalId = canonicalEmail === "radhika.sharma@example.com"
-        ? "usr_demo_radhika"
-        : `usr_email_${encodeIdentifierToId(canonicalEmail)}`;
-
-      return {
-        isSingleOwner: true,
-        clusters: [
-          {
-            canonicalEmail,
-            canonicalId,
-            emails: normalized,
-            isChangedEmailChain: changedEmails.length > 0,
-          },
-        ],
-      };
-    }
+    isSingleOwner = !hasConflictingOwner;
+  } else if (baseEmails.length === 0) {
+    // When every key is marked changed_email, verify that all aliases resolve to the same root owner
+    // and keep/quarantine the bucket if ownership is ambiguous or divergent.
+    const roots = changedEmails.map((c) => resolveRootOwner(c, meta));
+    const uniqueRoots = new Set(roots);
+    isSingleOwner = !uniqueRoots.has(undefined) && uniqueRoots.size === 1;
   }
 
-  // Multi-owner collision or multiple independent account owners in group
-  const clusters: Array<{
+  if (isSingleOwner) {
+    let canonicalEmail: string;
+    if (activeUserEmail && normalized.includes(activeUserEmail)) {
+      canonicalEmail = activeUserEmail;
+    } else if (changedEmails.length > 0) {
+      // Pick the latest changed email
+      const sorted = [...changedEmails].sort((a, b) => (meta[b]?.updatedAt || 0) - (meta[a]?.updatedAt || 0));
+      canonicalEmail = sorted[0];
+    } else {
+      canonicalEmail = baseEmails[0] || normalized[0];
+    }
+
+    const canonicalId = canonicalEmail === "radhika.sharma@example.com"
+      ? "usr_demo_radhika"
+      : `usr_email_${encodeIdentifierToId(canonicalEmail)}`;
+
+    return {
+      isSingleOwner: true,
+      clusters: [
+        {
+          canonicalEmail,
+          canonicalId,
+          emails: normalized,
+          isChangedEmailChain: changedEmails.length > 0,
+        },
+      ],
+    };
+  }
+
+  // Multi-owner collision or ambiguous ownership group:
+  // Partition into separate clusters by resolved root owner, isolating ambiguous aliases.
+  const clustersByRoot = new Map<string, {
+    canonicalEmail: string;
+    canonicalId: string;
+    emails: string[];
+    isChangedEmailChain: boolean;
+  }>();
+
+  const ambiguousClusters: Array<{
     canonicalEmail: string;
     canonicalId: string;
     emails: string[];
     isChangedEmailChain: boolean;
   }> = [];
 
-  for (const b of baseEmails) {
-    const canonicalId = b === "radhika.sharma@example.com"
-      ? "usr_demo_radhika"
-      : `usr_email_${encodeIdentifierToId(b)}`;
-    clusters.push({
-      canonicalEmail: b,
-      canonicalId,
-      emails: [b],
-      isChangedEmailChain: false,
-    });
-  }
-
-  for (const c of changedEmails) {
-    // Prioritize and validate previousEmail first, then ownerEmail (excluding self-references)
-    const rawPrev = meta[c]?.previousEmail?.toLowerCase().trim();
-    const prevEmail = rawPrev && rawPrev !== c ? rawPrev : undefined;
-
-    const rawOwner = meta[c]?.ownerEmail?.toLowerCase().trim();
-    const ownerEmail = rawOwner && rawOwner !== c ? rawOwner : undefined;
-
-    const targetRef = prevEmail || ownerEmail;
-
-    let targetCluster = targetRef
-      ? clusters.find((cl) => cl.emails.includes(targetRef) || cl.canonicalEmail === targetRef)
-      : undefined;
-
-    // Follow chain if targetRef points to another changed_email in a multi-hop chain
-    if (!targetCluster && targetRef) {
-      let currentRef: string | undefined = targetRef;
-      const visited = new Set<string>([c]);
-      while (currentRef && !visited.has(currentRef)) {
-        visited.add(currentRef);
-        targetCluster = clusters.find((cl) => cl.emails.includes(currentRef!) || cl.canonicalEmail === currentRef);
-        if (targetCluster) break;
-        const nextPrev: string | undefined = meta[currentRef]?.previousEmail?.toLowerCase().trim();
-        const nextOwner: string | undefined = meta[currentRef]?.ownerEmail?.toLowerCase().trim();
-        currentRef = (nextPrev && nextPrev !== currentRef) ? nextPrev : ((nextOwner && nextOwner !== currentRef) ? nextOwner : undefined);
-      }
-    }
-
-    if (targetCluster) {
-      targetCluster.emails.push(c);
-      targetCluster.isChangedEmailChain = true;
-      if ((meta[c]?.updatedAt || 0) >= (meta[targetCluster.canonicalEmail]?.updatedAt || 0)) {
-        targetCluster.canonicalEmail = c;
-        targetCluster.canonicalId = c === "radhika.sharma@example.com"
+  for (const e of normalized) {
+    const root = resolveRootOwner(e, meta);
+    if (root) {
+      const existing = clustersByRoot.get(root);
+      if (existing) {
+        existing.emails.push(e);
+        if (meta[e]?.type === "changed_email") {
+          existing.isChangedEmailChain = true;
+        }
+        if (activeUserEmail && e === activeUserEmail) {
+          existing.canonicalEmail = e;
+          existing.canonicalId = e === "radhika.sharma@example.com"
+            ? "usr_demo_radhika"
+            : `usr_email_${encodeIdentifierToId(e)}`;
+        } else if (
+          (!activeUserEmail || existing.canonicalEmail !== activeUserEmail) &&
+          (meta[e]?.updatedAt || 0) >= (meta[existing.canonicalEmail]?.updatedAt || 0)
+        ) {
+          existing.canonicalEmail = e;
+          existing.canonicalId = e === "radhika.sharma@example.com"
+            ? "usr_demo_radhika"
+            : `usr_email_${encodeIdentifierToId(e)}`;
+        }
+      } else {
+        const canonicalId = e === "radhika.sharma@example.com"
           ? "usr_demo_radhika"
-          : `usr_email_${encodeIdentifierToId(c)}`;
+          : `usr_email_${encodeIdentifierToId(e)}`;
+        clustersByRoot.set(root, {
+          canonicalEmail: e,
+          canonicalId,
+          emails: [e],
+          isChangedEmailChain: meta[e]?.type === "changed_email",
+        });
       }
     } else {
-      // Unlinked changed_email: do NOT use an unrelated active session as a fallback!
-      // Treat as its own account cluster.
-      const canonicalId = c === "radhika.sharma@example.com"
+      // Ambiguous / unresolvable alias: isolated to its own cluster
+      const canonicalId = e === "radhika.sharma@example.com"
         ? "usr_demo_radhika"
-        : `usr_email_${encodeIdentifierToId(c)}`;
-      clusters.push({
-        canonicalEmail: c,
+        : `usr_email_${encodeIdentifierToId(e)}`;
+      ambiguousClusters.push({
+        canonicalEmail: e,
         canonicalId,
-        emails: [c],
-        isChangedEmailChain: true,
+        emails: [e],
+        isChangedEmailChain: meta[e]?.type === "changed_email",
       });
     }
   }
 
+  const clusters = [...clustersByRoot.values(), ...ambiguousClusters];
+
   return {
-    isSingleOwner: clusters.length === 1,
+    isSingleOwner: false,
     clusters,
   };
 }
@@ -1129,6 +1180,7 @@ export function migrateLegacyAccountAliases(): void {
         for (const e of emailKeys) {
           map[e] = canonicalId;
           meta[e] = {
+            ...meta[e],
             accountId: canonicalId,
             type: meta[e]?.type || "primary",
             updatedAt: Date.now(),
@@ -1190,6 +1242,7 @@ export function migrateLegacyAccountAliases(): void {
           for (const e of cluster.emails) {
             map[e] = cluster.canonicalId;
             meta[e] = {
+              ...meta[e],
               accountId: cluster.canonicalId,
               type: meta[e]?.type || "primary",
               updatedAt: Date.now(),
@@ -1499,6 +1552,7 @@ export function lookupAccountId(identifier?: string | null): string | null {
         const targetId = myCluster?.canonicalId || expectedInjectiveId;
         map[key] = targetId;
         meta[key] = {
+          ...meta[key],
           accountId: targetId,
           type: meta[key]?.type || "primary",
           updatedAt: Date.now(),
@@ -1632,9 +1686,10 @@ export function registerAccountAlias(
       const priorEmail = options?.previousEmail || meta[key]?.previousEmail;
       if (isChangedEmail && priorEmail && priorEmail.toLowerCase().trim() !== key) {
         // For a changed email, prioritize the actual owning/base email
+        const root = resolveRootOwner(priorEmail, meta);
         effectiveOwnerEmail = options?.ownerEmail && options.ownerEmail.toLowerCase().trim() !== key
           ? options.ownerEmail.toLowerCase().trim()
-          : priorEmail.toLowerCase().trim();
+          : (root && root !== key ? root : priorEmail.toLowerCase().trim());
       } else if (!effectiveOwnerEmail) {
         effectiveOwnerEmail = key;
       }

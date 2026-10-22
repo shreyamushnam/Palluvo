@@ -5,7 +5,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Package, MapPin, User, Truck, CheckCircle2, ShieldCheck, Plus, X, Edit2, Trash2, Check, RotateCcw, LogOut, Sparkles, Award, Headphones, ArrowRight, Lock, Info } from "lucide-react";
-import { useStore, lookupAccountId, registerAccountAlias, unregisterAccountAlias, generateAccountId, encodeIdentifierToId, migrateLegacyAccountAliases, lookupEmailByAccountId, getAccountMetadata } from "@/context/StoreContext";
+import { useStore, lookupAccountId, registerAccountAlias, unregisterAccountAlias, generateAccountId, encodeIdentifierToId, migrateLegacyAccountAliases, lookupEmailByAccountId, getAccountMetadata, resolveRootOwner } from "@/context/StoreContext";
 import { SavedAddress, OrderRecord } from "@/data/mockOrders";
 import { useFocusTrap } from "@/hooks/useFocusTrap";
 import { formatStoredPhone, isValidIndianMobile } from "@/utils/phone";
@@ -500,6 +500,27 @@ export default function AccountPage() {
     const priorEmail = user?.email ? user.email.toLowerCase().trim() : undefined;
     const isEmailChanged = Boolean(priorEmail && priorEmail !== trimmedEmail);
 
+    // Read and retain the prior alias metadata BEFORE unregistering it:
+    // unregisterAccountAlias() deletes both the alias map entry and its metadata.
+    // On a second email edit (for example B → C → D), calling unregisterAccountAlias(C) first
+    // deletes C before metadata is read, losing the original owner B.
+    // Capture the prior metadata and resolve the root owner first.
+    const metaBeforeUnregister = getAccountMetadata();
+    const priorMeta = (isEmailChanged && priorEmail) ? metaBeforeUnregister[priorEmail] : undefined;
+    const resolvedOwner = (isEmailChanged && priorEmail)
+      ? resolveRootOwner(priorEmail, metaBeforeUnregister)
+      : undefined;
+
+    const actualOwnerEmail = isEmailChanged
+      ? (resolvedOwner && resolvedOwner !== trimmedEmail
+          ? resolvedOwner
+          : (priorMeta?.ownerEmail && priorMeta.ownerEmail.toLowerCase().trim() !== trimmedEmail
+              ? priorMeta.ownerEmail.toLowerCase().trim()
+              : (priorMeta?.previousEmail && priorMeta.previousEmail.toLowerCase().trim() !== trimmedEmail
+                  ? priorMeta.previousEmail.toLowerCase().trim()
+                  : priorEmail)))
+      : trimmedEmail;
+
     // If customer changed their email, release previous alias
     if (isEmailChanged && priorEmail) {
       unregisterAccountAlias(priorEmail, accountId);
@@ -513,14 +534,6 @@ export default function AccountPage() {
         unregisterAccountAlias(prevTen, accountId);
       }
     }
-
-    // Determine the true owning/base email: if this account changed emails, record the prior/base owner
-    const meta = getAccountMetadata();
-    const actualOwnerEmail = isEmailChanged
-      ? (meta[priorEmail!]?.ownerEmail && meta[priorEmail!]?.ownerEmail !== trimmedEmail
-          ? meta[priorEmail!].ownerEmail
-          : priorEmail)
-      : trimmedEmail;
 
     registerAccountAlias(trimmedEmail, accountId, {
       type: isEmailChanged ? "changed_email" : "primary",
