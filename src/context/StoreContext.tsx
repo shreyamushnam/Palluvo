@@ -147,6 +147,8 @@ const MIGRATION_META_KEY = "palluvo_account_migration_meta";
 export interface AccountAliasMeta {
   accountId: string;
   type?: "primary" | "changed_email" | "phone";
+  ownerEmail?: string;
+  previousEmail?: string;
   createdAt?: number;
   updatedAt?: number;
 }
@@ -174,6 +176,7 @@ export interface MigrationMeta {
   quarantinedLegacyBuckets: Record<string, { quarantinedAt: number; emails: string[] }>;
   tombstonedKeys?: Record<string, boolean>;
   failedQuarantineKeys?: Record<string, boolean>;
+  rekeyedOwnerIds?: Record<string, string>;
 }
 
 export function getMigrationMetadata(): MigrationMeta {
@@ -184,6 +187,7 @@ export function getMigrationMetadata(): MigrationMeta {
       quarantinedLegacyBuckets: {},
       tombstonedKeys: {},
       failedQuarantineKeys: {},
+      rekeyedOwnerIds: {},
     };
   }
   try {
@@ -195,6 +199,7 @@ export function getMigrationMetadata(): MigrationMeta {
       quarantinedLegacyBuckets: parsed.quarantinedLegacyBuckets || {},
       tombstonedKeys: parsed.tombstonedKeys || {},
       failedQuarantineKeys: parsed.failedQuarantineKeys || {},
+      rekeyedOwnerIds: parsed.rekeyedOwnerIds || {},
     };
   } catch {
     return {
@@ -203,6 +208,7 @@ export function getMigrationMetadata(): MigrationMeta {
       quarantinedLegacyBuckets: {},
       tombstonedKeys: {},
       failedQuarantineKeys: {},
+      rekeyedOwnerIds: {},
     };
   }
 }
@@ -444,6 +450,268 @@ export function getDirectLegacyEmailId(email: string): string {
 }
 
 /**
+ * Resolves a known real email address registered to an account ID, if any.
+ */
+export function lookupEmailByAccountId(accountId?: string | null): string | null {
+  if (!accountId || typeof accountId !== "string") return null;
+  const targetId = accountId.trim();
+  if (!targetId) return null;
+  try {
+    const raw = localStorage.getItem(ACCOUNT_MAP_KEY);
+    if (!raw) return null;
+    const map = JSON.parse(raw);
+    if (!map || typeof map !== "object") return null;
+    for (const [k, v] of Object.entries(map)) {
+      if (typeof v === "string" && v.trim() === targetId && k.includes("@") && !k.startsWith("connoisseur.")) {
+        return k.toLowerCase().trim();
+      }
+    }
+  } catch {}
+  return null;
+}
+
+/**
+ * Partitions a group of emails mapped to the same ID into distinct account owners.
+ * Uses explicit changed_email metadata and active session signals to group aliases belonging
+ * to the same account owner together, separating only distinct account owners.
+ */
+export function partitionEmailsByAccountOwner(
+  emails: string[],
+  meta: Record<string, AccountAliasMeta>,
+  activeUserEmail?: string | null
+): {
+  isSingleOwner: boolean;
+  clusters: Array<{
+    canonicalEmail: string;
+    canonicalId: string;
+    emails: string[];
+    isChangedEmailChain: boolean;
+  }>;
+} {
+  const normalized = Array.from(new Set(emails.map((e) => e.toLowerCase().trim()).filter(Boolean)));
+  if (normalized.length <= 1) {
+    const singleEmail = normalized[0] || "";
+    const canonicalId = singleEmail === "radhika.sharma@example.com"
+      ? "usr_demo_radhika"
+      : `usr_email_${encodeIdentifierToId(singleEmail)}`;
+    return {
+      isSingleOwner: true,
+      clusters: [{ canonicalEmail: singleEmail, canonicalId, emails: normalized, isChangedEmailChain: false }],
+    };
+  }
+
+  const changedEmails = normalized.filter((e) => meta[e]?.type === "changed_email");
+  const baseEmails = normalized.filter((e) => meta[e]?.type !== "changed_email");
+
+  // If there is at most one base email, all other emails are explicit changed_email aliases of that single account
+  if (baseEmails.length <= 1) {
+    let canonicalEmail: string;
+    if (activeUserEmail && normalized.includes(activeUserEmail)) {
+      canonicalEmail = activeUserEmail;
+    } else if (changedEmails.length > 0) {
+      // Pick the latest changed email
+      const sorted = [...changedEmails].sort((a, b) => (meta[b]?.updatedAt || 0) - (meta[a]?.updatedAt || 0));
+      canonicalEmail = sorted[0];
+    } else {
+      canonicalEmail = baseEmails[0] || normalized[0];
+    }
+
+    const canonicalId = canonicalEmail === "radhika.sharma@example.com"
+      ? "usr_demo_radhika"
+      : `usr_email_${encodeIdentifierToId(canonicalEmail)}`;
+
+    return {
+      isSingleOwner: true,
+      clusters: [
+        {
+          canonicalEmail,
+          canonicalId,
+          emails: normalized,
+          isChangedEmailChain: changedEmails.length > 0,
+        },
+      ],
+    };
+  }
+
+  // Multi-owner collision: multiple distinct base emails exist in this group
+  const clusters: Array<{
+    canonicalEmail: string;
+    canonicalId: string;
+    emails: string[];
+    isChangedEmailChain: boolean;
+  }> = [];
+
+  for (const b of baseEmails) {
+    const canonicalId = b === "radhika.sharma@example.com"
+      ? "usr_demo_radhika"
+      : `usr_email_${encodeIdentifierToId(b)}`;
+    clusters.push({
+      canonicalEmail: b,
+      canonicalId,
+      emails: [b],
+      isChangedEmailChain: false,
+    });
+  }
+
+  for (const c of changedEmails) {
+    const ownerEmail = meta[c]?.ownerEmail || meta[c]?.previousEmail;
+    let targetCluster = ownerEmail ? clusters.find((cl) => cl.emails.includes(ownerEmail) || cl.canonicalEmail === ownerEmail) : undefined;
+    if (!targetCluster && activeUserEmail && (activeUserEmail === c || clusters.some((cl) => cl.canonicalEmail === activeUserEmail))) {
+      targetCluster = clusters.find((cl) => cl.canonicalEmail === activeUserEmail);
+    }
+    if (targetCluster) {
+      targetCluster.emails.push(c);
+      targetCluster.isChangedEmailChain = true;
+      if ((meta[c]?.updatedAt || 0) >= (meta[targetCluster.canonicalEmail]?.updatedAt || 0)) {
+        targetCluster.canonicalEmail = c;
+        targetCluster.canonicalId = c === "radhika.sharma@example.com"
+          ? "usr_demo_radhika"
+          : `usr_email_${encodeIdentifierToId(c)}`;
+      }
+    } else {
+      // Unlinked changed_email: treat as its own account cluster
+      const canonicalId = c === "radhika.sharma@example.com"
+        ? "usr_demo_radhika"
+        : `usr_email_${encodeIdentifierToId(c)}`;
+      clusters.push({
+        canonicalEmail: c,
+        canonicalId,
+        emails: [c],
+        isChangedEmailChain: true,
+      });
+    }
+  }
+
+  return {
+    isSingleOwner: false,
+    clusters,
+  };
+}
+
+/**
+ * Safely copies orders and addresses from a source legacy ID to a canonical account ID.
+ * Avoids overwriting if target already contains orders or addresses.
+ */
+export function copyCustomerData(fromAccountId: string, toAccountId: string): void {
+  if (typeof window === "undefined" || !window.localStorage) return;
+  if (!fromAccountId || !toAccountId || fromAccountId === toAccountId) return;
+  try {
+    const fromSafe = fromAccountId.toLowerCase().trim().replace(/[^a-z0-9_]/g, (ch) => `_${ch.charCodeAt(0).toString(16)}_`);
+    const toSafe = toAccountId.toLowerCase().trim().replace(/[^a-z0-9_]/g, (ch) => `_${ch.charCodeAt(0).toString(16)}_`);
+
+    const orderSources = [
+      `palluvo_ecommerce_orders_${fromSafe}`,
+      `palluvo_ecommerce_orders_${fromAccountId}`,
+      `palluvo_quarantine_palluvo_ecommerce_orders_${fromSafe}`,
+      `palluvo_quarantine_palluvo_ecommerce_orders_${fromAccountId}`,
+    ];
+    const targetOrdersKey = `palluvo_ecommerce_orders_${toSafe}`;
+
+    let targetOrdersExist = false;
+    try {
+      const rawTarget = localStorage.getItem(targetOrdersKey);
+      if (rawTarget) {
+        const parsed = JSON.parse(rawTarget);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          targetOrdersExist = true;
+        }
+      }
+    } catch {}
+
+    if (!targetOrdersExist) {
+      for (const src of orderSources) {
+        try {
+          const val = localStorage.getItem(src);
+          if (val) {
+            const parsed = JSON.parse(val);
+            if (Array.isArray(parsed) && parsed.length > 0) {
+              localStorage.setItem(targetOrdersKey, val);
+              break;
+            }
+          }
+        } catch {}
+      }
+    }
+
+    const addrSources = [
+      `palluvo_ecommerce_addresses_${fromSafe}`,
+      `palluvo_ecommerce_addresses_${fromAccountId}`,
+      `palluvo_quarantine_palluvo_ecommerce_addresses_${fromSafe}`,
+      `palluvo_quarantine_palluvo_ecommerce_addresses_${fromAccountId}`,
+    ];
+    const targetAddrKey = `palluvo_ecommerce_addresses_${toSafe}`;
+
+    let targetAddrExist = false;
+    try {
+      const rawTarget = localStorage.getItem(targetAddrKey);
+      if (rawTarget) {
+        const parsed = JSON.parse(rawTarget);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          targetAddrExist = true;
+        }
+      }
+    } catch {}
+
+    if (!targetAddrExist) {
+      for (const src of addrSources) {
+        try {
+          const val = localStorage.getItem(src);
+          if (val) {
+            const parsed = JSON.parse(val);
+            if (Array.isArray(parsed) && parsed.length > 0) {
+              localStorage.setItem(targetAddrKey, val);
+              break;
+            }
+          }
+        } catch {}
+      }
+    }
+  } catch {}
+}
+
+/**
+ * Removes quarantine and tombstone markers that were mistakenly applied to a single account owner
+ * who merely had changed-email aliases.
+ */
+export function clearFalseQuarantine(accountId: string, canonicalId: string, migrationMeta?: MigrationMeta): void {
+  if (typeof window === "undefined" || !window.localStorage) return;
+  if (!accountId) return;
+  try {
+    const trimmed = accountId.trim();
+    const safeId = trimmed.toLowerCase().replace(/[^a-z0-9_]/g, (ch) => `_${ch.charCodeAt(0).toString(16)}_`);
+
+    localStorage.removeItem(`palluvo_tombstone_${trimmed}`);
+    localStorage.removeItem(`palluvo_tombstone_${safeId}`);
+    localStorage.removeItem(`palluvo_tombstone_palluvo_ecommerce_orders_${trimmed}`);
+    localStorage.removeItem(`palluvo_tombstone_palluvo_ecommerce_orders_${safeId}`);
+    localStorage.removeItem(`palluvo_tombstone_palluvo_ecommerce_addresses_${trimmed}`);
+    localStorage.removeItem(`palluvo_tombstone_palluvo_ecommerce_addresses_${safeId}`);
+
+    const metaToUpdate = migrationMeta || getMigrationMetadata();
+    if (metaToUpdate.quarantinedLegacyBuckets) {
+      delete metaToUpdate.quarantinedLegacyBuckets[trimmed];
+      delete metaToUpdate.quarantinedLegacyBuckets[safeId];
+    }
+    if (metaToUpdate.quarantinedCollisionIds) {
+      delete metaToUpdate.quarantinedCollisionIds[trimmed];
+      delete metaToUpdate.quarantinedCollisionIds[safeId];
+    }
+    if (metaToUpdate.tombstonedKeys) {
+      delete metaToUpdate.tombstonedKeys[`palluvo_ecommerce_orders_${trimmed}`];
+      delete metaToUpdate.tombstonedKeys[`palluvo_ecommerce_orders_${safeId}`];
+      delete metaToUpdate.tombstonedKeys[`palluvo_ecommerce_addresses_${trimmed}`];
+      delete metaToUpdate.tombstonedKeys[`palluvo_ecommerce_addresses_${safeId}`];
+    }
+    metaToUpdate.rekeyedOwnerIds = metaToUpdate.rekeyedOwnerIds || {};
+    metaToUpdate.rekeyedOwnerIds[trimmed] = canonicalId;
+    metaToUpdate.rekeyedOwnerIds[safeId] = canonicalId;
+    if (!migrationMeta) {
+      setMigrationMetadata(metaToUpdate);
+    }
+  } catch {}
+}
+
+/**
  * Migrates existing legacy colliding email aliases in palluvo_account_identity_map
  * to distinct injective IDs.
  * Does not infer a direct identity mapping solely from equality with the lossy legacy encoding.
@@ -506,9 +774,10 @@ export function migrateLegacyAccountAliases(): void {
 
     const meta = getAccountMetadata();
     const migrationMeta = getMigrationMetadata();
+    migrationMeta.rekeyedOwnerIds = migrationMeta.rekeyedOwnerIds || {};
 
     // Check currently active authenticated user session if available
-    let activeAuthUser: { id?: string; email?: string } | null = null;
+    let activeAuthUser: { id?: string; email?: string; mobile?: string } | null = null;
     try {
       const authRaw = localStorage.getItem("palluvo_ecommerce_auth");
       if (authRaw) {
@@ -522,126 +791,228 @@ export function migrateLegacyAccountAliases(): void {
     const activeUserEmail = activeAuthUser?.email ? activeAuthUser.email.toLowerCase().trim() : null;
     const activeUserId = activeAuthUser?.id ? activeAuthUser.id.trim() : null;
 
-    // Detect confirmed collision groups: multiple distinct emails mapped to the exact same value in identity map
-    const emailKeysByVal = new Map<string, Set<string>>();
+    // Group all keys by their mapped value
+    const keysByVal = new Map<string, Set<string>>();
     for (const [k, v] of Object.entries(map)) {
-      if (typeof v === "string" && k.toLowerCase().includes("@")) {
+      if (typeof v === "string" && v.trim().length > 0) {
         const trimmedVal = v.trim();
-        const set = emailKeysByVal.get(trimmedVal) || new Set<string>();
+        const set = keysByVal.get(trimmedVal) || new Set<string>();
         set.add(k.toLowerCase().trim());
-        emailKeysByVal.set(trimmedVal, set);
+        keysByVal.set(trimmedVal, set);
+      } else {
+        delete map[k];
+        delete meta[k.toLowerCase().trim()];
+        modified = true;
       }
     }
 
-    for (const key of Object.keys(map)) {
-      const val = map[key];
-      if (typeof val !== "string") {
-        delete map[key];
-        delete meta[key.toLowerCase().trim()];
-        modified = true;
+    for (const [trimmedVal, groupKeys] of keysByVal.entries()) {
+      const allKeys = Array.from(groupKeys);
+      const emailKeys = allKeys.filter((k) => k.includes("@"));
+      const nonEmailKeys = allKeys.filter((k) => !k.includes("@"));
+
+      if (emailKeys.length === 0) {
+        // Group contains only non-email keys (e.g. phone numbers)
+        if (isQuarantinedAccountId(trimmedVal)) {
+          const redirectedId = migrationMeta.rekeyedOwnerIds?.[trimmedVal];
+          if (redirectedId && !isQuarantinedAccountId(redirectedId)) {
+            for (const p of nonEmailKeys) {
+              map[p] = redirectedId;
+              meta[p] = { ...meta[p], accountId: redirectedId, type: "phone", updatedAt: Date.now() };
+              modified = true;
+            }
+          } else {
+            // Reject tombstoned ID consistently
+            for (const p of nonEmailKeys) {
+              delete map[p];
+              delete meta[p];
+              modified = true;
+            }
+          }
+        } else if (trimmedVal.startsWith("usr_phone_")) {
+          const phoneDigits = trimmedVal.slice("usr_phone_".length);
+          if (phoneDigits.length < 10) {
+            for (const p of nonEmailKeys) {
+              delete map[p];
+              delete meta[p];
+              modified = true;
+            }
+          }
+        }
         continue;
       }
-      const trimmedVal = val.trim();
-      const lowerKey = key.toLowerCase().trim();
 
-      if (lowerKey.includes("@")) {
-        const expectedInjectiveId = lowerKey === "radhika.sharma@example.com"
+      if (emailKeys.length === 1) {
+        const singleEmail = emailKeys[0];
+        const expectedInjectiveId = singleEmail === "radhika.sharma@example.com"
           ? "usr_demo_radhika"
-          : `usr_email_${encodeIdentifierToId(lowerKey)}`;
+          : `usr_email_${encodeIdentifierToId(singleEmail)}`;
 
-        // A confirmed collision occurs when multiple distinct emails are mapped to the same ID in the identity map
-        const collisionEmails = emailKeysByVal.get(trimmedVal);
-        const isCollisionGroup = (collisionEmails?.size ?? 0) > 1;
+        if (isQuarantinedAccountId(trimmedVal)) {
+          map[singleEmail] = expectedInjectiveId;
+          meta[singleEmail] = {
+            accountId: expectedInjectiveId,
+            type: meta[singleEmail]?.type || "primary",
+            updatedAt: Date.now(),
+          };
+          for (const p of nonEmailKeys) {
+            map[p] = expectedInjectiveId;
+            meta[p] = { ...meta[p], accountId: expectedInjectiveId, type: "phone", updatedAt: Date.now() };
+          }
+          migrationMeta.rekeyedOwnerIds[trimmedVal] = expectedInjectiveId;
+          modified = true;
 
-        if (isCollisionGroup) {
-          // Always quarantine the ambiguous legacy bucket for this collision group so neither alias loads it
-          if (!migrationMeta.quarantinedLegacyBuckets?.[trimmedVal]) {
-            quarantineLegacyBucket(trimmedVal, Array.from(collisionEmails!));
-            migrationMeta.quarantinedLegacyBuckets[trimmedVal] = {
-              quarantinedAt: Date.now(),
-              emails: Array.from(collisionEmails!),
+          if (activeUserId === trimmedVal && activeUserEmail === singleEmail) {
+            try {
+              const authRaw = localStorage.getItem("palluvo_ecommerce_auth");
+              if (authRaw) {
+                const parsed = JSON.parse(authRaw);
+                if (parsed?.user) {
+                  parsed.user.id = expectedInjectiveId;
+                  localStorage.setItem("palluvo_ecommerce_auth", JSON.stringify(parsed));
+                }
+              }
+            } catch {}
+          }
+        } else {
+          // If phone keys are present, associate them with this single account owner
+          for (const p of nonEmailKeys) {
+            if (trimmedVal.startsWith("usr_phone_")) {
+              const digits = trimmedVal.slice("usr_phone_".length);
+              if (digits.length < 10) {
+                delete map[p];
+                delete meta[p];
+                modified = true;
+              }
+            }
+          }
+        }
+        continue;
+      }
+
+      // emailKeys.length > 1: Analyze ownership partition
+      const partition = partitionEmailsByAccountOwner(emailKeys, meta, activeUserEmail);
+
+      if (partition.isSingleOwner) {
+        // Single customer who changed their email!
+        // DO NOT quarantine the legacy bucket.
+        const ownerCluster = partition.clusters[0];
+        const canonicalId = ownerCluster.canonicalId;
+
+        clearFalseQuarantine(trimmedVal, canonicalId, migrationMeta);
+        copyCustomerData(trimmedVal, canonicalId);
+
+        for (const e of emailKeys) {
+          map[e] = canonicalId;
+          meta[e] = {
+            accountId: canonicalId,
+            type: meta[e]?.type || "primary",
+            updatedAt: Date.now(),
+          };
+          modified = true;
+        }
+
+        for (const p of nonEmailKeys) {
+          map[p] = canonicalId;
+          meta[p] = {
+            accountId: canonicalId,
+            type: "phone",
+            updatedAt: Date.now(),
+          };
+          modified = true;
+        }
+
+        migrationMeta.rekeyedOwnerIds[trimmedVal] = canonicalId;
+
+        if (activeUserId === trimmedVal || (activeUserEmail && emailKeys.includes(activeUserEmail))) {
+          try {
+            const authRaw = localStorage.getItem("palluvo_ecommerce_auth");
+            if (authRaw) {
+              const parsed = JSON.parse(authRaw);
+              if (parsed?.user) {
+                parsed.user.id = canonicalId;
+                localStorage.setItem("palluvo_ecommerce_auth", JSON.stringify(parsed));
+              }
+            }
+          } catch {}
+        }
+      } else {
+        // Multi-owner collision: multiple distinct account owners mapped to same ID
+        if (!migrationMeta.quarantinedLegacyBuckets?.[trimmedVal]) {
+          quarantineLegacyBucket(trimmedVal, emailKeys);
+          migrationMeta.quarantinedLegacyBuckets[trimmedVal] = {
+            quarantinedAt: Date.now(),
+            emails: emailKeys,
+          };
+          migrationMeta.quarantinedCollisionIds[trimmedVal] = emailKeys;
+          modified = true;
+        }
+
+        for (const cluster of partition.clusters) {
+          for (const e of cluster.emails) {
+            map[e] = cluster.canonicalId;
+            meta[e] = {
+              accountId: cluster.canonicalId,
+              type: meta[e]?.type || "primary",
+              updatedAt: Date.now(),
             };
-            migrationMeta.quarantinedCollisionIds[trimmedVal] = Array.from(collisionEmails!);
             modified = true;
           }
+        }
 
-          // A quarantined legacy ID must remain unavailable as an active storage namespace across all tabs.
-          // Move ALL collision accounts, including any recognized owner, off that namespace to distinct injective IDs.
-          map[key] = expectedInjectiveId;
-          meta[lowerKey] = {
-            accountId: expectedInjectiveId,
-            type: meta[lowerKey]?.type || "primary",
-            updatedAt: Date.now(),
-          };
-          modified = true;
+        // Migrate non-email aliases (phones) using owner mapping
+        for (const p of nonEmailKeys) {
+          const ownerEmail = meta[p]?.ownerEmail;
+          let matchedCluster = ownerEmail
+            ? partition.clusters.find((cl) => cl.emails.includes(ownerEmail) || cl.canonicalEmail === ownerEmail)
+            : undefined;
 
-          migrationMeta.migratedCollisionIds[trimmedVal] = Array.from(
-            new Set([...(migrationMeta.migratedCollisionIds[trimmedVal] || []), ...Array.from(collisionEmails!)])
-          );
+          if (!matchedCluster && activeAuthUser?.mobile) {
+            const rawDigits = activeAuthUser.mobile.replace(/\D/g, "");
+            const tenDigits = rawDigits.length >= 10 ? rawDigits.slice(-10) : rawDigits;
+            if (tenDigits === p && activeUserEmail) {
+              matchedCluster = partition.clusters.find((cl) => cl.emails.includes(activeUserEmail));
+            }
+          }
 
-          if (activeUserId === trimmedVal && activeUserEmail === lowerKey) {
+          if (matchedCluster) {
+            map[p] = matchedCluster.canonicalId;
+            meta[p] = { ...meta[p], accountId: matchedCluster.canonicalId, type: "phone", updatedAt: Date.now() };
+            modified = true;
+          } else {
+            // Cannot attribute phone cleanly in multi-owner collision; reject tombstoned ID
+            delete map[p];
+            delete meta[p];
+            modified = true;
+          }
+        }
+
+        // Record active owner redirect if identifiable
+        if (activeUserEmail) {
+          const activeCluster = partition.clusters.find((cl) => cl.emails.includes(activeUserEmail));
+          if (activeCluster) {
+            migrationMeta.rekeyedOwnerIds[trimmedVal] = activeCluster.canonicalId;
+          }
+        }
+
+        migrationMeta.migratedCollisionIds[trimmedVal] = Array.from(
+          new Set([...(migrationMeta.migratedCollisionIds[trimmedVal] || []), ...emailKeys])
+        );
+
+        if (activeUserId === trimmedVal && activeUserEmail) {
+          const activeCluster = partition.clusters.find((cl) => cl.emails.includes(activeUserEmail));
+          if (activeCluster) {
             try {
               const authRaw = localStorage.getItem("palluvo_ecommerce_auth");
               if (authRaw) {
                 const parsed = JSON.parse(authRaw);
                 if (parsed?.user) {
-                  parsed.user.id = expectedInjectiveId;
+                  parsed.user.id = activeCluster.canonicalId;
                   localStorage.setItem("palluvo_ecommerce_auth", JSON.stringify(parsed));
                 }
               }
             } catch {}
           }
-          continue;
-        }
-
-        // If this ID was quarantined, it must remain unavailable as an active storage namespace.
-        // Move the retained owner off that namespace too.
-        if (isQuarantinedAccountId(trimmedVal)) {
-          map[key] = expectedInjectiveId;
-          meta[lowerKey] = {
-            accountId: expectedInjectiveId,
-            type: meta[lowerKey]?.type || "primary",
-            updatedAt: Date.now(),
-          };
-          modified = true;
-
-          migrationMeta.migratedCollisionIds[trimmedVal] = Array.from(
-            new Set([...(migrationMeta.migratedCollisionIds[trimmedVal] || []), lowerKey])
-          );
-
-          if (activeUserId === trimmedVal && activeUserEmail === lowerKey) {
-            try {
-              const authRaw = localStorage.getItem("palluvo_ecommerce_auth");
-              if (authRaw) {
-                const parsed = JSON.parse(authRaw);
-                if (parsed?.user) {
-                  parsed.user.id = expectedInjectiveId;
-                  localStorage.setItem("palluvo_ecommerce_auth", JSON.stringify(parsed));
-                }
-              }
-            } catch {}
-          }
-          continue;
-        }
-
-        // Check if this key is known as a changed-email alias or actively authenticated user
-        const isKnownChangedEmail = meta[lowerKey]?.type === "changed_email" && meta[lowerKey]?.accountId === trimmedVal;
-        const isActiveAuthOwnership = activeUserEmail === lowerKey && activeUserId === trimmedVal;
-
-        if (isKnownChangedEmail || isActiveAuthOwnership) {
-          if (!meta[lowerKey]) {
-            meta[lowerKey] = { accountId: trimmedVal, type: "changed_email", updatedAt: Date.now() };
-          }
-          continue;
-        }
-        // If there is NO collision (only 1 email mapped to trimmedVal), NEVER remap!
-        // Preserve aliases to an existing immutable account ID!
-      } else if (trimmedVal.startsWith("usr_phone_")) {
-        const phoneDigits = trimmedVal.slice("usr_phone_".length);
-        if (phoneDigits.length < 10) {
-          delete map[key];
-          delete meta[lowerKey];
-          modified = true;
         }
       }
     }
@@ -657,6 +1028,7 @@ export function migrateLegacyAccountAliases(): void {
 /**
  * Returns a known immutable account ID mapped to an identifier (email or phone digits), if any.
  * Preserves aliases pointing to an existing immutable account ID and only remaps confirmed collision records.
+ * Consistently redirects or rejects tombstoned IDs across all identifier types.
  */
 export function lookupAccountId(identifier?: string | null): string | null {
   if (!identifier || typeof identifier !== "string") return null;
@@ -666,151 +1038,205 @@ export function lookupAccountId(identifier?: string | null): string | null {
     const raw = localStorage.getItem(ACCOUNT_MAP_KEY);
     if (!raw) return null;
     const map = JSON.parse(raw);
-    if (map && typeof map === "object" && typeof map[key] === "string" && map[key].trim().length > 0) {
-      const val = map[key].trim();
+    if (!map || typeof map !== "object" || typeof map[key] !== "string" || !map[key].trim()) {
+      return null;
+    }
+    const val = map[key].trim();
+    const meta = getAccountMetadata();
+    const migrationMeta = getMigrationMetadata();
 
+    // 1. Check whether val represents a quarantined/tombstoned ID for ANY identifier type
+    if (isQuarantinedAccountId(val)) {
+      const redirectedId = migrationMeta.rekeyedOwnerIds?.[val];
+      if (redirectedId && !isQuarantinedAccountId(redirectedId)) {
+        map[key] = redirectedId;
+        meta[key] = {
+          ...meta[key],
+          accountId: redirectedId,
+          type: meta[key]?.type || (key.includes("@") ? "primary" : "phone"),
+          updatedAt: Date.now(),
+        };
+        try {
+          localStorage.setItem(ACCOUNT_MAP_KEY, JSON.stringify(map));
+          setAccountMetadata(meta);
+        } catch {}
+        return redirectedId;
+      }
+
+      // If key is an email, rekey to injective ID
       if (key.includes("@")) {
         const expectedInjectiveId = key === "radhika.sharma@example.com"
           ? "usr_demo_radhika"
           : `usr_email_${encodeIdentifierToId(key)}`;
-
-        const meta = getAccountMetadata();
-        const migrationMeta = getMigrationMetadata();
-
-        let activeAuthUser: { id?: string; email?: string } | null = null;
+        map[key] = expectedInjectiveId;
+        meta[key] = {
+          accountId: expectedInjectiveId,
+          type: meta[key]?.type || "primary",
+          updatedAt: Date.now(),
+        };
         try {
-          const authRaw = localStorage.getItem("palluvo_ecommerce_auth");
-          if (authRaw) {
-            const parsed = JSON.parse(authRaw);
-            if (parsed?.isLoggedIn && parsed?.user && typeof parsed.user === "object") {
-              activeAuthUser = parsed.user;
-            }
-          }
+          localStorage.setItem(ACCOUNT_MAP_KEY, JSON.stringify(map));
+          setAccountMetadata(meta);
         } catch {}
+        return expectedInjectiveId;
+      }
 
-        const activeUserEmail = activeAuthUser?.email ? activeAuthUser.email.toLowerCase().trim() : null;
-        const activeUserId = activeAuthUser?.id ? activeAuthUser.id.trim() : null;
+      // For non-email identifier (e.g. phone) without a valid owner redirect:
+      // Reject the tombstoned ID consistently!
+      delete map[key];
+      delete meta[key];
+      try {
+        localStorage.setItem(ACCOUNT_MAP_KEY, JSON.stringify(map));
+        setAccountMetadata(meta);
+      } catch {}
+      return null;
+    }
 
-        // Count distinct emails in map pointing to this val
-        let collisionCount = 0;
-        let otherEmailHasOwner = false;
-        const collisionEmails: string[] = [];
-        for (const [k, v] of Object.entries(map)) {
-          if (typeof v === "string" && v.trim() === val && k.toLowerCase().includes("@")) {
-            collisionCount++;
-            const otherKey = k.toLowerCase().trim();
-            collisionEmails.push(otherKey);
-            if (otherKey !== key && ((activeUserEmail === otherKey && activeUserId === val) || meta[otherKey]?.type === "changed_email")) {
-              otherEmailHasOwner = true;
-            }
+    // 2. If val is NOT quarantined:
+    if (key.includes("@")) {
+      const expectedInjectiveId = key === "radhika.sharma@example.com"
+        ? "usr_demo_radhika"
+        : `usr_email_${encodeIdentifierToId(key)}`;
+
+      let activeAuthUser: { id?: string; email?: string } | null = null;
+      try {
+        const authRaw = localStorage.getItem("palluvo_ecommerce_auth");
+        if (authRaw) {
+          const parsed = JSON.parse(authRaw);
+          if (parsed?.isLoggedIn && parsed?.user && typeof parsed.user === "object") {
+            activeAuthUser = parsed.user;
           }
         }
+      } catch {}
 
-        if (isQuarantinedAccountId(val)) {
-          map[key] = expectedInjectiveId;
-          meta[key] = {
-            accountId: expectedInjectiveId,
-            type: meta[key]?.type || "primary",
-            updatedAt: Date.now(),
-          };
-          try {
-            localStorage.setItem(ACCOUNT_MAP_KEY, JSON.stringify(map));
-            setAccountMetadata(meta);
-          } catch {}
-          return expectedInjectiveId;
-        }
+      const activeUserEmail = activeAuthUser?.email ? activeAuthUser.email.toLowerCase().trim() : null;
 
-        if (collisionCount > 1) {
-          if (!migrationMeta.quarantinedLegacyBuckets?.[val]) {
-            quarantineLegacyBucket(val, collisionEmails);
-            migrationMeta.quarantinedLegacyBuckets[val] = {
-              quarantinedAt: Date.now(),
-              emails: collisionEmails,
-            };
-            migrationMeta.quarantinedCollisionIds[val] = collisionEmails;
-          }
-          map[key] = expectedInjectiveId;
-          meta[key] = {
-            accountId: expectedInjectiveId,
-            type: meta[key]?.type || "primary",
-            updatedAt: Date.now(),
-          };
-          try {
-            localStorage.setItem(ACCOUNT_MAP_KEY, JSON.stringify(map));
-            setAccountMetadata(meta);
-            migrationMeta.migratedCollisionIds[val] = migrationMeta.migratedCollisionIds[val] || [];
-            if (!migrationMeta.migratedCollisionIds[val].includes(key)) {
-              migrationMeta.migratedCollisionIds[val].push(key);
-            }
-            setMigrationMetadata(migrationMeta);
-          } catch {}
-          return expectedInjectiveId;
-        }
-
-        const isKnownChangedEmail = meta[key]?.type === "changed_email" && meta[key]?.accountId === val;
-        const isActiveAuthOwnership = activeUserEmail === key && activeUserId === val;
-
-        if (isKnownChangedEmail || isActiveAuthOwnership) {
-          return val;
-        }
-
-        if (otherEmailHasOwner) {
-          map[key] = expectedInjectiveId;
-          try {
-            localStorage.setItem(ACCOUNT_MAP_KEY, JSON.stringify(map));
-          } catch {}
-          return expectedInjectiveId;
-        }
-
-        return val;
-      } else if (val.startsWith("usr_phone_")) {
-        const phoneDigits = val.slice("usr_phone_".length);
-        if (phoneDigits.length < 10) {
-          delete map[key];
-          try {
-            localStorage.setItem(ACCOUNT_MAP_KEY, JSON.stringify(map));
-          } catch {}
-          return null;
+      // Find all emails in map pointing to this val
+      const collisionEmails: string[] = [];
+      for (const [k, v] of Object.entries(map)) {
+        if (typeof v === "string" && v.trim() === val && k.toLowerCase().includes("@")) {
+          collisionEmails.push(k.toLowerCase().trim());
         }
       }
 
+      if (collisionEmails.length > 1) {
+        const partition = partitionEmailsByAccountOwner(collisionEmails, meta, activeUserEmail);
+        if (partition.isSingleOwner) {
+          const ownerCluster = partition.clusters[0];
+          const targetId = (val.startsWith("usr_email_") || val === "usr_demo_radhika")
+            ? val
+            : ownerCluster.canonicalId;
+          map[key] = targetId;
+          meta[key] = {
+            ...meta[key],
+            accountId: targetId,
+            type: meta[key]?.type || "primary",
+            updatedAt: Date.now(),
+          };
+          copyCustomerData(val, targetId);
+          clearFalseQuarantine(val, targetId, migrationMeta);
+          try {
+            localStorage.setItem(ACCOUNT_MAP_KEY, JSON.stringify(map));
+            setAccountMetadata(meta);
+          } catch {}
+          return targetId;
+        }
+
+        // True collision between distinct owners
+        if (!migrationMeta.quarantinedLegacyBuckets?.[val]) {
+          quarantineLegacyBucket(val, collisionEmails);
+          migrationMeta.quarantinedLegacyBuckets[val] = {
+            quarantinedAt: Date.now(),
+            emails: collisionEmails,
+          };
+          migrationMeta.quarantinedCollisionIds[val] = collisionEmails;
+        }
+
+        const myCluster = partition.clusters.find((c) => c.emails.includes(key));
+        const targetId = myCluster?.canonicalId || expectedInjectiveId;
+        map[key] = targetId;
+        meta[key] = {
+          accountId: targetId,
+          type: meta[key]?.type || "primary",
+          updatedAt: Date.now(),
+        };
+        try {
+          localStorage.setItem(ACCOUNT_MAP_KEY, JSON.stringify(map));
+          setAccountMetadata(meta);
+          migrationMeta.migratedCollisionIds[val] = Array.from(
+            new Set([...(migrationMeta.migratedCollisionIds[val] || []), key])
+          );
+          setMigrationMetadata(migrationMeta);
+        } catch {}
+        return targetId;
+      }
+
       return val;
+    } else if (val.startsWith("usr_phone_")) {
+      const phoneDigits = val.slice("usr_phone_".length);
+      if (phoneDigits.length < 10) {
+        delete map[key];
+        delete meta[key];
+        try {
+          localStorage.setItem(ACCOUNT_MAP_KEY, JSON.stringify(map));
+          setAccountMetadata(meta);
+        } catch {}
+        return null;
+      }
     }
-  } catch {}
-  return null;
+
+    return val;
+  } catch {
+    return null;
+  }
 }
 
 /**
  * Registers an identifier alias (e.g. new email or phone number) pointing to an immutable account ID.
  * Strictly rejects rebinding if the identifier is already registered to a different account ID.
- * Supports explicit metadata tracking for changed-email aliases.
+ * Supports explicit metadata tracking for changed-email aliases and owner links.
  */
 export function registerAccountAlias(
   identifier: string,
   accountId: string,
-  options?: { type?: "primary" | "changed_email" | "phone" }
+  options?: {
+    type?: "primary" | "changed_email" | "phone";
+    ownerEmail?: string;
+    previousEmail?: string;
+  }
 ): boolean {
   if (!identifier || !accountId) return false;
   const key = identifier.toLowerCase().trim();
-  const val = accountId.trim();
+  let val = accountId.trim();
   if (!key || !val) return false;
   try {
+    const migrationMeta = getMigrationMetadata();
     if (isQuarantinedAccountId(val)) {
-      return false;
+      const redirectedId = migrationMeta.rekeyedOwnerIds?.[val];
+      if (redirectedId && !isQuarantinedAccountId(redirectedId)) {
+        val = redirectedId;
+      } else {
+        return false;
+      }
     }
     const raw = localStorage.getItem(ACCOUNT_MAP_KEY);
     const map: Record<string, string> = raw ? JSON.parse(raw) : {};
     const meta = getAccountMetadata();
 
-    // Reject if already mapped to a different account ID (unless the existing mapping was quarantined)
+    // Reject if already mapped to a different account ID (unless the existing mapping was quarantined or redirects to same owner)
     if (map[key] && map[key] !== val && !isQuarantinedAccountId(map[key])) {
-      return false;
+      const existingRedirect = migrationMeta.rekeyedOwnerIds?.[map[key]];
+      if (existingRedirect !== val) {
+        return false;
+      }
     }
 
     map[key] = val;
     meta[key] = {
       accountId: val,
-      type: options?.type || meta[key]?.type || "primary",
+      type: options?.type || meta[key]?.type || (key.includes("@") ? "primary" : "phone"),
+      ownerEmail: options?.ownerEmail || meta[key]?.ownerEmail,
+      previousEmail: options?.previousEmail || meta[key]?.previousEmail,
       updatedAt: Date.now(),
     };
 
@@ -1198,11 +1624,26 @@ export function getUserStorageKey(user: UserProfile | null, prefix: string): str
     return `palluvo_ecommerce_${prefix}_guest`;
   }
   let accountId = user.id && user.id.trim() ? user.id.trim() : generateAccountId(user);
-  if (user.email && isQuarantinedAccountId(accountId)) {
-    const lowerEmail = user.email.toLowerCase().trim();
-    accountId = lowerEmail === "radhika.sharma@example.com"
-      ? "usr_demo_radhika"
-      : `usr_email_${encodeIdentifierToId(lowerEmail)}`;
+  if (isQuarantinedAccountId(accountId)) {
+    const migrationMeta = getMigrationMetadata();
+    const redirectedId = migrationMeta.rekeyedOwnerIds?.[accountId];
+    if (redirectedId && !isQuarantinedAccountId(redirectedId)) {
+      accountId = redirectedId;
+    } else if (user.email && !user.email.startsWith("connoisseur.")) {
+      const lowerEmail = user.email.toLowerCase().trim();
+      accountId = lowerEmail === "radhika.sharma@example.com"
+        ? "usr_demo_radhika"
+        : `usr_email_${encodeIdentifierToId(lowerEmail)}`;
+    } else if (user.mobile) {
+      const digits = user.mobile.replace(/\D/g, "");
+      const tenDigits = digits.length >= 10 ? digits.slice(-10) : digits;
+      accountId = `usr_phone_${tenDigits}`;
+    } else if (user.email) {
+      const lowerEmail = user.email.toLowerCase().trim();
+      accountId = lowerEmail === "radhika.sharma@example.com"
+        ? "usr_demo_radhika"
+        : `usr_email_${encodeIdentifierToId(lowerEmail)}`;
+    }
   }
   const safeId = accountId.toLowerCase().trim().replace(/[^a-z0-9_]/g, (ch) => `_${ch.charCodeAt(0).toString(16)}_`);
   return `palluvo_ecommerce_${prefix}_${safeId}`;
@@ -1296,12 +1737,22 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     if (!isHydrated || !isHydratedRef.current) return;
     try {
       let safeUser = user;
-      if (user && user.email && isQuarantinedAccountId(user.id)) {
-        const lowerEmail = user.email.toLowerCase().trim();
-        const expectedInjectiveId = lowerEmail === "radhika.sharma@example.com"
-          ? "usr_demo_radhika"
-          : `usr_email_${encodeIdentifierToId(lowerEmail)}`;
-        safeUser = { ...user, id: expectedInjectiveId };
+      if (user && user.id && isQuarantinedAccountId(user.id)) {
+        const migrationMeta = getMigrationMetadata();
+        const redirectedId = migrationMeta.rekeyedOwnerIds?.[user.id];
+        if (redirectedId && !isQuarantinedAccountId(redirectedId)) {
+          safeUser = { ...user, id: redirectedId };
+        } else if (user.email && !user.email.startsWith("connoisseur.")) {
+          const lowerEmail = user.email.toLowerCase().trim();
+          const expectedInjectiveId = lowerEmail === "radhika.sharma@example.com"
+            ? "usr_demo_radhika"
+            : `usr_email_${encodeIdentifierToId(lowerEmail)}`;
+          safeUser = { ...user, id: expectedInjectiveId };
+        } else if (user.mobile) {
+          const digits = user.mobile.replace(/\D/g, "");
+          const tenDigits = digits.length >= 10 ? digits.slice(-10) : digits;
+          safeUser = { ...user, id: `usr_phone_${tenDigits}` };
+        }
       }
       localStorage.setItem("palluvo_ecommerce_auth", JSON.stringify({ isLoggedIn, user: safeUser }));
     } catch {}
@@ -1346,14 +1797,19 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         : `usr_email_${encodeIdentifierToId(lowerEmail)}`;
 
       if (isQuarantinedAccountId(user.id)) {
+        const migrationMeta = getMigrationMetadata();
+        const redirectedId = migrationMeta.rekeyedOwnerIds?.[user.id];
+        const targetId = redirectedId && !isQuarantinedAccountId(redirectedId)
+          ? redirectedId
+          : (user.email && !user.email.startsWith("connoisseur.") ? expectedInjectiveId : user.id);
         quarantineLegacyBucket(user.id, [lowerEmail]);
-        setUser((prev) => (prev ? { ...prev, id: expectedInjectiveId } : prev));
+        setUser((prev) => (prev ? { ...prev, id: targetId } : prev));
         try {
           const authRaw = localStorage.getItem("palluvo_ecommerce_auth");
           if (authRaw) {
             const parsed = JSON.parse(authRaw);
             if (parsed?.user) {
-              parsed.user.id = expectedInjectiveId;
+              parsed.user.id = targetId;
               localStorage.setItem("palluvo_ecommerce_auth", JSON.stringify(parsed));
             }
           }
@@ -1471,11 +1927,21 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     setUser((prevUser) => {
       if (userData) {
         let id = userData.id || prevUser?.id || generateAccountId(userData);
-        if (userData.email && isQuarantinedAccountId(id)) {
-          const lowerEmail = userData.email.toLowerCase().trim();
-          id = lowerEmail === "radhika.sharma@example.com"
-            ? "usr_demo_radhika"
-            : `usr_email_${encodeIdentifierToId(lowerEmail)}`;
+        if (isQuarantinedAccountId(id)) {
+          const migrationMeta = getMigrationMetadata();
+          const redirectedId = migrationMeta.rekeyedOwnerIds?.[id];
+          if (redirectedId && !isQuarantinedAccountId(redirectedId)) {
+            id = redirectedId;
+          } else if (userData.email && !userData.email.startsWith("connoisseur.")) {
+            const lowerEmail = userData.email.toLowerCase().trim();
+            id = lowerEmail === "radhika.sharma@example.com"
+              ? "usr_demo_radhika"
+              : `usr_email_${encodeIdentifierToId(lowerEmail)}`;
+          } else if (userData.mobile) {
+            const digits = userData.mobile.replace(/\D/g, "");
+            const tenDigits = digits.length >= 10 ? digits.slice(-10) : digits;
+            id = `usr_phone_${tenDigits}`;
+          }
         }
         if (userData.email) registerAccountAlias(userData.email, id);
         if (userData.mobile) {

@@ -5,7 +5,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Package, MapPin, User, Truck, CheckCircle2, ShieldCheck, Plus, X, Edit2, Trash2, Check, RotateCcw, LogOut, Sparkles, Award, Headphones, ArrowRight, Lock, Info } from "lucide-react";
-import { useStore, lookupAccountId, registerAccountAlias, unregisterAccountAlias, generateAccountId, encodeIdentifierToId, migrateLegacyAccountAliases } from "@/context/StoreContext";
+import { useStore, lookupAccountId, registerAccountAlias, unregisterAccountAlias, generateAccountId, encodeIdentifierToId, migrateLegacyAccountAliases, lookupEmailByAccountId } from "@/context/StoreContext";
 import { SavedAddress, OrderRecord } from "@/data/mockOrders";
 import { useFocusTrap } from "@/hooks/useFocusTrap";
 import { formatStoredPhone, isValidIndianMobile } from "@/utils/phone";
@@ -226,6 +226,7 @@ export default function AccountPage() {
         document.getElementById("signin-identifier")?.focus();
         return;
       }
+      migrateLegacyAccountAliases();
       const digitsOnly = trimmedId.replace(/\D/g, "");
       const tenDigits = digitsOnly.length >= 10 ? digitsOnly.slice(-10) : digitsOnly;
       resolvedMobile = formatStoredPhone(trimmedId);
@@ -236,6 +237,10 @@ export default function AccountPage() {
       resolvedDrape = "Nivi Style / Bengali Festive";
 
       accountId = lookupAccountId(tenDigits) || `usr_phone_${tenDigits}`;
+      const linkedEmail = lookupEmailByAccountId(accountId);
+      if (linkedEmail) {
+        resolvedEmail = linkedEmail;
+      }
       registerAccountAlias(tenDigits, accountId);
       registerAccountAlias(resolvedEmail, accountId);
     }
@@ -475,7 +480,10 @@ export default function AccountPage() {
       }
     }
 
-    registerAccountAlias(trimmedEmail, accountId, { type: "changed_email" });
+    registerAccountAlias(trimmedEmail, accountId, {
+      type: "changed_email",
+      previousEmail: user?.email ? user.email.toLowerCase().trim() : undefined,
+    });
     if (mobileTen) {
       registerAccountAlias(mobileTen, accountId, { type: "phone" });
     }
