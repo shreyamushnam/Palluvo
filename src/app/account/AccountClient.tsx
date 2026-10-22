@@ -511,15 +511,24 @@ export default function AccountPage() {
       ? resolveRootOwner(priorEmail, metaBeforeUnregister)
       : undefined;
 
-    const actualOwnerEmail = isEmailChanged
-      ? (resolvedOwner && resolvedOwner !== trimmedEmail
-          ? resolvedOwner
-          : (priorMeta?.ownerEmail && priorMeta.ownerEmail.toLowerCase().trim() !== trimmedEmail
-              ? priorMeta.ownerEmail.toLowerCase().trim()
-              : (priorMeta?.previousEmail && priorMeta.previousEmail.toLowerCase().trim() !== trimmedEmail
-                  ? priorMeta.previousEmail.toLowerCase().trim()
-                  : priorEmail)))
-      : trimmedEmail;
+    // If customer is switching back to their original root email (e.g. B -> C -> B),
+    // restore it as the primary root identity rather than falling back to prior alias C.
+    const isRestoringRoot = Boolean(isEmailChanged && resolvedOwner && resolvedOwner === trimmedEmail);
+
+    const actualOwnerEmail = isRestoringRoot
+      ? trimmedEmail
+      : (isEmailChanged
+          ? (resolvedOwner
+              ? resolvedOwner
+              : (priorMeta?.ownerEmail && priorMeta.ownerEmail.toLowerCase().trim() !== trimmedEmail
+                  ? priorMeta.ownerEmail.toLowerCase().trim()
+                  : (priorMeta?.previousEmail && priorMeta.previousEmail.toLowerCase().trim() !== trimmedEmail
+                      ? priorMeta.previousEmail.toLowerCase().trim()
+                      : priorEmail)))
+          : trimmedEmail);
+
+    const aliasType = isRestoringRoot ? "primary" : (isEmailChanged ? "changed_email" : "primary");
+    const aliasPreviousEmail = isRestoringRoot ? undefined : (isEmailChanged ? priorEmail : undefined);
 
     // If customer changed their email, release previous alias
     if (isEmailChanged && priorEmail) {
@@ -536,8 +545,8 @@ export default function AccountPage() {
     }
 
     registerAccountAlias(trimmedEmail, accountId, {
-      type: isEmailChanged ? "changed_email" : "primary",
-      previousEmail: isEmailChanged ? priorEmail : undefined,
+      type: aliasType,
+      previousEmail: aliasPreviousEmail,
       ownerEmail: actualOwnerEmail,
       phone: mobileTen || undefined,
     });

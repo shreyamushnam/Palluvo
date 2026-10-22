@@ -676,11 +676,11 @@ export function partitionEmailsByAccountOwner(
 
   if (baseEmails.length === 1) {
     const singleBase = baseEmails[0];
-    const hasConflictingOwner = changedEmails.some((c) => {
+    const hasConflictingOrAmbiguousOwner = changedEmails.some((c) => {
       const root = resolveRootOwner(c, meta);
-      return Boolean(root && root !== singleBase);
+      return root !== singleBase;
     });
-    isSingleOwner = !hasConflictingOwner;
+    isSingleOwner = !hasConflictingOrAmbiguousOwner;
   } else if (baseEmails.length === 0) {
     // When every key is marked changed_email, verify that all aliases resolve to the same root owner
     // and keep/quarantine the bucket if ownership is ambiguous or divergent.
@@ -1675,6 +1675,7 @@ export function registerAccountAlias(
     const isEmail = key.includes("@");
     let effectiveOwnerEmail = options?.ownerEmail || meta[key]?.ownerEmail;
     let effectivePhone = options?.phone || meta[key]?.phone;
+    let isChangedEmail = false;
 
     if (!isEmail) {
       if (!effectivePhone) effectivePhone = key;
@@ -1682,15 +1683,15 @@ export function registerAccountAlias(
         effectiveOwnerEmail = lookupEmailByAccountId(val) || undefined;
       }
     } else {
-      const isChangedEmail = options?.type === "changed_email" || meta[key]?.type === "changed_email";
-      const priorEmail = options?.previousEmail || meta[key]?.previousEmail;
+      isChangedEmail = options?.type !== undefined ? options.type === "changed_email" : meta[key]?.type === "changed_email";
+      const priorEmail = options?.previousEmail || (isChangedEmail ? meta[key]?.previousEmail : undefined);
       if (isChangedEmail && priorEmail && priorEmail.toLowerCase().trim() !== key) {
         // For a changed email, prioritize the actual owning/base email
         const root = resolveRootOwner(priorEmail, meta);
         effectiveOwnerEmail = options?.ownerEmail && options.ownerEmail.toLowerCase().trim() !== key
           ? options.ownerEmail.toLowerCase().trim()
           : (root && root !== key ? root : priorEmail.toLowerCase().trim());
-      } else if (!effectiveOwnerEmail) {
+      } else if (!effectiveOwnerEmail || !isChangedEmail) {
         effectiveOwnerEmail = key;
       }
     }
@@ -1700,7 +1701,7 @@ export function registerAccountAlias(
       accountId: val,
       type: options?.type || meta[key]?.type || (isEmail ? "primary" : "phone"),
       ownerEmail: effectiveOwnerEmail,
-      previousEmail: options?.previousEmail || meta[key]?.previousEmail,
+      previousEmail: isChangedEmail ? (options?.previousEmail || meta[key]?.previousEmail) : undefined,
       phone: effectivePhone,
       status: options?.status || "active",
       updatedAt: Date.now(),
