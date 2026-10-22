@@ -172,11 +172,19 @@ export interface MigrationMeta {
   migratedCollisionIds: Record<string, string[]>;
   quarantinedCollisionIds: Record<string, string[]>;
   quarantinedLegacyBuckets: Record<string, { quarantinedAt: number; emails: string[] }>;
+  tombstonedKeys?: Record<string, boolean>;
+  failedQuarantineKeys?: Record<string, boolean>;
 }
 
 export function getMigrationMetadata(): MigrationMeta {
   if (typeof window === "undefined" || !window.localStorage) {
-    return { migratedCollisionIds: {}, quarantinedCollisionIds: {}, quarantinedLegacyBuckets: {} };
+    return {
+      migratedCollisionIds: {},
+      quarantinedCollisionIds: {},
+      quarantinedLegacyBuckets: {},
+      tombstonedKeys: {},
+      failedQuarantineKeys: {},
+    };
   }
   try {
     const raw = localStorage.getItem(MIGRATION_META_KEY);
@@ -185,9 +193,17 @@ export function getMigrationMetadata(): MigrationMeta {
       migratedCollisionIds: parsed.migratedCollisionIds || {},
       quarantinedCollisionIds: parsed.quarantinedCollisionIds || {},
       quarantinedLegacyBuckets: parsed.quarantinedLegacyBuckets || {},
+      tombstonedKeys: parsed.tombstonedKeys || {},
+      failedQuarantineKeys: parsed.failedQuarantineKeys || {},
     };
   } catch {
-    return { migratedCollisionIds: {}, quarantinedCollisionIds: {}, quarantinedLegacyBuckets: {} };
+    return {
+      migratedCollisionIds: {},
+      quarantinedCollisionIds: {},
+      quarantinedLegacyBuckets: {},
+      tombstonedKeys: {},
+      failedQuarantineKeys: {},
+    };
   }
 }
 
@@ -199,10 +215,93 @@ export function setMigrationMetadata(meta: MigrationMeta): void {
 }
 
 /**
+ * Checks whether an account ID represents a legacy collision namespace that has been quarantined
+ * and tombstoned, preventing it from serving as an active storage namespace.
+ */
+export function isQuarantinedAccountId(accountId?: string | null): boolean {
+  if (!accountId || typeof accountId !== "string") return false;
+  const trimmed = accountId.trim();
+  if (!trimmed) return false;
+  if (typeof window === "undefined" || !window.localStorage) return false;
+  try {
+    const safeId = trimmed.toLowerCase().replace(/[^a-z0-9_]/g, (ch) => `_${ch.charCodeAt(0).toString(16)}_`);
+    if (
+      localStorage.getItem(`palluvo_tombstone_${safeId}`) === "1" ||
+      localStorage.getItem(`palluvo_tombstone_${trimmed}`) === "1"
+    ) {
+      return true;
+    }
+    const meta = getMigrationMetadata();
+    if (meta.quarantinedLegacyBuckets?.[trimmed] || meta.quarantinedCollisionIds?.[trimmed]) {
+      return true;
+    }
+    if (meta.quarantinedLegacyBuckets?.[safeId] || meta.quarantinedCollisionIds?.[safeId]) {
+      return true;
+    }
+    if (
+      meta.tombstonedKeys?.[`palluvo_ecommerce_orders_${safeId}`] ||
+      meta.tombstonedKeys?.[`palluvo_ecommerce_orders_${trimmed}`]
+    ) {
+      return true;
+    }
+  } catch {}
+  return false;
+}
+
+/**
+ * Checks whether a specific storage key is tombstoned or quarantined.
+ */
+export function isQuarantinedStorageKey(key?: string | null): boolean {
+  if (!key || typeof key !== "string") return false;
+  if (typeof window === "undefined" || !window.localStorage) return false;
+  try {
+    if (localStorage.getItem(`palluvo_tombstone_${key}`) === "1") {
+      return true;
+    }
+    if (localStorage.getItem(`palluvo_quarantine_${key}`) !== null) {
+      return true;
+    }
+    const meta = getMigrationMetadata();
+    if (meta.tombstonedKeys?.[key] || meta.failedQuarantineKeys?.[key]) {
+      return true;
+    }
+    const match = key.match(/^palluvo_ecommerce_(?:orders|addresses)_(.+)$/);
+    if (match) {
+      const suffix = match[1];
+      if (
+        meta.quarantinedLegacyBuckets?.[suffix] ||
+        meta.quarantinedCollisionIds?.[suffix] ||
+        localStorage.getItem(`palluvo_tombstone_${suffix}`) === "1"
+      ) {
+        return true;
+      }
+    }
+  } catch {}
+  return false;
+}
+
+/**
+ * Checks whether a key is recorded as a failed quarantine backup that must be preserved.
+ */
+export function isFailedQuarantineKey(key?: string | null): boolean {
+  if (!key || typeof key !== "string") return false;
+  if (typeof window === "undefined" || !window.localStorage) return false;
+  try {
+    const meta = getMigrationMetadata();
+    return Boolean(meta.failedQuarantineKeys?.[key]);
+  } catch {
+    return false;
+  }
+}
+
+/**
  * Safely quarantines ambiguous or unverified legacy customer data buckets (orders and addresses)
  * by moving them to dedicated quarantine keys ('palluvo_quarantine_*') and clearing active storage keys.
  * This guarantees that shared collision buckets or unauthenticated legacy namespaces cannot be hydrated
  * by an alias or user session that did not definitively own all records in that bucket.
+ *
+ * Verifies each quarantine backup before removing the active source key. If backup fails (e.g. QuotaExceededError),
+ * the source bucket is preserved in place and tracked to prevent hydration until it can be safely backed up.
  */
 export function quarantineLegacyBucket(accountId: string, relatedEmails?: string[]): void {
   if (typeof window === "undefined" || !window.localStorage) return;
@@ -231,23 +330,78 @@ export function quarantineLegacyBucket(accountId: string, relatedEmails?: string
       }
     }
 
+    const migrationMeta = getMigrationMetadata();
+    migrationMeta.quarantinedLegacyBuckets = migrationMeta.quarantinedLegacyBuckets || {};
+    migrationMeta.quarantinedCollisionIds = migrationMeta.quarantinedCollisionIds || {};
+    migrationMeta.tombstonedKeys = migrationMeta.tombstonedKeys || {};
+    migrationMeta.failedQuarantineKeys = migrationMeta.failedQuarantineKeys || {};
+
+    // Register persistent tombstones on all candidate keys and IDs
+    for (const key of keysToQuarantine) {
+      migrationMeta.tombstonedKeys[key] = true;
+      try {
+        localStorage.setItem(`palluvo_tombstone_${key}`, "1");
+      } catch {}
+    }
+    try {
+      localStorage.setItem(`palluvo_tombstone_${trimmedId}`, "1");
+      localStorage.setItem(`palluvo_tombstone_${safeId}`, "1");
+    } catch {}
+
     for (const key of keysToQuarantine) {
       try {
         const val = localStorage.getItem(key);
         if (val !== null) {
+          const quarantineKey = `palluvo_quarantine_${key}`;
+          let copyVerified = false;
           try {
-            localStorage.setItem(`palluvo_quarantine_${key}`, val);
-          } catch {}
-          try {
-            localStorage.removeItem(key);
-          } catch {}
+            localStorage.setItem(quarantineKey, val);
+            const verified = localStorage.getItem(quarantineKey);
+            if (verified === val) {
+              copyVerified = true;
+            }
+          } catch {
+            copyVerified = false;
+          }
+
+          if (copyVerified) {
+            try {
+              localStorage.removeItem(key);
+            } catch {}
+            if (migrationMeta.failedQuarantineKeys?.[key]) {
+              delete migrationMeta.failedQuarantineKeys[key];
+            }
+          } else {
+            // Backup failed (e.g. QuotaExceededError).
+            // Preserve the source bucket and keep it from hydration until safely handled.
+            migrationMeta.failedQuarantineKeys[key] = true;
+          }
         }
       } catch {}
     }
 
-    const migrationMeta = getMigrationMetadata();
-    migrationMeta.quarantinedLegacyBuckets = migrationMeta.quarantinedLegacyBuckets || {};
-    migrationMeta.quarantinedCollisionIds = migrationMeta.quarantinedCollisionIds || {};
+    // Retry any previously failed quarantine keys
+    if (migrationMeta.failedQuarantineKeys) {
+      for (const failedKey of Object.keys(migrationMeta.failedQuarantineKeys)) {
+        if (!keysToQuarantine.has(failedKey)) {
+          try {
+            const val = localStorage.getItem(failedKey);
+            if (val !== null) {
+              const qKey = `palluvo_quarantine_${failedKey}`;
+              localStorage.setItem(qKey, val);
+              if (localStorage.getItem(qKey) === val) {
+                try {
+                  localStorage.removeItem(failedKey);
+                } catch {}
+                delete migrationMeta.failedQuarantineKeys[failedKey];
+              }
+            } else {
+              delete migrationMeta.failedQuarantineKeys[failedKey];
+            }
+          } catch {}
+        }
+      }
+    }
 
     if (!migrationMeta.quarantinedLegacyBuckets[trimmedId]) {
       migrationMeta.quarantinedLegacyBuckets[trimmedId] = {
@@ -264,6 +418,7 @@ export function quarantineLegacyBucket(accountId: string, relatedEmails?: string
     setMigrationMetadata(migrationMeta);
   } catch {}
 }
+
 
 /**
  * Encodes an identifier (such as an email address) into a safe, collision-resistant string.
@@ -410,27 +565,61 @@ export function migrateLegacyAccountAliases(): void {
             modified = true;
           }
 
-          const groupHasOwner = Array.from(collisionEmails!).some(
-            (e) => (activeUserEmail === e && activeUserId === trimmedVal) || (meta[e]?.type === "changed_email" && meta[e]?.accountId === trimmedVal)
+          // A quarantined legacy ID must remain unavailable as an active storage namespace across all tabs.
+          // Move ALL collision accounts, including any recognized owner, off that namespace to distinct injective IDs.
+          map[key] = expectedInjectiveId;
+          meta[lowerKey] = {
+            accountId: expectedInjectiveId,
+            type: meta[lowerKey]?.type || "primary",
+            updatedAt: Date.now(),
+          };
+          modified = true;
+
+          migrationMeta.migratedCollisionIds[trimmedVal] = Array.from(
+            new Set([...(migrationMeta.migratedCollisionIds[trimmedVal] || []), ...Array.from(collisionEmails!)])
           );
 
-          if (groupHasOwner) {
-            const isOwner = (activeUserEmail === lowerKey && activeUserId === trimmedVal) || (meta[lowerKey]?.type === "changed_email" && meta[lowerKey]?.accountId === trimmedVal);
-            if (!isOwner) {
-              map[key] = expectedInjectiveId;
-              modified = true;
-            } else {
-              if (!meta[lowerKey]) {
-                meta[lowerKey] = { accountId: trimmedVal, type: "changed_email", updatedAt: Date.now() };
+          if (activeUserId === trimmedVal && activeUserEmail === lowerKey) {
+            try {
+              const authRaw = localStorage.getItem("palluvo_ecommerce_auth");
+              if (authRaw) {
+                const parsed = JSON.parse(authRaw);
+                if (parsed?.user) {
+                  parsed.user.id = expectedInjectiveId;
+                  localStorage.setItem("palluvo_ecommerce_auth", JSON.stringify(parsed));
+                }
               }
-            }
-          } else {
-            // Neither email is proven owner; both collided under the legacy sanitizer
-            map[key] = expectedInjectiveId;
-            modified = true;
-            if (!migrationMeta.migratedCollisionIds[trimmedVal]) {
-              migrationMeta.migratedCollisionIds[trimmedVal] = Array.from(collisionEmails!);
-            }
+            } catch {}
+          }
+          continue;
+        }
+
+        // If this ID was quarantined, it must remain unavailable as an active storage namespace.
+        // Move the retained owner off that namespace too.
+        if (isQuarantinedAccountId(trimmedVal)) {
+          map[key] = expectedInjectiveId;
+          meta[lowerKey] = {
+            accountId: expectedInjectiveId,
+            type: meta[lowerKey]?.type || "primary",
+            updatedAt: Date.now(),
+          };
+          modified = true;
+
+          migrationMeta.migratedCollisionIds[trimmedVal] = Array.from(
+            new Set([...(migrationMeta.migratedCollisionIds[trimmedVal] || []), lowerKey])
+          );
+
+          if (activeUserId === trimmedVal && activeUserEmail === lowerKey) {
+            try {
+              const authRaw = localStorage.getItem("palluvo_ecommerce_auth");
+              if (authRaw) {
+                const parsed = JSON.parse(authRaw);
+                if (parsed?.user) {
+                  parsed.user.id = expectedInjectiveId;
+                  localStorage.setItem("palluvo_ecommerce_auth", JSON.stringify(parsed));
+                }
+              }
+            } catch {}
           }
           continue;
         }
@@ -517,6 +706,20 @@ export function lookupAccountId(identifier?: string | null): string | null {
           }
         }
 
+        if (isQuarantinedAccountId(val)) {
+          map[key] = expectedInjectiveId;
+          meta[key] = {
+            accountId: expectedInjectiveId,
+            type: meta[key]?.type || "primary",
+            updatedAt: Date.now(),
+          };
+          try {
+            localStorage.setItem(ACCOUNT_MAP_KEY, JSON.stringify(map));
+            setAccountMetadata(meta);
+          } catch {}
+          return expectedInjectiveId;
+        }
+
         if (collisionCount > 1) {
           if (!migrationMeta.quarantinedLegacyBuckets?.[val]) {
             quarantineLegacyBucket(val, collisionEmails);
@@ -525,8 +728,23 @@ export function lookupAccountId(identifier?: string | null): string | null {
               emails: collisionEmails,
             };
             migrationMeta.quarantinedCollisionIds[val] = collisionEmails;
-            setMigrationMetadata(migrationMeta);
           }
+          map[key] = expectedInjectiveId;
+          meta[key] = {
+            accountId: expectedInjectiveId,
+            type: meta[key]?.type || "primary",
+            updatedAt: Date.now(),
+          };
+          try {
+            localStorage.setItem(ACCOUNT_MAP_KEY, JSON.stringify(map));
+            setAccountMetadata(meta);
+            migrationMeta.migratedCollisionIds[val] = migrationMeta.migratedCollisionIds[val] || [];
+            if (!migrationMeta.migratedCollisionIds[val].includes(key)) {
+              migrationMeta.migratedCollisionIds[val].push(key);
+            }
+            setMigrationMetadata(migrationMeta);
+          } catch {}
+          return expectedInjectiveId;
         }
 
         const isKnownChangedEmail = meta[key]?.type === "changed_email" && meta[key]?.accountId === val;
@@ -540,19 +758,6 @@ export function lookupAccountId(identifier?: string | null): string | null {
           map[key] = expectedInjectiveId;
           try {
             localStorage.setItem(ACCOUNT_MAP_KEY, JSON.stringify(map));
-          } catch {}
-          return expectedInjectiveId;
-        }
-
-        if (collisionCount > 1) {
-          map[key] = expectedInjectiveId;
-          try {
-            localStorage.setItem(ACCOUNT_MAP_KEY, JSON.stringify(map));
-            migrationMeta.migratedCollisionIds[val] = migrationMeta.migratedCollisionIds[val] || [];
-            if (!migrationMeta.migratedCollisionIds[val].includes(key)) {
-              migrationMeta.migratedCollisionIds[val].push(key);
-            }
-            setMigrationMetadata(migrationMeta);
           } catch {}
           return expectedInjectiveId;
         }
@@ -590,12 +795,15 @@ export function registerAccountAlias(
   const val = accountId.trim();
   if (!key || !val) return false;
   try {
+    if (isQuarantinedAccountId(val)) {
+      return false;
+    }
     const raw = localStorage.getItem(ACCOUNT_MAP_KEY);
     const map: Record<string, string> = raw ? JSON.parse(raw) : {};
     const meta = getAccountMetadata();
 
-    // Reject if already mapped to a different account ID
-    if (map[key] && map[key] !== val) {
+    // Reject if already mapped to a different account ID (unless the existing mapping was quarantined)
+    if (map[key] && map[key] !== val && !isQuarantinedAccountId(map[key])) {
       return false;
     }
 
@@ -751,8 +959,9 @@ export function validateAndNormalizeAuth(raw: unknown): {
     // that was migrated to a distinct injective ID, or if ownership cannot be established from map/metadata for a legacy usr_email_* ID.
     const migrationMeta = getMigrationMetadata();
     const wasMigratedCollision = (migrationMeta.migratedCollisionIds[id] || []).includes(lowerEmail);
+    const isQuarantined = isQuarantinedAccountId(id);
 
-    if (wasMigratedCollision) {
+    if (wasMigratedCollision || isQuarantined) {
       id = expectedInjectiveId;
     } else if (id.startsWith("usr_email_") && id !== expectedInjectiveId) {
       let ownershipEstablished = false;
@@ -769,7 +978,10 @@ export function validateAndNormalizeAuth(raw: unknown): {
                   collisionCount++;
                 }
               }
-              if (collisionCount <= 1 || (meta[lowerEmail]?.type === "changed_email" && meta[lowerEmail]?.accountId === id)) {
+              if (
+                (collisionCount <= 1 || (meta[lowerEmail]?.type === "changed_email" && meta[lowerEmail]?.accountId === id)) &&
+                !isQuarantinedAccountId(id)
+              ) {
                 ownershipEstablished = true;
               }
             }
@@ -985,7 +1197,13 @@ export function getUserStorageKey(user: UserProfile | null, prefix: string): str
   if (!user) {
     return `palluvo_ecommerce_${prefix}_guest`;
   }
-  const accountId = user.id && user.id.trim() ? user.id.trim() : generateAccountId(user);
+  let accountId = user.id && user.id.trim() ? user.id.trim() : generateAccountId(user);
+  if (user.email && isQuarantinedAccountId(accountId)) {
+    const lowerEmail = user.email.toLowerCase().trim();
+    accountId = lowerEmail === "radhika.sharma@example.com"
+      ? "usr_demo_radhika"
+      : `usr_email_${encodeIdentifierToId(lowerEmail)}`;
+  }
   const safeId = accountId.toLowerCase().trim().replace(/[^a-z0-9_]/g, (ch) => `_${ch.charCodeAt(0).toString(16)}_`);
   return `palluvo_ecommerce_${prefix}_${safeId}`;
 }
@@ -1077,7 +1295,15 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   useEffect(() => {
     if (!isHydrated || !isHydratedRef.current) return;
     try {
-      localStorage.setItem("palluvo_ecommerce_auth", JSON.stringify({ isLoggedIn, user }));
+      let safeUser = user;
+      if (user && user.email && isQuarantinedAccountId(user.id)) {
+        const lowerEmail = user.email.toLowerCase().trim();
+        const expectedInjectiveId = lowerEmail === "radhika.sharma@example.com"
+          ? "usr_demo_radhika"
+          : `usr_email_${encodeIdentifierToId(lowerEmail)}`;
+        safeUser = { ...user, id: expectedInjectiveId };
+      }
+      localStorage.setItem("palluvo_ecommerce_auth", JSON.stringify({ isLoggedIn, user: safeUser }));
     } catch {}
   }, [isLoggedIn, user, isHydrated]);
 
@@ -1112,14 +1338,27 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     const ordersKey = getUserStorageKey(user, "orders");
     const addressesKey = getUserStorageKey(user, "addresses");
 
-    // Check if user has an unverified legacy usr_email_* ID when map is missing
-    if (user.id && user.id.startsWith("usr_email_") && user.email) {
+    // Check if user has an unverified legacy usr_email_* ID when map is missing, or if user's ID was quarantined
+    if (user.id && user.email) {
       const lowerEmail = user.email.toLowerCase().trim();
       const expectedInjectiveId = lowerEmail === "radhika.sharma@example.com"
         ? "usr_demo_radhika"
         : `usr_email_${encodeIdentifierToId(lowerEmail)}`;
 
-      if (user.id !== expectedInjectiveId) {
+      if (isQuarantinedAccountId(user.id)) {
+        quarantineLegacyBucket(user.id, [lowerEmail]);
+        setUser((prev) => (prev ? { ...prev, id: expectedInjectiveId } : prev));
+        try {
+          const authRaw = localStorage.getItem("palluvo_ecommerce_auth");
+          if (authRaw) {
+            const parsed = JSON.parse(authRaw);
+            if (parsed?.user) {
+              parsed.user.id = expectedInjectiveId;
+              localStorage.setItem("palluvo_ecommerce_auth", JSON.stringify(parsed));
+            }
+          }
+        } catch {}
+      } else if (user.id.startsWith("usr_email_") && user.id !== expectedInjectiveId) {
         let mapMissing = false;
         try {
           if (!localStorage.getItem(ACCOUNT_MAP_KEY)) {
@@ -1129,6 +1368,17 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
         if (mapMissing) {
           quarantineLegacyBucket(user.id, [lowerEmail]);
+          setUser((prev) => (prev ? { ...prev, id: expectedInjectiveId } : prev));
+          try {
+            const authRaw = localStorage.getItem("palluvo_ecommerce_auth");
+            if (authRaw) {
+              const parsed = JSON.parse(authRaw);
+              if (parsed?.user) {
+                parsed.user.id = expectedInjectiveId;
+                localStorage.setItem("palluvo_ecommerce_auth", JSON.stringify(parsed));
+              }
+            }
+          } catch {}
           setOrders(isDemoUser ? MOCK_ORDERS : []);
           setAddresses(isDemoUser ? MOCK_ADDRESSES : []);
           return;
@@ -1137,29 +1387,30 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     }
 
     // Clean up any legacy ambiguous collision-prone keys without copying to avoid attributing shared data to new IDs
+    // Preserve source keys when quarantine backup failed so customer data is not permanently deleted
     if (user.email) {
       const legacySanitized = user.email.toLowerCase().trim().replace(/[^a-z0-9_.-]/g, "_");
       const legacyEmailOrderKey = `palluvo_ecommerce_orders_${legacySanitized}`;
-      if (legacyEmailOrderKey !== ordersKey) {
+      if (legacyEmailOrderKey !== ordersKey && !isFailedQuarantineKey(legacyEmailOrderKey)) {
         try {
           localStorage.removeItem(legacyEmailOrderKey);
         } catch {}
       }
       const legacyPrefixedOrderKey = `palluvo_ecommerce_orders_usr_email_${legacySanitized}`;
-      if (legacyPrefixedOrderKey !== ordersKey) {
+      if (legacyPrefixedOrderKey !== ordersKey && !isFailedQuarantineKey(legacyPrefixedOrderKey)) {
         try {
           localStorage.removeItem(legacyPrefixedOrderKey);
         } catch {}
       }
 
       const legacyEmailAddrKey = `palluvo_ecommerce_addresses_${legacySanitized}`;
-      if (legacyEmailAddrKey !== addressesKey) {
+      if (legacyEmailAddrKey !== addressesKey && !isFailedQuarantineKey(legacyEmailAddrKey)) {
         try {
           localStorage.removeItem(legacyEmailAddrKey);
         } catch {}
       }
       const legacyPrefixedAddrKey = `palluvo_ecommerce_addresses_usr_email_${legacySanitized}`;
-      if (legacyPrefixedAddrKey !== addressesKey) {
+      if (legacyPrefixedAddrKey !== addressesKey && !isFailedQuarantineKey(legacyPrefixedAddrKey)) {
         try {
           localStorage.removeItem(legacyPrefixedAddrKey);
         } catch {}
@@ -1168,13 +1419,23 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
     // Load user-scoped orders - retain only known mock seed data for demo account; never import unscoped legacy records
     try {
-      const savedOrders = localStorage.getItem(ordersKey);
-      if (savedOrders !== null) {
-        setOrders(validateAndNormalizeOrders(JSON.parse(savedOrders)));
-      } else if (isDemoUser) {
-        setOrders(MOCK_ORDERS);
+      if (isQuarantinedStorageKey(ordersKey) || isQuarantinedAccountId(user.id)) {
+        // Enforce persistent tombstone on reads: do not hydrate quarantined namespace. Discard repopulation unless backup failed.
+        if (!isFailedQuarantineKey(ordersKey)) {
+          try {
+            localStorage.removeItem(ordersKey);
+          } catch {}
+        }
+        setOrders(isDemoUser ? MOCK_ORDERS : []);
       } else {
-        setOrders([]);
+        const savedOrders = localStorage.getItem(ordersKey);
+        if (savedOrders !== null) {
+          setOrders(validateAndNormalizeOrders(JSON.parse(savedOrders)));
+        } else if (isDemoUser) {
+          setOrders(MOCK_ORDERS);
+        } else {
+          setOrders([]);
+        }
       }
     } catch {
       setOrders(isDemoUser ? MOCK_ORDERS : []);
@@ -1182,13 +1443,23 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
     // Load user-scoped addresses - retain only known mock seed data for demo account; never import unscoped legacy records
     try {
-      const savedAddresses = localStorage.getItem(addressesKey);
-      if (savedAddresses !== null) {
-        setAddresses(validateAndNormalizeAddresses(JSON.parse(savedAddresses)));
-      } else if (isDemoUser) {
-        setAddresses(MOCK_ADDRESSES);
+      if (isQuarantinedStorageKey(addressesKey) || isQuarantinedAccountId(user.id)) {
+        // Enforce persistent tombstone on reads: do not hydrate quarantined namespace. Discard repopulation unless backup failed.
+        if (!isFailedQuarantineKey(addressesKey)) {
+          try {
+            localStorage.removeItem(addressesKey);
+          } catch {}
+        }
+        setAddresses(isDemoUser ? MOCK_ADDRESSES : []);
       } else {
-        setAddresses([]);
+        const savedAddresses = localStorage.getItem(addressesKey);
+        if (savedAddresses !== null) {
+          setAddresses(validateAndNormalizeAddresses(JSON.parse(savedAddresses)));
+        } else if (isDemoUser) {
+          setAddresses(MOCK_ADDRESSES);
+        } else {
+          setAddresses([]);
+        }
       }
     } catch {
       setAddresses(isDemoUser ? MOCK_ADDRESSES : []);
@@ -1199,7 +1470,13 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     setIsLoggedIn(true);
     setUser((prevUser) => {
       if (userData) {
-        const id = userData.id || prevUser?.id || generateAccountId(userData);
+        let id = userData.id || prevUser?.id || generateAccountId(userData);
+        if (userData.email && isQuarantinedAccountId(id)) {
+          const lowerEmail = userData.email.toLowerCase().trim();
+          id = lowerEmail === "radhika.sharma@example.com"
+            ? "usr_demo_radhika"
+            : `usr_email_${encodeIdentifierToId(lowerEmail)}`;
+        }
         if (userData.email) registerAccountAlias(userData.email, id);
         if (userData.mobile) {
           const digits = userData.mobile.replace(/\D/g, "");
@@ -1249,6 +1526,15 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     if (!isLoggedIn || !user) return;
     try {
       const key = getUserStorageKey(user, "orders");
+      if (isQuarantinedStorageKey(key) || isQuarantinedAccountId(user.id)) {
+        // Enforce persistent tombstone on writes: never write to quarantined legacy namespace
+        if (!isFailedQuarantineKey(key)) {
+          try {
+            localStorage.removeItem(key);
+          } catch {}
+        }
+        return;
+      }
       localStorage.setItem(key, JSON.stringify(orders));
     } catch {}
   }, [orders, isLoggedIn, user, isHydrated]);
@@ -1258,6 +1544,15 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     if (!isLoggedIn || !user) return;
     try {
       const key = getUserStorageKey(user, "addresses");
+      if (isQuarantinedStorageKey(key) || isQuarantinedAccountId(user.id)) {
+        // Enforce persistent tombstone on writes: never write to quarantined legacy namespace
+        if (!isFailedQuarantineKey(key)) {
+          try {
+            localStorage.removeItem(key);
+          } catch {}
+        }
+        return;
+      }
       localStorage.setItem(key, JSON.stringify(addresses));
     } catch {}
   }, [addresses, isLoggedIn, user, isHydrated]);
