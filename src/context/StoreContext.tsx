@@ -496,25 +496,42 @@ export function lookupEmailByAccountId(accountId?: string | null): string | null
 }
 
 /**
+ * Normalizes an explicit phone value to its exact 10-digit subscriber number.
+ * Accepts exact 10-digit numbers, 11-digit numbers with leading '0',
+ * or 12-digit numbers with leading '91' (Indian country code).
+ * Strictly rejects strings with extra or fewer digits rather than truncating/slicing.
+ */
+export function normalizeExplicitPhoneToken(raw: unknown): string | null {
+  if (typeof raw !== "string" && typeof raw !== "number") return null;
+  const digits = String(raw).replace(/\D/g, "");
+  if (digits.length === 10) {
+    return digits;
+  }
+  if (digits.length === 11 && digits.startsWith("0")) {
+    return digits.slice(1);
+  }
+  if (digits.length === 12 && digits.startsWith("91")) {
+    return digits.slice(2);
+  }
+  // Reject extra trailing or leading digits; fail closed rather than slicing
+  return null;
+}
+
+/**
  * Extracts explicit normalized 10-digit phone tokens from an object or address string.
  * Rejects arbitrary concatenated digits (e.g. flat number + pincode) by requiring
  * explicit phone fields, labeled phone tokens, or bounded standalone 10-digit phone tokens.
+ * Parses exactly one phone number from a label and rejects extra trailing digits
+ * rather than slicing them off into a synthetic phone token.
  */
 export function extractExplicitPhoneTokens(source: unknown): string[] {
   if (!source) return [];
   const tokens = new Set<string>();
 
   const addIfValid = (raw: unknown) => {
-    if (typeof raw === "string") {
-      const digits = raw.replace(/\D/g, "");
-      if (digits.length >= 10) {
-        tokens.add(digits.slice(-10));
-      }
-    } else if (typeof raw === "number" && Number.isFinite(raw)) {
-      const digits = String(raw).replace(/\D/g, "");
-      if (digits.length >= 10) {
-        tokens.add(digits.slice(-10));
-      }
+    const normalized = normalizeExplicitPhoneToken(raw);
+    if (normalized) {
+      tokens.add(normalized);
     }
   };
 
@@ -554,15 +571,17 @@ export function extractExplicitPhoneTokens(source: unknown): string[] {
     if (!str) return [];
 
     // Pattern A: Explicitly labeled phone prefixes
-    // e.g. "Ph: 9876543210", "Phone: +91 98765 43210", "Mobile: 9876543210", "Contact: 9876543210"
-    const labeledRegex = /(?:phone|ph|mobile|mob|tel|contact|cell)\b[\s.:#-]*([+\d\s().-]{10,25})/gi;
+    // Parse exactly one phone number immediately after the label, bounded so trailing digits
+    // (such as a pincode, e.g. "Phone: 9876598765 560001") are never captured or sliced into synthetic phones.
+    const labeledRegex =
+      /(?:phone|ph|mobile|mob|tel|contact|cell)\b[\s.:#-]*((?:\+?91[\s.-]?|\(\+?91\)[\s.-]?|0)?(?:\(\d{2,4}\)[\s.-]?)?(?:\d[\s.-]?){9}\d)(?!\d)/gi;
     let match: RegExpExecArray | null;
     while ((match = labeledRegex.exec(str)) !== null) {
       const captured = match[1];
       if (captured) {
-        const digits = captured.replace(/\D/g, "");
-        if (digits.length >= 10) {
-          tokens.add(digits.slice(-10));
+        const norm = normalizeExplicitPhoneToken(captured);
+        if (norm) {
+          tokens.add(norm);
         }
       }
     }
@@ -587,6 +606,8 @@ export function extractExplicitPhoneTokens(source: unknown): string[] {
  * Collects all matching canonical owners across the legacy records and resolves only
  * when exactly one distinct owner remains; otherwise fails closed and returns null
  * to keep the alias quarantined/unresolved.
+ * Strictly excludes unresolved changed_email aliases (missing/cyclic chains) from being
+ * treated as root canonical owners.
  */
 export function findOwnerEmailForPhoneInRecords(
   phoneDigits: string,
@@ -596,9 +617,9 @@ export function findOwnerEmailForPhoneInRecords(
   if (typeof window === "undefined" || !window.localStorage) return null;
   if (!phoneDigits || !candidateEmails.length || !legacyAccountId) return null;
 
-  const normalizedDigits = phoneDigits.replace(/\D/g, "");
-  if (normalizedDigits.length < 10) return null;
-  const targetPhone = normalizedDigits.slice(-10);
+  const targetPhone = normalizeExplicitPhoneToken(phoneDigits) || (phoneDigits.replace(/\D/g, "").length === 10 ? phoneDigits.replace(/\D/g, "") : null);
+  if (!targetPhone) return null;
+
   const lowerCandidates = candidateEmails
     .map((e) => e.toLowerCase().trim())
     .filter((e) => e && e.includes("@"));
@@ -615,6 +636,24 @@ export function findOwnerEmailForPhoneInRecords(
 
   const meta = getAccountMetadata();
   const matchedCanonicalOwners = new Set<string>();
+  let hasAmbiguousOwner = false;
+
+  const getVerifiedCanonicalOwner = (email: string): string | undefined => {
+    if (!email || typeof email !== "string") return undefined;
+    const norm = email.toLowerCase().trim();
+    if (!norm || !norm.includes("@")) return undefined;
+
+    const m = meta[norm];
+    if (m?.type === "changed_email") {
+      const root = resolveRootOwner(norm, meta);
+      // For changed_email, resolveRootOwner MUST return a valid base owner.
+      // If undefined (missing predecessor, cyclic, or ambiguous), do NOT treat the alias itself as root!
+      return root ? root.toLowerCase().trim() : undefined;
+    }
+
+    const root = resolveRootOwner(norm, meta);
+    return (root || norm).toLowerCase().trim();
+  };
 
   for (const k of orderKeys) {
     try {
@@ -637,8 +676,21 @@ export function findOwnerEmailForPhoneInRecords(
 
         for (const em of [custEmail, ordEmail]) {
           if (em && em.includes("@")) {
-            const canonical = (resolveRootOwner(em, meta) || em).toLowerCase().trim();
-            matchedCanonicalOwners.add(canonical);
+            const norm = em.toLowerCase().trim();
+            const m = meta[norm];
+            if (m?.type === "changed_email") {
+              const root = resolveRootOwner(norm, meta);
+              if (!root) {
+                // Unresolved changed_email entry: ambiguous ownership!
+                // Skip treating alias as root and fail closed.
+                hasAmbiguousOwner = true;
+                continue;
+              }
+              matchedCanonicalOwners.add(root.toLowerCase().trim());
+            } else {
+              const canonical = (resolveRootOwner(norm, meta) || norm).toLowerCase().trim();
+              matchedCanonicalOwners.add(canonical);
+            }
           }
         }
       }
@@ -673,29 +725,48 @@ export function findOwnerEmailForPhoneInRecords(
 
         for (const em of [addrEmail, ownerEmail, userEmail]) {
           if (em && em.includes("@")) {
-            const canonical = (resolveRootOwner(em, meta) || em).toLowerCase().trim();
-            matchedCanonicalOwners.add(canonical);
+            const norm = em.toLowerCase().trim();
+            const m = meta[norm];
+            if (m?.type === "changed_email") {
+              const root = resolveRootOwner(norm, meta);
+              if (!root) {
+                // Unresolved changed_email entry: ambiguous ownership!
+                // Skip treating alias as root and fail closed.
+                hasAmbiguousOwner = true;
+                continue;
+              }
+              matchedCanonicalOwners.add(root.toLowerCase().trim());
+            } else {
+              const canonical = (resolveRootOwner(norm, meta) || norm).toLowerCase().trim();
+              matchedCanonicalOwners.add(canonical);
+            }
           }
         }
       }
     } catch {}
   }
 
-  // Resolve only when exactly one distinct canonical owner remains across historical records;
-  // otherwise fail closed (0 matches or conflicting owners)
-  if (matchedCanonicalOwners.size !== 1) {
+  // Resolve only when exactly one distinct canonical owner remains across historical records,
+  // and no ambiguous/unresolved changed_email entries were attached to this phone.
+  // Otherwise fail closed (0 matches, conflicting owners, or ambiguous ownership).
+  if (hasAmbiguousOwner || matchedCanonicalOwners.size !== 1) {
     return null;
   }
 
   const singleCanonicalOwner = Array.from(matchedCanonicalOwners)[0];
 
+  // 1. Exact match in lowerCandidates (verify candidate itself is not an unresolved changed_email)
   if (lowerCandidates.includes(singleCanonicalOwner)) {
-    return singleCanonicalOwner;
+    const verifiedOwner = getVerifiedCanonicalOwner(singleCanonicalOwner);
+    if (verifiedOwner === singleCanonicalOwner) {
+      return singleCanonicalOwner;
+    }
   }
 
+  // 2. Candidate that resolves to singleCanonicalOwner
   const matchingCandidate = lowerCandidates.find((cand) => {
-    const root = (resolveRootOwner(cand, meta) || cand).toLowerCase().trim();
-    return root === singleCanonicalOwner;
+    const root = getVerifiedCanonicalOwner(cand);
+    return root && root === singleCanonicalOwner;
   });
 
   if (matchingCandidate) {
