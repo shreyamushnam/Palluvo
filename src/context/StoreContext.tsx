@@ -901,23 +901,26 @@ export function copyCustomerData(
     };
 
     const isOrderVerifiedForOwner = (ord: Record<string, unknown>): boolean => {
-      if (!filterEmail && allowedEmailSet.size === 0) return true;
-
       const cust = ord.customer as Record<string, unknown> | undefined;
       const custEmail = typeof cust?.email === "string" ? cust.email.toLowerCase().trim() : "";
-      if (custEmail && isEmailVerified(custEmail)) {
-        return true;
-      }
-
       const ordEmail = typeof ord.email === "string" ? ord.email.toLowerCase().trim() : "";
-      if (ordEmail && isEmailVerified(ordEmail)) {
+
+      if (!filterEmail && allowedEmailSet.size === 0) {
+        if (custEmail && ordEmail && custEmail !== ordEmail) {
+          const root1 = resolveRootOwner(custEmail, meta) || custEmail;
+          const root2 = resolveRootOwner(ordEmail, meta) || ordEmail;
+          if (root1.toLowerCase().trim() !== root2.toLowerCase().trim()) {
+            return false;
+          }
+        }
         return true;
       }
 
-      // If an explicit email is present on the order but did not match this account's verified aliases,
-      // reject it (belongs to a different customer in the colliding legacy bucket)
-      if (custEmail || ordEmail) {
-        return false;
+      const orderEmails = [custEmail, ordEmail].filter(Boolean);
+      if (orderEmails.length > 0) {
+        // Require every non-empty owner email to resolve to this account,
+        // and fail closed on a conflict.
+        return orderEmails.every((e) => isEmailVerified(e));
       }
 
       // If no email was attached to the order, check if phone matches this owner's verified phone
@@ -937,6 +940,8 @@ export function copyCustomerData(
       return false;
     };
 
+    let sourceReadSuccess = true;
+
     // Load existing target orders
     const mergedOrders: Record<string, unknown>[] = [];
     const seenOrderKeys = new Set<string>();
@@ -949,7 +954,7 @@ export function copyCustomerData(
     for (const tk of targetOrderKeys) {
       try {
         const rawTarget = localStorage.getItem(tk);
-        if (rawTarget) {
+        if (rawTarget && rawTarget.trim()) {
           const parsed = JSON.parse(rawTarget);
           if (Array.isArray(parsed)) {
             for (const item of parsed) {
@@ -961,9 +966,13 @@ export function copyCustomerData(
                 }
               }
             }
+          } else {
+            sourceReadSuccess = false;
           }
         }
-      } catch {}
+      } catch {
+        sourceReadSuccess = false;
+      }
     }
 
     const initialOrderCount = mergedOrders.length;
@@ -971,9 +980,13 @@ export function copyCustomerData(
     for (const src of orderSources) {
       try {
         const val = localStorage.getItem(src);
-        if (!val) continue;
+        if (val === null || val === undefined || val.trim() === "") continue;
         const parsed = JSON.parse(val);
-        if (!Array.isArray(parsed) || parsed.length === 0) continue;
+        if (!Array.isArray(parsed)) {
+          sourceReadSuccess = false;
+          continue;
+        }
+        if (parsed.length === 0) continue;
 
         for (const item of parsed) {
           if (!item || typeof item !== "object") continue;
@@ -986,11 +999,13 @@ export function copyCustomerData(
             mergedOrders.push(ord);
           }
         }
-      } catch {}
+      } catch {
+        sourceReadSuccess = false;
+      }
     }
 
     let ordersWriteSuccess = true;
-    if (mergedOrders.length > initialOrderCount || (initialOrderCount === 0 && mergedOrders.length > 0)) {
+    if (sourceReadSuccess && (mergedOrders.length > initialOrderCount || (initialOrderCount === 0 && mergedOrders.length > 0))) {
       try {
         const serialized = JSON.stringify(mergedOrders);
         localStorage.setItem(targetOrdersKey, serialized);
@@ -1001,6 +1016,8 @@ export function copyCustomerData(
       } catch {
         ordersWriteSuccess = false;
       }
+    } else if (!sourceReadSuccess) {
+      ordersWriteSuccess = false;
     }
 
     // Addresses merging
@@ -1031,24 +1048,27 @@ export function copyCustomerData(
     };
 
     const isAddressVerifiedForOwner = (addr: Record<string, unknown>): boolean => {
-      if (!filterEmail && allowedEmailSet.size === 0) return true;
-
       const addrEmail = typeof addr.email === "string" ? addr.email.toLowerCase().trim() : "";
-      if (addrEmail && isEmailVerified(addrEmail)) {
-        return true;
-      }
       const ownerEmail = typeof addr.ownerEmail === "string" ? addr.ownerEmail.toLowerCase().trim() : "";
-      if (ownerEmail && isEmailVerified(ownerEmail)) {
-        return true;
-      }
       const userEmail = typeof addr.userEmail === "string" ? addr.userEmail.toLowerCase().trim() : "";
-      if (userEmail && isEmailVerified(userEmail)) {
+
+      if (!filterEmail && allowedEmailSet.size === 0) {
+        const nonNulls = [addrEmail, ownerEmail, userEmail].filter(Boolean);
+        if (nonNulls.length > 1) {
+          const firstRoot = (resolveRootOwner(nonNulls[0], meta) || nonNulls[0]).toLowerCase().trim();
+          for (let i = 1; i < nonNulls.length; i++) {
+            const r = (resolveRootOwner(nonNulls[i], meta) || nonNulls[i]).toLowerCase().trim();
+            if (r !== firstRoot) return false;
+          }
+        }
         return true;
       }
 
-      // If an explicit email was present on the address but did not match, reject it
-      if (addrEmail || ownerEmail || userEmail) {
-        return false;
+      const addrEmails = [addrEmail, ownerEmail, userEmail].filter(Boolean);
+      if (addrEmails.length > 0) {
+        // Require every non-empty owner email to resolve to this account,
+        // and fail closed on a conflict.
+        return addrEmails.every((e) => isEmailVerified(e));
       }
 
       // If no email was attached to the address, check verified phone
@@ -1077,7 +1097,7 @@ export function copyCustomerData(
     for (const tk of targetAddrKeys) {
       try {
         const rawTarget = localStorage.getItem(tk);
-        if (rawTarget) {
+        if (rawTarget && rawTarget.trim()) {
           const parsed = JSON.parse(rawTarget);
           if (Array.isArray(parsed)) {
             for (const item of parsed) {
@@ -1089,9 +1109,13 @@ export function copyCustomerData(
                 }
               }
             }
+          } else {
+            sourceReadSuccess = false;
           }
         }
-      } catch {}
+      } catch {
+        sourceReadSuccess = false;
+      }
     }
 
     const initialAddrCount = mergedAddrs.length;
@@ -1099,9 +1123,13 @@ export function copyCustomerData(
     for (const src of addrSources) {
       try {
         const val = localStorage.getItem(src);
-        if (!val) continue;
+        if (val === null || val === undefined || val.trim() === "") continue;
         const parsed = JSON.parse(val);
-        if (!Array.isArray(parsed) || parsed.length === 0) continue;
+        if (!Array.isArray(parsed)) {
+          sourceReadSuccess = false;
+          continue;
+        }
+        if (parsed.length === 0) continue;
 
         for (const item of parsed) {
           if (!item || typeof item !== "object") continue;
@@ -1114,11 +1142,13 @@ export function copyCustomerData(
             mergedAddrs.push(addr);
           }
         }
-      } catch {}
+      } catch {
+        sourceReadSuccess = false;
+      }
     }
 
     let addrsWriteSuccess = true;
-    if (mergedAddrs.length > initialAddrCount || (initialAddrCount === 0 && mergedAddrs.length > 0)) {
+    if (sourceReadSuccess && (mergedAddrs.length > initialAddrCount || (initialAddrCount === 0 && mergedAddrs.length > 0))) {
       try {
         const serialized = JSON.stringify(mergedAddrs);
         localStorage.setItem(targetAddrKey, serialized);
@@ -1129,9 +1159,11 @@ export function copyCustomerData(
       } catch {
         addrsWriteSuccess = false;
       }
+    } else if (!sourceReadSuccess) {
+      addrsWriteSuccess = false;
     }
 
-    return ordersWriteSuccess && addrsWriteSuccess;
+    return sourceReadSuccess && ordersWriteSuccess && addrsWriteSuccess;
   } catch {
     return false;
   }
@@ -2379,10 +2411,13 @@ export function lookupAccountId(identifier?: string | null): string | null {
       if (collisionEmails.length > 1) {
         const partition = partitionEmailsByAccountOwner(collisionEmails, meta, activeUserEmail);
         if (partition.isSingleOwner) {
-          const ownerCluster = partition.clusters[0];
           const targetId = (val.startsWith("usr_email_") || val === "usr_demo_radhika")
             ? val
             : ownerCluster.canonicalId;
+          const copySuccess = copyCustomerData(val, targetId);
+          if (!copySuccess) {
+            return val;
+          }
           map[key] = targetId;
           meta[key] = {
             ...meta[key],
@@ -2390,7 +2425,6 @@ export function lookupAccountId(identifier?: string | null): string | null {
             type: meta[key]?.type || "primary",
             updatedAt: Date.now(),
           };
-          copyCustomerData(val, targetId);
           clearFalseQuarantine(val, targetId, migrationMeta);
           try {
             localStorage.setItem(ACCOUNT_MAP_KEY, JSON.stringify(map));
@@ -2466,11 +2500,14 @@ export function lookupAccountId(identifier?: string | null): string | null {
               status: "active",
               updatedAt: Date.now(),
             };
+            const copySuccess = copyCustomerData(`usr_phone_${key}`, resolvedId);
+            if (!copySuccess) {
+              return val;
+            }
             if (migrationMeta.unresolvedPhoneAliases?.[key]) {
               delete migrationMeta.unresolvedPhoneAliases[key];
               setMigrationMetadata(migrationMeta);
             }
-            copyCustomerData(`usr_phone_${key}`, resolvedId);
             try {
               localStorage.setItem(ACCOUNT_MAP_KEY, JSON.stringify(map));
               setAccountMetadata(meta);
@@ -2585,9 +2622,11 @@ export function registerAccountAlias(
 
     // Clean up unresolved tracking if this phone is now registered to an active account
     if (!isEmail && migrationMeta.unresolvedPhoneAliases?.[key]) {
-      delete migrationMeta.unresolvedPhoneAliases[key];
-      copyCustomerData(`usr_phone_${key}`, val);
-      setMigrationMetadata(migrationMeta);
+      const copySuccess = copyCustomerData(`usr_phone_${key}`, val);
+      if (copySuccess) {
+        delete migrationMeta.unresolvedPhoneAliases[key];
+        setMigrationMetadata(migrationMeta);
+      }
     }
 
     localStorage.setItem(ACCOUNT_MAP_KEY, JSON.stringify(map));
