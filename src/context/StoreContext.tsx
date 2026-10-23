@@ -496,8 +496,97 @@ export function lookupEmailByAccountId(accountId?: string | null): string | null
 }
 
 /**
+ * Extracts explicit normalized 10-digit phone tokens from an object or address string.
+ * Rejects arbitrary concatenated digits (e.g. flat number + pincode) by requiring
+ * explicit phone fields, labeled phone tokens, or bounded standalone 10-digit phone tokens.
+ */
+export function extractExplicitPhoneTokens(source: unknown): string[] {
+  if (!source) return [];
+  const tokens = new Set<string>();
+
+  const addIfValid = (raw: unknown) => {
+    if (typeof raw === "string") {
+      const digits = raw.replace(/\D/g, "");
+      if (digits.length >= 10) {
+        tokens.add(digits.slice(-10));
+      }
+    } else if (typeof raw === "number" && Number.isFinite(raw)) {
+      const digits = String(raw).replace(/\D/g, "");
+      if (digits.length >= 10) {
+        tokens.add(digits.slice(-10));
+      }
+    }
+  };
+
+  // 1. Explicit object fields
+  if (typeof source === "object" && source !== null) {
+    const obj = source as Record<string, unknown>;
+    addIfValid(obj.phone);
+    addIfValid(obj.mobile);
+    addIfValid(obj.tel);
+    addIfValid(obj.contactPhone);
+    addIfValid(obj.contactNumber);
+    addIfValid(obj.phoneNumber);
+    if (obj.customer && typeof obj.customer === "object") {
+      const cust = obj.customer as Record<string, unknown>;
+      addIfValid(cust.phone);
+      addIfValid(cust.mobile);
+      addIfValid(cust.tel);
+    }
+    if (obj.shippingAddress) {
+      if (typeof obj.shippingAddress === "object") {
+        const ship = obj.shippingAddress as Record<string, unknown>;
+        addIfValid(ship.phone);
+        addIfValid(ship.mobile);
+        addIfValid(ship.tel);
+      } else if (typeof obj.shippingAddress === "string") {
+        for (const t of extractExplicitPhoneTokens(obj.shippingAddress)) {
+          tokens.add(t);
+        }
+      }
+    }
+    return Array.from(tokens);
+  }
+
+  // 2. String parsing
+  if (typeof source === "string") {
+    const str = source.trim();
+    if (!str) return [];
+
+    // Pattern A: Explicitly labeled phone prefixes
+    // e.g. "Ph: 9876543210", "Phone: +91 98765 43210", "Mobile: 9876543210", "Contact: 9876543210"
+    const labeledRegex = /(?:phone|ph|mobile|mob|tel|contact|cell)\b[\s.:#-]*([+\d\s().-]{10,25})/gi;
+    let match: RegExpExecArray | null;
+    while ((match = labeledRegex.exec(str)) !== null) {
+      const captured = match[1];
+      if (captured) {
+        const digits = captured.replace(/\D/g, "");
+        if (digits.length >= 10) {
+          tokens.add(digits.slice(-10));
+        }
+      }
+    }
+
+    // Pattern B: Delimited standalone 10-digit phone patterns
+    // e.g. bounded by delimiters/non-digits, optionally prefixed by +91 or 91
+    const standaloneRegex = /(?:^|[^\d])(?:\+?91[\s-]?)?([6-9]\d{9})(?=$|[^\d])/g;
+    while ((match = standaloneRegex.exec(str)) !== null) {
+      const captured = match[1];
+      if (captured && captured.length === 10) {
+        tokens.add(captured);
+      }
+    }
+  }
+
+  return Array.from(tokens);
+}
+
+/**
  * Scans order and address records in the legacy storage bucket or its quarantine backup
  * to associate a phone alias with an email belonging to candidate account owners.
+ * Collects all matching canonical owners across the legacy records and resolves only
+ * when exactly one distinct owner remains; otherwise fails closed and returns null
+ * to keep the alias quarantined/unresolved.
  */
 export function findOwnerEmailForPhoneInRecords(
   phoneDigits: string,
@@ -508,17 +597,24 @@ export function findOwnerEmailForPhoneInRecords(
   if (!phoneDigits || !candidateEmails.length || !legacyAccountId) return null;
 
   const normalizedDigits = phoneDigits.replace(/\D/g, "");
-  const targetPhone = normalizedDigits.length >= 10 ? normalizedDigits.slice(-10) : normalizedDigits;
-  const lowerCandidates = candidateEmails.map((e) => e.toLowerCase().trim());
+  if (normalizedDigits.length < 10) return null;
+  const targetPhone = normalizedDigits.slice(-10);
+  const lowerCandidates = candidateEmails
+    .map((e) => e.toLowerCase().trim())
+    .filter((e) => e && e.includes("@"));
+  if (!lowerCandidates.length) return null;
 
   const safeLegacyId = legacyAccountId.toLowerCase().trim().replace(/[^a-z0-9_]/g, (ch) => `_${ch.charCodeAt(0).toString(16)}_`);
 
-  const orderKeys = [
+  const orderKeys = Array.from(new Set([
     `palluvo_ecommerce_orders_${safeLegacyId}`,
     `palluvo_ecommerce_orders_${legacyAccountId}`,
     `palluvo_quarantine_palluvo_ecommerce_orders_${safeLegacyId}`,
     `palluvo_quarantine_palluvo_ecommerce_orders_${legacyAccountId}`,
-  ];
+  ]));
+
+  const meta = getAccountMetadata();
+  const matchedCanonicalOwners = new Set<string>();
 
   for (const k of orderKeys) {
     try {
@@ -529,38 +625,32 @@ export function findOwnerEmailForPhoneInRecords(
       for (const ord of parsed) {
         if (!ord || typeof ord !== "object") continue;
         const ordObj = ord as Record<string, unknown>;
+
+        const tokens = extractExplicitPhoneTokens(ordObj);
+        if (!tokens.includes(targetPhone)) {
+          continue;
+        }
+
         const cust = ordObj.customer as Record<string, unknown> | undefined;
-        const custPhone = typeof cust?.phone === "string" ? cust.phone.replace(/\D/g, "").slice(-10) : "";
         const custEmail = typeof cust?.email === "string" ? cust.email.toLowerCase().trim() : "";
-        if (custPhone === targetPhone && custEmail && lowerCandidates.includes(custEmail)) {
-          return custEmail;
-        }
-
-        const ordPhone = typeof ordObj.phone === "string" ? ordObj.phone.replace(/\D/g, "").slice(-10) : "";
         const ordEmail = typeof ordObj.email === "string" ? ordObj.email.toLowerCase().trim() : "";
-        if (ordPhone === targetPhone && ordEmail && lowerCandidates.includes(ordEmail)) {
-          return ordEmail;
-        }
 
-        const shippingStr = typeof ordObj.shippingAddress === "string" ? ordObj.shippingAddress : "";
-        if (shippingStr && shippingStr.replace(/\D/g, "").includes(targetPhone)) {
-          if (custEmail && lowerCandidates.includes(custEmail)) {
-            return custEmail;
-          }
-          if (ordEmail && lowerCandidates.includes(ordEmail)) {
-            return ordEmail;
+        for (const em of [custEmail, ordEmail]) {
+          if (em && em.includes("@")) {
+            const canonical = (resolveRootOwner(em, meta) || em).toLowerCase().trim();
+            matchedCanonicalOwners.add(canonical);
           }
         }
       }
     } catch {}
   }
 
-  const addressKeys = [
+  const addressKeys = Array.from(new Set([
     `palluvo_ecommerce_addresses_${safeLegacyId}`,
     `palluvo_ecommerce_addresses_${legacyAccountId}`,
     `palluvo_quarantine_palluvo_ecommerce_addresses_${safeLegacyId}`,
     `palluvo_quarantine_palluvo_ecommerce_addresses_${legacyAccountId}`,
-  ];
+  ]));
 
   for (const k of addressKeys) {
     try {
@@ -571,13 +661,45 @@ export function findOwnerEmailForPhoneInRecords(
       for (const addr of parsed) {
         if (!addr || typeof addr !== "object") continue;
         const addrObj = addr as Record<string, unknown>;
-        const addrPhone = typeof addrObj.phone === "string" ? addrObj.phone.replace(/\D/g, "").slice(-10) : "";
+
+        const tokens = extractExplicitPhoneTokens(addrObj);
+        if (!tokens.includes(targetPhone)) {
+          continue;
+        }
+
         const addrEmail = typeof addrObj.email === "string" ? addrObj.email.toLowerCase().trim() : "";
-        if (addrPhone === targetPhone && addrEmail && lowerCandidates.includes(addrEmail)) {
-          return addrEmail;
+        const ownerEmail = typeof addrObj.ownerEmail === "string" ? addrObj.ownerEmail.toLowerCase().trim() : "";
+        const userEmail = typeof addrObj.userEmail === "string" ? addrObj.userEmail.toLowerCase().trim() : "";
+
+        for (const em of [addrEmail, ownerEmail, userEmail]) {
+          if (em && em.includes("@")) {
+            const canonical = (resolveRootOwner(em, meta) || em).toLowerCase().trim();
+            matchedCanonicalOwners.add(canonical);
+          }
         }
       }
     } catch {}
+  }
+
+  // Resolve only when exactly one distinct canonical owner remains across historical records;
+  // otherwise fail closed (0 matches or conflicting owners)
+  if (matchedCanonicalOwners.size !== 1) {
+    return null;
+  }
+
+  const singleCanonicalOwner = Array.from(matchedCanonicalOwners)[0];
+
+  if (lowerCandidates.includes(singleCanonicalOwner)) {
+    return singleCanonicalOwner;
+  }
+
+  const matchingCandidate = lowerCandidates.find((cand) => {
+    const root = (resolveRootOwner(cand, meta) || cand).toLowerCase().trim();
+    return root === singleCanonicalOwner;
+  });
+
+  if (matchingCandidate) {
+    return matchingCandidate;
   }
 
   return null;
@@ -925,15 +1047,10 @@ export function copyCustomerData(
 
       // If no email was attached to the order, check if phone matches this owner's verified phone
       if (verifiedPhoneList.length > 0) {
-        const custPhone = typeof cust?.phone === "string" ? cust.phone.replace(/\D/g, "").slice(-10) : "";
-        if (custPhone && verifiedPhoneList.includes(custPhone)) return true;
-        const ordPhone = typeof ord.phone === "string" ? ord.phone.replace(/\D/g, "").slice(-10) : "";
-        if (ordPhone && verifiedPhoneList.includes(ordPhone)) return true;
-        const shippingStr = typeof ord.shippingAddress === "string" ? ord.shippingAddress : "";
-        if (shippingStr) {
-          const digits = shippingStr.replace(/\D/g, "");
-          for (const vp of verifiedPhoneList) {
-            if (digits.includes(vp)) return true;
+        const explicitTokens = extractExplicitPhoneTokens(ord);
+        for (const token of explicitTokens) {
+          if (verifiedPhoneList.includes(token)) {
+            return true;
           }
         }
       }
@@ -1073,14 +1190,11 @@ export function copyCustomerData(
 
       // If no email was attached to the address, check verified phone
       if (verifiedPhoneList.length > 0) {
-        const rawPhone = addr.phone;
-        const phone = typeof rawPhone === "string"
-          ? rawPhone.replace(/\D/g, "").slice(-10)
-          : typeof rawPhone === "number" && Number.isFinite(rawPhone)
-          ? String(rawPhone).replace(/\D/g, "").slice(-10)
-          : "";
-        if (phone && verifiedPhoneList.includes(phone)) {
-          return true;
+        const explicitTokens = extractExplicitPhoneTokens(addr);
+        for (const token of explicitTokens) {
+          if (verifiedPhoneList.includes(token)) {
+            return true;
+          }
         }
       }
       return false;
@@ -2265,19 +2379,17 @@ export function lookupAccountId(identifier?: string | null): string | null {
               return null;
             }
 
-            if (quarantinedEmails.length > 1) {
-              const safePhoneId = `usr_phone_${key}`;
-              map[key] = safePhoneId;
-              meta[key] = { ...meta[key], accountId: safePhoneId, type: "phone", phone: key, status: "unresolved", legacyId: val, candidateAccountIds: [redirectedId], candidateEmails: quarantinedEmails, updatedAt: Date.now() };
-              migrationMeta.unresolvedPhoneAliases = migrationMeta.unresolvedPhoneAliases || {};
-              migrationMeta.unresolvedPhoneAliases[key] = { legacyId: val, candidateAccountIds: [redirectedId], candidateEmails: quarantinedEmails, quarantinedAt: Date.now() };
-              try {
-                localStorage.setItem(ACCOUNT_MAP_KEY, JSON.stringify(map));
-                setAccountMetadata(meta);
-                setMigrationMetadata(migrationMeta);
-              } catch {}
-              return null;
-            }
+            const safePhoneId = `usr_phone_${key}`;
+            map[key] = safePhoneId;
+            meta[key] = { ...meta[key], accountId: safePhoneId, type: "phone", phone: key, status: "unresolved", legacyId: val, candidateAccountIds: [redirectedId], candidateEmails: quarantinedEmails, updatedAt: Date.now() };
+            migrationMeta.unresolvedPhoneAliases = migrationMeta.unresolvedPhoneAliases || {};
+            migrationMeta.unresolvedPhoneAliases[key] = { legacyId: val, candidateAccountIds: [redirectedId], candidateEmails: quarantinedEmails, quarantinedAt: Date.now() };
+            try {
+              localStorage.setItem(ACCOUNT_MAP_KEY, JSON.stringify(map));
+              setAccountMetadata(meta);
+              setMigrationMetadata(migrationMeta);
+            } catch {}
+            return null;
           }
         }
 
