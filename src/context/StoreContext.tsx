@@ -2477,26 +2477,52 @@ export function lookupAccountId(identifier?: string | null): string | null {
         return null;
       }
 
-      // Check if this phone alias was unresolved and candidate owners can now be disambiguated
+      // Check if this phone alias was unresolved and can now be resolved with affirmative evidence tied to this phone
       if (meta[key]?.status === "unresolved" || migrationMeta.unresolvedPhoneAliases?.[key]) {
         const candidateAccountIds = meta[key]?.candidateAccountIds || migrationMeta.unresolvedPhoneAliases?.[key]?.candidateAccountIds || [];
-        if (candidateAccountIds.length > 0) {
-          // A candidate cluster that already has a different phone mapped in meta/map is ruled out
-          const availableCandidates = candidateAccountIds.filter((cid) => {
-            if (isQuarantinedAccountId(cid)) return false;
-            for (const [otherKey, otherMeta] of Object.entries(meta)) {
-              if (otherKey !== key && !otherKey.includes("@") && (otherMeta?.accountId === cid || map[otherKey] === cid)) {
-                return false;
+        const recordedLegacyId = migrationMeta.unresolvedPhoneAliases?.[key]?.legacyId || meta[key]?.legacyId;
+        const candidateEmails = Array.from(new Set([
+          ...(meta[key]?.candidateEmails || []),
+          ...(migrationMeta.unresolvedPhoneAliases?.[key]?.candidateEmails || []),
+        ]));
+
+        let resolvedOwnerEmail: string | undefined;
+        let resolvedId: string | undefined;
+
+        // Evidence 1: Explicit recorded owner on this phone alias
+        const recordedOwner = meta[key]?.ownerEmail?.toLowerCase().trim();
+        const resolvedOwner = recordedOwner ? (resolveRootOwner(recordedOwner, meta) || recordedOwner) : undefined;
+        const checkOwner = resolvedOwner || recordedOwner;
+
+        if (checkOwner) {
+          const ownerTarget = map[checkOwner] || meta[checkOwner]?.accountId;
+          if (ownerTarget && !isQuarantinedAccountId(ownerTarget) && ownerTarget !== val) {
+            if (candidateAccountIds.length === 0 || candidateAccountIds.includes(ownerTarget)) {
+              resolvedId = ownerTarget;
+              resolvedOwnerEmail = checkOwner;
+            }
+          }
+        }
+
+        // Evidence 2: Historical records tied to this phone alias in the legacy bucket
+        if (!resolvedId && recordedLegacyId && candidateEmails.length > 0) {
+          const foundEmail = findOwnerEmailForPhoneInRecords(key, candidateEmails, recordedLegacyId);
+          if (foundEmail) {
+            const targetId = map[foundEmail] || meta[foundEmail]?.accountId;
+            if (targetId && !isQuarantinedAccountId(targetId) && targetId !== val) {
+              if (candidateAccountIds.length === 0 || candidateAccountIds.includes(targetId)) {
+                resolvedId = targetId;
+                resolvedOwnerEmail = foundEmail;
               }
             }
-            return true;
-          });
+          }
+        }
 
-          if (availableCandidates.length === 1) {
-            const resolvedId = availableCandidates[0];
-            const recordedLegacyId = migrationMeta.unresolvedPhoneAliases?.[key]?.legacyId || meta[key]?.legacyId;
-
-            let resolvedOwnerEmail = lookupEmailByAccountId(resolvedId) || undefined;
+        // Do not eliminate candidates or guess just because one candidate already has a different phone.
+        // Resolve only when affirmative evidence tied to this phone points to a candidate.
+        if (resolvedId) {
+          if (!resolvedOwnerEmail) {
+            resolvedOwnerEmail = lookupEmailByAccountId(resolvedId) || undefined;
             if (!resolvedOwnerEmail) {
               for (const [k, v] of Object.entries(map)) {
                 if (v === resolvedId && k.includes("@")) {
@@ -2505,73 +2531,67 @@ export function lookupAccountId(identifier?: string | null): string | null {
                 }
               }
             }
-            if (!resolvedOwnerEmail && meta[key]?.ownerEmail) {
-              resolvedOwnerEmail = meta[key]?.ownerEmail?.toLowerCase().trim();
-            }
-            if (!resolvedOwnerEmail && migrationMeta.unresolvedPhoneAliases?.[key]?.candidateEmails?.length === 1) {
-              resolvedOwnerEmail = migrationMeta.unresolvedPhoneAliases[key].candidateEmails[0]?.toLowerCase().trim();
-            }
+          }
 
-            const allowedEmailSet = new Set<string>();
-            if (resolvedOwnerEmail) {
-              const normOwner = resolvedOwnerEmail.toLowerCase().trim();
-              allowedEmailSet.add(normOwner);
-              const root = resolveRootOwner(normOwner, meta);
-              if (root) allowedEmailSet.add(root.toLowerCase().trim());
-              for (const [em] of Object.entries(meta)) {
-                if (em.includes("@")) {
-                  const norm = em.toLowerCase().trim();
-                  const emRoot = resolveRootOwner(norm, meta);
-                  if (emRoot && (emRoot === root || emRoot === normOwner)) {
-                    allowedEmailSet.add(norm);
-                  }
+          const allowedEmailSet = new Set<string>();
+          if (resolvedOwnerEmail) {
+            const normOwner = resolvedOwnerEmail.toLowerCase().trim();
+            allowedEmailSet.add(normOwner);
+            const root = resolveRootOwner(normOwner, meta);
+            if (root) allowedEmailSet.add(root.toLowerCase().trim());
+            for (const [em] of Object.entries(meta)) {
+              if (em.includes("@")) {
+                const norm = em.toLowerCase().trim();
+                const emRoot = resolveRootOwner(norm, meta);
+                if (emRoot && (emRoot === root || emRoot === normOwner)) {
+                  allowedEmailSet.add(norm);
                 }
               }
             }
+          }
 
-            const copyOptions: CopyCustomerDataOptions = {
-              filterByOwnerEmail: resolvedOwnerEmail,
-              allowedEmails: Array.from(allowedEmailSet),
-              verifiedPhones: Array.from(new Set([key, meta[key]?.phone].filter(Boolean) as string[])),
-            };
+          const copyOptions: CopyCustomerDataOptions = {
+            filterByOwnerEmail: resolvedOwnerEmail,
+            allowedEmails: Array.from(allowedEmailSet),
+            verifiedPhones: Array.from(new Set([key, meta[key]?.phone].filter(Boolean) as string[])),
+          };
 
-            let copySuccess = true;
-            if (recordedLegacyId && recordedLegacyId !== resolvedId) {
-              copySuccess = copyCustomerData(recordedLegacyId, resolvedId, copyOptions);
-            }
-            if (copySuccess && `usr_phone_${key}` !== resolvedId) {
-              copySuccess = copyCustomerData(`usr_phone_${key}`, resolvedId, copyOptions);
-            }
+          let copySuccess = true;
+          if (recordedLegacyId && recordedLegacyId !== resolvedId) {
+            copySuccess = copyCustomerData(recordedLegacyId, resolvedId, copyOptions);
+          }
+          if (copySuccess && `usr_phone_${key}` !== resolvedId) {
+            copySuccess = copyCustomerData(`usr_phone_${key}`, resolvedId, copyOptions);
+          }
 
-            if (!copySuccess) {
-              return val;
-            }
+          if (!copySuccess) {
+            return val;
+          }
 
-            map[key] = resolvedId;
-            meta[key] = {
-              ...meta[key],
-              accountId: resolvedId,
-              ownerEmail: resolvedOwnerEmail || meta[key]?.ownerEmail,
-              status: "active",
+          map[key] = resolvedId;
+          meta[key] = {
+            ...meta[key],
+            accountId: resolvedId,
+            ownerEmail: resolvedOwnerEmail || meta[key]?.ownerEmail,
+            status: "active",
+            updatedAt: Date.now(),
+          };
+          if (resolvedOwnerEmail && meta[resolvedOwnerEmail]) {
+            meta[resolvedOwnerEmail] = {
+              ...meta[resolvedOwnerEmail],
+              phone: key,
               updatedAt: Date.now(),
             };
-            if (resolvedOwnerEmail && meta[resolvedOwnerEmail]) {
-              meta[resolvedOwnerEmail] = {
-                ...meta[resolvedOwnerEmail],
-                phone: key,
-                updatedAt: Date.now(),
-              };
-            }
-            if (migrationMeta.unresolvedPhoneAliases?.[key]) {
-              delete migrationMeta.unresolvedPhoneAliases[key];
-              setMigrationMetadata(migrationMeta);
-            }
-            try {
-              localStorage.setItem(ACCOUNT_MAP_KEY, JSON.stringify(map));
-              setAccountMetadata(meta);
-            } catch {}
-            return resolvedId;
           }
+          if (migrationMeta.unresolvedPhoneAliases?.[key]) {
+            delete migrationMeta.unresolvedPhoneAliases[key];
+            setMigrationMetadata(migrationMeta);
+          }
+          try {
+            localStorage.setItem(ACCOUNT_MAP_KEY, JSON.stringify(map));
+            setAccountMetadata(meta);
+          } catch {}
+          return resolvedId;
         }
       }
     }
