@@ -1023,45 +1023,163 @@ export function migrateLegacyAccountAliases(): void {
         // Group contains only non-email keys (e.g. phone numbers)
         if (isQuarantinedAccountId(trimmedVal)) {
           const redirectedId = migrationMeta.rekeyedOwnerIds?.[trimmedVal];
+          const quarantinedEmails = migrationMeta.quarantinedLegacyBuckets?.[trimmedVal]?.emails ||
+            migrationMeta.quarantinedCollisionIds?.[trimmedVal] || [];
+
           if (redirectedId && !isQuarantinedAccountId(redirectedId)) {
+            const redirectOwnerEmail = lookupEmailByAccountId(redirectedId)?.toLowerCase().trim();
+
             for (const p of nonEmailKeys) {
               const recordedOwner = meta[p]?.ownerEmail?.toLowerCase().trim();
-              if (recordedOwner && map[recordedOwner] && map[recordedOwner] !== redirectedId && !isQuarantinedAccountId(map[recordedOwner])) {
-                const targetId = map[recordedOwner];
-                map[p] = targetId;
-                meta[p] = { ...meta[p], accountId: targetId, type: "phone", status: "active", updatedAt: Date.now() };
+              const resolvedOwner = recordedOwner ? (resolveRootOwner(recordedOwner, meta) || recordedOwner) : undefined;
+
+              if (recordedOwner) {
+                const isRedirectOwner = Boolean(
+                  map[recordedOwner] === redirectedId ||
+                  meta[recordedOwner]?.accountId === redirectedId ||
+                  (redirectOwnerEmail && (recordedOwner === redirectOwnerEmail || resolvedOwner === redirectOwnerEmail))
+                );
+
+                if (isRedirectOwner) {
+                  map[p] = redirectedId;
+                  meta[p] = {
+                    ...meta[p],
+                    accountId: redirectedId,
+                    type: "phone",
+                    ownerEmail: recordedOwner,
+                    status: "active",
+                    updatedAt: Date.now(),
+                  };
+                  if (meta[recordedOwner]) {
+                    meta[recordedOwner] = {
+                      ...meta[recordedOwner],
+                      phone: p,
+                      updatedAt: Date.now(),
+                    };
+                  }
+                  if (migrationMeta.unresolvedPhoneAliases?.[p]) {
+                    delete migrationMeta.unresolvedPhoneAliases[p];
+                  }
+                  modified = true;
+                  continue;
+                }
+
+                // Explicit owner names a different owner (e.g. Bob, while redirectedId is Alice).
+                // Check if that owner can be safely resolved to a usable non-quarantined account.
+                const otherOwnerTargetId = (resolvedOwner && map[resolvedOwner]) || map[recordedOwner] || meta[recordedOwner]?.accountId;
+                if (otherOwnerTargetId && !isQuarantinedAccountId(otherOwnerTargetId) && otherOwnerTargetId !== trimmedVal) {
+                  map[p] = otherOwnerTargetId;
+                  meta[p] = {
+                    ...meta[p],
+                    accountId: otherOwnerTargetId,
+                    type: "phone",
+                    ownerEmail: recordedOwner,
+                    status: "active",
+                    updatedAt: Date.now(),
+                  };
+                  if (meta[recordedOwner]) {
+                    meta[recordedOwner] = {
+                      ...meta[recordedOwner],
+                      phone: p,
+                      updatedAt: Date.now(),
+                    };
+                  }
+                  if (migrationMeta.unresolvedPhoneAliases?.[p]) {
+                    delete migrationMeta.unresolvedPhoneAliases[p];
+                  }
+                  modified = true;
+                  continue;
+                }
+
+                // Explicit owner has no usable map entry: keep unresolved/isolated, do NOT bind to redirectedId!
+                const safePhoneId = `usr_phone_${p}`;
+                map[p] = safePhoneId;
+                meta[p] = {
+                  ...meta[p],
+                  accountId: safePhoneId,
+                  type: "phone",
+                  phone: p,
+                  ownerEmail: recordedOwner,
+                  status: "unresolved",
+                  legacyId: trimmedVal,
+                  candidateAccountIds: otherOwnerTargetId && otherOwnerTargetId !== trimmedVal && !isQuarantinedAccountId(otherOwnerTargetId) ? [otherOwnerTargetId] : [],
+                  candidateEmails: [recordedOwner],
+                  updatedAt: Date.now(),
+                };
+                migrationMeta.unresolvedPhoneAliases = migrationMeta.unresolvedPhoneAliases || {};
+                migrationMeta.unresolvedPhoneAliases[p] = {
+                  legacyId: trimmedVal,
+                  candidateAccountIds: otherOwnerTargetId && otherOwnerTargetId !== trimmedVal && !isQuarantinedAccountId(otherOwnerTargetId) ? [otherOwnerTargetId] : [],
+                  candidateEmails: [recordedOwner],
+                  quarantinedAt: Date.now(),
+                };
                 modified = true;
                 continue;
               }
-              map[p] = redirectedId;
-              meta[p] = { ...meta[p], accountId: redirectedId, type: "phone", status: "active", updatedAt: Date.now() };
-              modified = true;
-            }
-          } else {
-            // For non-email keys pointing to a quarantined ID without an active redirect:
-            // Check metadata and historical records before isolating. Do NOT delete!
-            const quarantinedEmails = migrationMeta.quarantinedLegacyBuckets?.[trimmedVal]?.emails ||
-              migrationMeta.quarantinedCollisionIds?.[trimmedVal] || [];
 
-            for (const p of nonEmailKeys) {
-              const ownerEmail = meta[p]?.ownerEmail;
-              let targetId: string | undefined;
-              if (ownerEmail && map[ownerEmail] && !isQuarantinedAccountId(map[ownerEmail])) {
-                targetId = map[ownerEmail];
+              // No explicit recorded owner on phone: check historical records
+              let foundEmail: string | undefined;
+              if (quarantinedEmails.length > 0) {
+                foundEmail = findOwnerEmailForPhoneInRecords(p, quarantinedEmails, trimmedVal) || undefined;
               }
-              if (!targetId && quarantinedEmails.length > 0) {
-                const foundEmail = findOwnerEmailForPhoneInRecords(p, quarantinedEmails, trimmedVal);
-                if (foundEmail && map[foundEmail] && !isQuarantinedAccountId(map[foundEmail])) {
-                  targetId = map[foundEmail];
+
+              if (foundEmail) {
+                const isFoundRedirectOwner = map[foundEmail] === redirectedId || redirectOwnerEmail === foundEmail;
+                if (isFoundRedirectOwner) {
+                  map[p] = redirectedId;
+                  meta[p] = { ...meta[p], accountId: redirectedId, type: "phone", ownerEmail: foundEmail, status: "active", updatedAt: Date.now() };
+                  if (meta[foundEmail]) {
+                    meta[foundEmail] = { ...meta[foundEmail], phone: p, updatedAt: Date.now() };
+                  }
+                  if (migrationMeta.unresolvedPhoneAliases?.[p]) {
+                    delete migrationMeta.unresolvedPhoneAliases[p];
+                  }
+                  modified = true;
+                  continue;
                 }
+
+                const targetId = map[foundEmail] || meta[foundEmail]?.accountId;
+                if (targetId && !isQuarantinedAccountId(targetId) && targetId !== trimmedVal) {
+                  map[p] = targetId;
+                  meta[p] = { ...meta[p], accountId: targetId, type: "phone", ownerEmail: foundEmail, status: "active", updatedAt: Date.now() };
+                  if (meta[foundEmail]) {
+                    meta[foundEmail] = { ...meta[foundEmail], phone: p, updatedAt: Date.now() };
+                  }
+                  if (migrationMeta.unresolvedPhoneAliases?.[p]) {
+                    delete migrationMeta.unresolvedPhoneAliases[p];
+                  }
+                  modified = true;
+                  continue;
+                }
+
+                // Found owner not active: isolate as unresolved
+                const safePhoneId = `usr_phone_${p}`;
+                map[p] = safePhoneId;
+                meta[p] = {
+                  ...meta[p],
+                  accountId: safePhoneId,
+                  type: "phone",
+                  phone: p,
+                  ownerEmail: foundEmail,
+                  status: "unresolved",
+                  legacyId: trimmedVal,
+                  candidateAccountIds: targetId && targetId !== trimmedVal && !isQuarantinedAccountId(targetId) ? [targetId] : [],
+                  candidateEmails: [foundEmail],
+                  updatedAt: Date.now(),
+                };
+                migrationMeta.unresolvedPhoneAliases = migrationMeta.unresolvedPhoneAliases || {};
+                migrationMeta.unresolvedPhoneAliases[p] = {
+                  legacyId: trimmedVal,
+                  candidateAccountIds: targetId && targetId !== trimmedVal && !isQuarantinedAccountId(targetId) ? [targetId] : [],
+                  candidateEmails: [foundEmail],
+                  quarantinedAt: Date.now(),
+                };
+                modified = true;
+                continue;
               }
 
-              if (targetId) {
-                map[p] = targetId;
-                meta[p] = { ...meta[p], accountId: targetId, type: "phone", status: "active", updatedAt: Date.now() };
-                modified = true;
-              } else {
-                // Isolate to safe non-quarantined ID and keep recoverable
+              // Ambiguous phone caught in collision without records: do NOT bind to redirectedId
+              if (quarantinedEmails.length > 1) {
                 const safePhoneId = `usr_phone_${p}`;
                 map[p] = safePhoneId;
                 meta[p] = {
@@ -1071,14 +1189,70 @@ export function migrateLegacyAccountAliases(): void {
                   phone: p,
                   status: "unresolved",
                   legacyId: trimmedVal,
+                  candidateAccountIds: [redirectedId],
                   candidateEmails: quarantinedEmails,
                   updatedAt: Date.now(),
                 };
                 migrationMeta.unresolvedPhoneAliases = migrationMeta.unresolvedPhoneAliases || {};
                 migrationMeta.unresolvedPhoneAliases[p] = {
                   legacyId: trimmedVal,
-                  candidateAccountIds: [],
+                  candidateAccountIds: [redirectedId],
                   candidateEmails: quarantinedEmails,
+                  quarantinedAt: Date.now(),
+                };
+                modified = true;
+                continue;
+              }
+
+              // Only if single legacy owner with no collision history: bind to redirectedId
+              map[p] = redirectedId;
+              meta[p] = { ...meta[p], accountId: redirectedId, type: "phone", status: "active", updatedAt: Date.now() };
+              modified = true;
+            }
+          } else {
+            // For non-email keys pointing to a quarantined ID without an active redirect:
+            // Check metadata and historical records before isolating. Do NOT delete!
+            for (const p of nonEmailKeys) {
+              const recordedOwner = meta[p]?.ownerEmail?.toLowerCase().trim();
+              const resolvedOwner = recordedOwner ? (resolveRootOwner(recordedOwner, meta) || recordedOwner) : undefined;
+              let targetId: string | undefined;
+
+              const checkOwner = resolvedOwner || recordedOwner;
+              if (checkOwner && map[checkOwner] && !isQuarantinedAccountId(map[checkOwner]) && map[checkOwner] !== trimmedVal) {
+                targetId = map[checkOwner];
+              }
+              if (!targetId && quarantinedEmails.length > 0) {
+                const foundEmail = findOwnerEmailForPhoneInRecords(p, quarantinedEmails, trimmedVal);
+                if (foundEmail && map[foundEmail] && !isQuarantinedAccountId(map[foundEmail]) && map[foundEmail] !== trimmedVal) {
+                  targetId = map[foundEmail];
+                }
+              }
+
+              if (targetId) {
+                map[p] = targetId;
+                meta[p] = { ...meta[p], accountId: targetId, type: "phone", ownerEmail: meta[p]?.ownerEmail, status: "active", updatedAt: Date.now() };
+                modified = true;
+              } else {
+                // Isolate to safe non-quarantined ID and keep recoverable with recorded owner preserved
+                const safePhoneId = `usr_phone_${p}`;
+                map[p] = safePhoneId;
+                meta[p] = {
+                  ...meta[p],
+                  accountId: safePhoneId,
+                  type: "phone",
+                  phone: p,
+                  ownerEmail: meta[p]?.ownerEmail,
+                  status: "unresolved",
+                  legacyId: trimmedVal,
+                  candidateAccountIds: [],
+                  candidateEmails: recordedOwner ? [recordedOwner] : quarantinedEmails,
+                  updatedAt: Date.now(),
+                };
+                migrationMeta.unresolvedPhoneAliases = migrationMeta.unresolvedPhoneAliases || {};
+                migrationMeta.unresolvedPhoneAliases[p] = {
+                  legacyId: trimmedVal,
+                  candidateAccountIds: [],
+                  candidateEmails: recordedOwner ? [recordedOwner] : quarantinedEmails,
                   quarantinedAt: Date.now(),
                 };
                 modified = true;
@@ -1590,26 +1764,142 @@ export function lookupAccountId(identifier?: string | null): string | null {
     // 1. Check whether val represents a quarantined/tombstoned ID for ANY identifier type
     if (isQuarantinedAccountId(val)) {
       const redirectedId = migrationMeta.rekeyedOwnerIds?.[val];
+      const quarantinedEmails = migrationMeta.quarantinedLegacyBuckets?.[val]?.emails ||
+        migrationMeta.quarantinedCollisionIds?.[val] || [];
+
       if (redirectedId && !isQuarantinedAccountId(redirectedId)) {
         if (!key.includes("@")) {
           const recordedOwner = meta[key]?.ownerEmail?.toLowerCase().trim();
-          if (recordedOwner && map[recordedOwner] && map[recordedOwner] !== redirectedId && !isQuarantinedAccountId(map[recordedOwner])) {
-            const targetId = map[recordedOwner];
-            map[key] = targetId;
+          const resolvedOwner = recordedOwner ? (resolveRootOwner(recordedOwner, meta) || recordedOwner) : undefined;
+          const redirectOwnerEmail = lookupEmailByAccountId(redirectedId)?.toLowerCase().trim();
+
+          if (recordedOwner) {
+            const isRedirectOwner = Boolean(
+              map[recordedOwner] === redirectedId ||
+              meta[recordedOwner]?.accountId === redirectedId ||
+              (redirectOwnerEmail && (recordedOwner === redirectOwnerEmail || resolvedOwner === redirectOwnerEmail))
+            );
+
+            if (isRedirectOwner) {
+              map[key] = redirectedId;
+              meta[key] = {
+                ...meta[key],
+                accountId: redirectedId,
+                type: "phone",
+                ownerEmail: recordedOwner,
+                status: "active",
+                updatedAt: Date.now(),
+              };
+              try {
+                localStorage.setItem(ACCOUNT_MAP_KEY, JSON.stringify(map));
+                setAccountMetadata(meta);
+              } catch {}
+              return redirectedId;
+            }
+
+            const otherOwnerTargetId = (resolvedOwner && map[resolvedOwner]) || map[recordedOwner] || meta[recordedOwner]?.accountId;
+            if (otherOwnerTargetId && !isQuarantinedAccountId(otherOwnerTargetId) && otherOwnerTargetId !== val) {
+              map[key] = otherOwnerTargetId;
+              meta[key] = {
+                ...meta[key],
+                accountId: otherOwnerTargetId,
+                type: "phone",
+                ownerEmail: recordedOwner,
+                status: "active",
+                updatedAt: Date.now(),
+              };
+              try {
+                localStorage.setItem(ACCOUNT_MAP_KEY, JSON.stringify(map));
+                setAccountMetadata(meta);
+              } catch {}
+              return otherOwnerTargetId;
+            }
+
+            // Explicit owner has no usable map entry: keep unresolved/isolated, do NOT bind to redirectedId!
+            const safePhoneId = `usr_phone_${key}`;
+            map[key] = safePhoneId;
             meta[key] = {
               ...meta[key],
-              accountId: targetId,
+              accountId: safePhoneId,
               type: "phone",
-              status: "active",
+              phone: key,
+              ownerEmail: recordedOwner,
+              status: "unresolved",
+              legacyId: val,
+              candidateAccountIds: otherOwnerTargetId && otherOwnerTargetId !== val && !isQuarantinedAccountId(otherOwnerTargetId) ? [otherOwnerTargetId] : [],
+              candidateEmails: [recordedOwner],
               updatedAt: Date.now(),
+            };
+            migrationMeta.unresolvedPhoneAliases = migrationMeta.unresolvedPhoneAliases || {};
+            migrationMeta.unresolvedPhoneAliases[key] = {
+              legacyId: val,
+              candidateAccountIds: otherOwnerTargetId && otherOwnerTargetId !== val && !isQuarantinedAccountId(otherOwnerTargetId) ? [otherOwnerTargetId] : [],
+              candidateEmails: [recordedOwner],
+              quarantinedAt: Date.now(),
             };
             try {
               localStorage.setItem(ACCOUNT_MAP_KEY, JSON.stringify(map));
               setAccountMetadata(meta);
+              setMigrationMetadata(migrationMeta);
             } catch {}
-            return targetId;
+            return null;
+          }
+
+          // No explicit recorded owner on phone: check historical records
+          if (quarantinedEmails.length > 0) {
+            const foundEmail = findOwnerEmailForPhoneInRecords(key, quarantinedEmails, val);
+            if (foundEmail) {
+              const isFoundRedirectOwner = map[foundEmail] === redirectedId || redirectOwnerEmail === foundEmail;
+              if (isFoundRedirectOwner) {
+                map[key] = redirectedId;
+                meta[key] = { ...meta[key], accountId: redirectedId, type: "phone", ownerEmail: foundEmail, status: "active", updatedAt: Date.now() };
+                try {
+                  localStorage.setItem(ACCOUNT_MAP_KEY, JSON.stringify(map));
+                  setAccountMetadata(meta);
+                } catch {}
+                return redirectedId;
+              }
+
+              const targetId = map[foundEmail] || meta[foundEmail]?.accountId;
+              if (targetId && !isQuarantinedAccountId(targetId) && targetId !== val) {
+                map[key] = targetId;
+                meta[key] = { ...meta[key], accountId: targetId, type: "phone", ownerEmail: foundEmail, status: "active", updatedAt: Date.now() };
+                try {
+                  localStorage.setItem(ACCOUNT_MAP_KEY, JSON.stringify(map));
+                  setAccountMetadata(meta);
+                } catch {}
+                return targetId;
+              }
+
+              const safePhoneId = `usr_phone_${key}`;
+              map[key] = safePhoneId;
+              meta[key] = { ...meta[key], accountId: safePhoneId, type: "phone", phone: key, ownerEmail: foundEmail, status: "unresolved", legacyId: val, candidateEmails: [foundEmail], updatedAt: Date.now() };
+              migrationMeta.unresolvedPhoneAliases = migrationMeta.unresolvedPhoneAliases || {};
+              migrationMeta.unresolvedPhoneAliases[key] = { legacyId: val, candidateAccountIds: [], candidateEmails: [foundEmail], quarantinedAt: Date.now() };
+              try {
+                localStorage.setItem(ACCOUNT_MAP_KEY, JSON.stringify(map));
+                setAccountMetadata(meta);
+                setMigrationMetadata(migrationMeta);
+              } catch {}
+              return null;
+            }
+
+            if (quarantinedEmails.length > 1) {
+              const safePhoneId = `usr_phone_${key}`;
+              map[key] = safePhoneId;
+              meta[key] = { ...meta[key], accountId: safePhoneId, type: "phone", phone: key, status: "unresolved", legacyId: val, candidateAccountIds: [redirectedId], candidateEmails: quarantinedEmails, updatedAt: Date.now() };
+              migrationMeta.unresolvedPhoneAliases = migrationMeta.unresolvedPhoneAliases || {};
+              migrationMeta.unresolvedPhoneAliases[key] = { legacyId: val, candidateAccountIds: [redirectedId], candidateEmails: quarantinedEmails, quarantinedAt: Date.now() };
+              try {
+                localStorage.setItem(ACCOUNT_MAP_KEY, JSON.stringify(map));
+                setAccountMetadata(meta);
+                setMigrationMetadata(migrationMeta);
+              } catch {}
+              return null;
+            }
           }
         }
+
         map[key] = redirectedId;
         meta[key] = {
           ...meta[key],
@@ -1644,29 +1934,60 @@ export function lookupAccountId(identifier?: string | null): string | null {
 
       // For non-email identifier (e.g. phone) without a valid owner redirect:
       // Check metadata and historical records before isolating. Do NOT delete!
-      const quarantinedEmails = migrationMeta.quarantinedLegacyBuckets?.[val]?.emails ||
-        migrationMeta.quarantinedCollisionIds?.[val] || [];
-
-      const ownerEmail = meta[key]?.ownerEmail;
+      const ownerEmail = meta[key]?.ownerEmail?.toLowerCase().trim();
+      const resolvedOwner = ownerEmail ? (resolveRootOwner(ownerEmail, meta) || ownerEmail) : undefined;
       let targetId: string | undefined;
-      if (ownerEmail && map[ownerEmail] && !isQuarantinedAccountId(map[ownerEmail])) {
-        targetId = map[ownerEmail];
+
+      const checkOwner = resolvedOwner || ownerEmail;
+      if (checkOwner && map[checkOwner] && !isQuarantinedAccountId(map[checkOwner]) && map[checkOwner] !== val) {
+        targetId = map[checkOwner];
       }
       if (!targetId && quarantinedEmails.length > 0) {
         const foundEmail = findOwnerEmailForPhoneInRecords(key, quarantinedEmails, val);
-        if (foundEmail && map[foundEmail] && !isQuarantinedAccountId(map[foundEmail])) {
+        if (foundEmail && map[foundEmail] && !isQuarantinedAccountId(map[foundEmail]) && map[foundEmail] !== val) {
           targetId = map[foundEmail];
         }
       }
 
       if (targetId) {
         map[key] = targetId;
-        meta[key] = { ...meta[key], accountId: targetId, type: "phone", status: "active", updatedAt: Date.now() };
+        meta[key] = { ...meta[key], accountId: targetId, type: "phone", ownerEmail: meta[key]?.ownerEmail, status: "active", updatedAt: Date.now() };
         try {
           localStorage.setItem(ACCOUNT_MAP_KEY, JSON.stringify(map));
           setAccountMetadata(meta);
         } catch {}
         return targetId;
+      }
+
+      // If owner is known or was part of a quarantined collision, isolate as unresolved instead of deleting
+      if (ownerEmail || quarantinedEmails.length > 0) {
+        const safePhoneId = `usr_phone_${key}`;
+        map[key] = safePhoneId;
+        meta[key] = {
+          ...meta[key],
+          accountId: safePhoneId,
+          type: "phone",
+          phone: key,
+          ownerEmail: meta[key]?.ownerEmail,
+          status: "unresolved",
+          legacyId: val,
+          candidateAccountIds: [],
+          candidateEmails: ownerEmail ? [ownerEmail] : quarantinedEmails,
+          updatedAt: Date.now(),
+        };
+        migrationMeta.unresolvedPhoneAliases = migrationMeta.unresolvedPhoneAliases || {};
+        migrationMeta.unresolvedPhoneAliases[key] = {
+          legacyId: val,
+          candidateAccountIds: [],
+          candidateEmails: ownerEmail ? [ownerEmail] : quarantinedEmails,
+          quarantinedAt: Date.now(),
+        };
+        try {
+          localStorage.setItem(ACCOUNT_MAP_KEY, JSON.stringify(map));
+          setAccountMetadata(meta);
+          setMigrationMetadata(migrationMeta);
+        } catch {}
+        return null;
       }
 
       // For unowned tombstoned ID without redirect, reject tombstone consistently
