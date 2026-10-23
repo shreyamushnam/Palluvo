@@ -790,27 +790,37 @@ export function partitionEmailsByAccountOwner(
   };
 }
 
+export interface CopyCustomerDataOptions {
+  filterByOwnerEmail?: string;
+  allowedEmails?: string[];
+  verifiedPhones?: string[];
+}
+
 /**
  * Safely copies and merges orders and addresses from a source legacy ID to a canonical account ID.
  * Merges and deduplicates records instead of skipping the source when destination records already exist.
- * Verifies writes to localStorage.
- * When filterByOwnerEmail is specified, copies only records independently verified to belong to that email,
- * ensuring multi-owner quarantined records remain strictly isolated.
+ * Verifies writes to localStorage and returns a boolean indicating whether both datasets were verified.
+ * When filterByOwnerEmail is specified, accepts records owned through verified prior-email aliases
+ * or verified phone numbers, while keeping multi-owner quarantined records strictly isolated.
  */
 export function copyCustomerData(
   fromAccountId: string,
   toAccountId: string,
-  options?: {
-    filterByOwnerEmail?: string;
-    verifiedPhones?: string[];
-  } | string
-): void {
-  if (typeof window === "undefined" || !window.localStorage) return;
-  if (!fromAccountId || !toAccountId || fromAccountId === toAccountId) return;
+  options?: CopyCustomerDataOptions | string
+): boolean {
+  if (typeof window === "undefined" || !window.localStorage) return false;
+  if (!fromAccountId || !toAccountId) return false;
+  if (fromAccountId === toAccountId) return true;
   try {
     const filterEmail = (
       typeof options === "string" ? options : options?.filterByOwnerEmail
     )?.toLowerCase().trim();
+
+    const allowedEmailsInput = (
+      typeof options === "object" && options && Array.isArray(options.allowedEmails)
+        ? options.allowedEmails
+        : []
+    );
 
     const rawPhones = (
       typeof options === "object" && options && Array.isArray(options.verifiedPhones)
@@ -823,6 +833,54 @@ export function copyCustomerData(
 
     const fromSafe = fromAccountId.toLowerCase().trim().replace(/[^a-z0-9_]/g, (ch) => `_${ch.charCodeAt(0).toString(16)}_`);
     const toSafe = toAccountId.toLowerCase().trim().replace(/[^a-z0-9_]/g, (ch) => `_${ch.charCodeAt(0).toString(16)}_`);
+
+    const meta = getAccountMetadata();
+    const allowedEmailSet = new Set<string>();
+    if (filterEmail) {
+      allowedEmailSet.add(filterEmail);
+      const root = resolveRootOwner(filterEmail, meta);
+      if (root) {
+        allowedEmailSet.add(root.toLowerCase().trim());
+      }
+    }
+    for (const em of allowedEmailsInput) {
+      if (em && em.includes("@")) {
+        const norm = em.toLowerCase().trim();
+        allowedEmailSet.add(norm);
+        const root = resolveRootOwner(norm, meta);
+        if (root) {
+          allowedEmailSet.add(root.toLowerCase().trim());
+        }
+      }
+    }
+    if (filterEmail) {
+      const root = resolveRootOwner(filterEmail, meta) || filterEmail;
+      for (const [em] of Object.entries(meta)) {
+        if (em.includes("@")) {
+          const norm = em.toLowerCase().trim();
+          const emRoot = resolveRootOwner(norm, meta);
+          if (emRoot && (emRoot === root || emRoot === filterEmail)) {
+            allowedEmailSet.add(norm);
+          }
+        }
+      }
+    }
+    const filterRoot = filterEmail ? (resolveRootOwner(filterEmail, meta) || filterEmail).toLowerCase().trim() : undefined;
+
+    const isEmailVerified = (emailCandidate?: string | null): boolean => {
+      if (!emailCandidate || typeof emailCandidate !== "string") return false;
+      const norm = emailCandidate.toLowerCase().trim();
+      if (!norm || !norm.includes("@")) return false;
+      if (allowedEmailSet.has(norm)) return true;
+      const root = resolveRootOwner(norm, meta);
+      if (root) {
+        const normRoot = root.toLowerCase().trim();
+        if (allowedEmailSet.has(normRoot) || (filterRoot && normRoot === filterRoot)) {
+          return true;
+        }
+      }
+      return false;
+    };
 
     const orderSources = Array.from(new Set([
       `palluvo_ecommerce_orders_${fromSafe}`,
@@ -843,16 +901,26 @@ export function copyCustomerData(
     };
 
     const isOrderVerifiedForOwner = (ord: Record<string, unknown>): boolean => {
-      if (!filterEmail) return true;
+      if (!filterEmail && allowedEmailSet.size === 0) return true;
+
       const cust = ord.customer as Record<string, unknown> | undefined;
       const custEmail = typeof cust?.email === "string" ? cust.email.toLowerCase().trim() : "";
-      if (custEmail) {
-        return custEmail === filterEmail;
+      if (custEmail && isEmailVerified(custEmail)) {
+        return true;
       }
+
       const ordEmail = typeof ord.email === "string" ? ord.email.toLowerCase().trim() : "";
-      if (ordEmail) {
-        return ordEmail === filterEmail;
+      if (ordEmail && isEmailVerified(ordEmail)) {
+        return true;
       }
+
+      // If an explicit email is present on the order but did not match this account's verified aliases,
+      // reject it (belongs to a different customer in the colliding legacy bucket)
+      if (custEmail || ordEmail) {
+        return false;
+      }
+
+      // If no email was attached to the order, check if phone matches this owner's verified phone
       if (verifiedPhoneList.length > 0) {
         const custPhone = typeof cust?.phone === "string" ? cust.phone.replace(/\D/g, "").slice(-10) : "";
         if (custPhone && verifiedPhoneList.includes(custPhone)) return true;
@@ -921,12 +989,17 @@ export function copyCustomerData(
       } catch {}
     }
 
+    let ordersWriteSuccess = true;
     if (mergedOrders.length > initialOrderCount || (initialOrderCount === 0 && mergedOrders.length > 0)) {
-      const serialized = JSON.stringify(mergedOrders);
-      localStorage.setItem(targetOrdersKey, serialized);
-      const verified = localStorage.getItem(targetOrdersKey);
-      if (verified !== serialized) {
-        // Write verification failed
+      try {
+        const serialized = JSON.stringify(mergedOrders);
+        localStorage.setItem(targetOrdersKey, serialized);
+        const verified = localStorage.getItem(targetOrdersKey);
+        if (verified !== serialized) {
+          ordersWriteSuccess = false;
+        }
+      } catch {
+        ordersWriteSuccess = false;
       }
     }
 
@@ -958,19 +1031,27 @@ export function copyCustomerData(
     };
 
     const isAddressVerifiedForOwner = (addr: Record<string, unknown>): boolean => {
-      if (!filterEmail) return true;
+      if (!filterEmail && allowedEmailSet.size === 0) return true;
+
       const addrEmail = typeof addr.email === "string" ? addr.email.toLowerCase().trim() : "";
-      if (addrEmail) {
-        return addrEmail === filterEmail;
+      if (addrEmail && isEmailVerified(addrEmail)) {
+        return true;
       }
       const ownerEmail = typeof addr.ownerEmail === "string" ? addr.ownerEmail.toLowerCase().trim() : "";
-      if (ownerEmail) {
-        return ownerEmail === filterEmail;
+      if (ownerEmail && isEmailVerified(ownerEmail)) {
+        return true;
       }
       const userEmail = typeof addr.userEmail === "string" ? addr.userEmail.toLowerCase().trim() : "";
-      if (userEmail) {
-        return userEmail === filterEmail;
+      if (userEmail && isEmailVerified(userEmail)) {
+        return true;
       }
+
+      // If an explicit email was present on the address but did not match, reject it
+      if (addrEmail || ownerEmail || userEmail) {
+        return false;
+      }
+
+      // If no email was attached to the address, check verified phone
       if (verifiedPhoneList.length > 0) {
         const rawPhone = addr.phone;
         const phone = typeof rawPhone === "string"
@@ -1036,15 +1117,24 @@ export function copyCustomerData(
       } catch {}
     }
 
+    let addrsWriteSuccess = true;
     if (mergedAddrs.length > initialAddrCount || (initialAddrCount === 0 && mergedAddrs.length > 0)) {
-      const serialized = JSON.stringify(mergedAddrs);
-      localStorage.setItem(targetAddrKey, serialized);
-      const verified = localStorage.getItem(targetAddrKey);
-      if (verified !== serialized) {
-        // Write verification failed
+      try {
+        const serialized = JSON.stringify(mergedAddrs);
+        localStorage.setItem(targetAddrKey, serialized);
+        const verified = localStorage.getItem(targetAddrKey);
+        if (verified !== serialized) {
+          addrsWriteSuccess = false;
+        }
+      } catch {
+        addrsWriteSuccess = false;
       }
     }
-  } catch {}
+
+    return ordersWriteSuccess && addrsWriteSuccess;
+  } catch {
+    return false;
+  }
 }
 
 /**
@@ -1478,10 +1568,39 @@ export function migrateLegacyAccountAliases(): void {
               }
             }
 
-            copyCustomerData(trimmedVal, expectedInjectiveId, {
+            // Collect all verified alias emails in this account owner chain
+            const verifiedAliasEmails = new Set<string>();
+            verifiedAliasEmails.add(singleEmail);
+            const rootOfSingle = resolveRootOwner(singleEmail, meta);
+            if (rootOfSingle) verifiedAliasEmails.add(rootOfSingle.toLowerCase().trim());
+            for (const [em] of Object.entries(meta)) {
+              if (em.includes("@")) {
+                const norm = em.toLowerCase().trim();
+                const emRoot = resolveRootOwner(norm, meta);
+                if (emRoot && (emRoot === rootOfSingle || emRoot === singleEmail)) {
+                  verifiedAliasEmails.add(norm);
+                }
+              }
+            }
+
+            const copySuccess = copyCustomerData(trimmedVal, expectedInjectiveId, {
               filterByOwnerEmail: singleEmail,
+              allowedEmails: Array.from(verifiedAliasEmails),
               verifiedPhones,
             });
+
+            if (!copySuccess) {
+              // Write verification failed for destination datasets (e.g. storage quota/security error).
+              // Do NOT commit the rekey! Leave the mapping unchanged and mark the migration retryable.
+              migrationMeta.failedQuarantineKeys = migrationMeta.failedQuarantineKeys || {};
+              migrationMeta.failedQuarantineKeys[`retry_migration_${trimmedVal}`] = true;
+              setMigrationMetadata(migrationMeta);
+              continue;
+            }
+
+            if (migrationMeta.failedQuarantineKeys?.[`retry_migration_${trimmedVal}`]) {
+              delete migrationMeta.failedQuarantineKeys[`retry_migration_${trimmedVal}`];
+            }
 
             map[singleEmail] = expectedInjectiveId;
             meta[singleEmail] = {
@@ -1497,7 +1616,18 @@ export function migrateLegacyAccountAliases(): void {
           } else {
             // Single-owner legacy bucket without collision history:
             // Safely merge records into expectedInjectiveId and record rekey
-            copyCustomerData(trimmedVal, expectedInjectiveId);
+            const copySuccess = copyCustomerData(trimmedVal, expectedInjectiveId);
+
+            if (!copySuccess) {
+              migrationMeta.failedQuarantineKeys = migrationMeta.failedQuarantineKeys || {};
+              migrationMeta.failedQuarantineKeys[`retry_migration_${trimmedVal}`] = true;
+              setMigrationMetadata(migrationMeta);
+              continue;
+            }
+
+            if (migrationMeta.failedQuarantineKeys?.[`retry_migration_${trimmedVal}`]) {
+              delete migrationMeta.failedQuarantineKeys[`retry_migration_${trimmedVal}`];
+            }
 
             map[singleEmail] = expectedInjectiveId;
             meta[singleEmail] = {
@@ -1728,8 +1858,19 @@ export function migrateLegacyAccountAliases(): void {
         const ownerCluster = partition.clusters[0];
         const canonicalId = ownerCluster.canonicalId;
 
+        const copySuccess = copyCustomerData(trimmedVal, canonicalId);
+        if (!copySuccess) {
+          migrationMeta.failedQuarantineKeys = migrationMeta.failedQuarantineKeys || {};
+          migrationMeta.failedQuarantineKeys[`retry_migration_${trimmedVal}`] = true;
+          setMigrationMetadata(migrationMeta);
+          continue;
+        }
+
+        if (migrationMeta.failedQuarantineKeys?.[`retry_migration_${trimmedVal}`]) {
+          delete migrationMeta.failedQuarantineKeys[`retry_migration_${trimmedVal}`];
+        }
+
         clearFalseQuarantine(trimmedVal, canonicalId, migrationMeta);
-        copyCustomerData(trimmedVal, canonicalId);
 
         for (const e of emailKeys) {
           map[e] = canonicalId;
