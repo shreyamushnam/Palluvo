@@ -828,7 +828,10 @@ export function copyCustomerData(fromAccountId: string, toAccountId: string): vo
             const parsed = JSON.parse(val);
             if (Array.isArray(parsed) && parsed.length > 0) {
               localStorage.setItem(targetOrdersKey, val);
-              break;
+              const verified = localStorage.getItem(targetOrdersKey);
+              if (verified === val) {
+                break;
+              }
             }
           }
         } catch {}
@@ -862,7 +865,10 @@ export function copyCustomerData(fromAccountId: string, toAccountId: string): vo
             const parsed = JSON.parse(val);
             if (Array.isArray(parsed) && parsed.length > 0) {
               localStorage.setItem(targetAddrKey, val);
-              break;
+              const verified = localStorage.getItem(targetAddrKey);
+              if (verified === val) {
+                break;
+              }
             }
           }
         } catch {}
@@ -1019,6 +1025,14 @@ export function migrateLegacyAccountAliases(): void {
           const redirectedId = migrationMeta.rekeyedOwnerIds?.[trimmedVal];
           if (redirectedId && !isQuarantinedAccountId(redirectedId)) {
             for (const p of nonEmailKeys) {
+              const recordedOwner = meta[p]?.ownerEmail?.toLowerCase().trim();
+              if (recordedOwner && map[recordedOwner] && map[recordedOwner] !== redirectedId && !isQuarantinedAccountId(map[recordedOwner])) {
+                const targetId = map[recordedOwner];
+                map[p] = targetId;
+                meta[p] = { ...meta[p], accountId: targetId, type: "phone", status: "active", updatedAt: Date.now() };
+                modified = true;
+                continue;
+              }
               map[p] = redirectedId;
               meta[p] = { ...meta[p], accountId: redirectedId, type: "phone", status: "active", updatedAt: Date.now() };
               modified = true;
@@ -1091,29 +1105,21 @@ export function migrateLegacyAccountAliases(): void {
           : `usr_email_${encodeIdentifierToId(singleEmail)}`;
 
         if (isQuarantinedAccountId(trimmedVal)) {
+          // Copy quarantined records to the new ID before completing the rekey,
+          // preserving the quarantined source until copy is verified
+          copyCustomerData(trimmedVal, expectedInjectiveId);
+
           map[singleEmail] = expectedInjectiveId;
           meta[singleEmail] = {
             accountId: expectedInjectiveId,
             type: meta[singleEmail]?.type || "primary",
-            phone: nonEmailKeys[0] || meta[singleEmail]?.phone,
+            phone: meta[singleEmail]?.phone,
             updatedAt: Date.now(),
           };
-          for (const p of nonEmailKeys) {
-            map[p] = expectedInjectiveId;
-            meta[p] = {
-              ...meta[p],
-              accountId: expectedInjectiveId,
-              type: "phone",
-              ownerEmail: singleEmail,
-              phone: p,
-              status: "active",
-              updatedAt: Date.now(),
-            };
-            if (migrationMeta.unresolvedPhoneAliases?.[p]) {
-              delete migrationMeta.unresolvedPhoneAliases[p];
-            }
-          }
           migrationMeta.rekeyedOwnerIds[trimmedVal] = expectedInjectiveId;
+          migrationMeta.migratedCollisionIds[trimmedVal] = Array.from(
+            new Set([...(migrationMeta.migratedCollisionIds[trimmedVal] || []), singleEmail])
+          );
           modified = true;
 
           if (activeUserId === trimmedVal && activeUserEmail === singleEmail) {
@@ -1128,38 +1134,204 @@ export function migrateLegacyAccountAliases(): void {
               }
             } catch {}
           }
-        } else {
-          // If phone keys are present, associate them with this single account owner
-          for (const p of nonEmailKeys) {
-            if (trimmedVal.startsWith("usr_phone_")) {
-              const digits = trimmedVal.slice("usr_phone_".length);
-              if (digits.length < 10) {
-                delete map[p];
-                delete meta[p];
-                modified = true;
-                continue;
+        }
+
+        const targetAccountIdForSingleEmail = isQuarantinedAccountId(trimmedVal)
+          ? expectedInjectiveId
+          : (map[singleEmail] || trimmedVal);
+
+        const historicalEmails = Array.from(
+          new Set([
+            ...(migrationMeta.quarantinedLegacyBuckets?.[trimmedVal]?.emails || []),
+            ...(migrationMeta.quarantinedCollisionIds?.[trimmedVal] || []),
+            ...(migrationMeta.migratedCollisionIds?.[trimmedVal] || []),
+          ])
+        );
+        const allCandidateEmails = Array.from(new Set([...historicalEmails, singleEmail]));
+
+        // Validate phone alias ownership rather than unconditionally re-binding to singleEmail
+        for (const p of nonEmailKeys) {
+          if (trimmedVal.startsWith("usr_phone_")) {
+            const digits = trimmedVal.slice("usr_phone_".length);
+            if (digits.length < 10) {
+              delete map[p];
+              delete meta[p];
+              modified = true;
+              continue;
+            }
+          }
+
+          // 1. Explicit owner metadata on phone alias
+          const recordedOwner = meta[p]?.ownerEmail?.toLowerCase().trim();
+          const resolvedOwner = recordedOwner ? (resolveRootOwner(recordedOwner, meta) || recordedOwner) : undefined;
+
+          // 2. Reverse phone metadata on emails
+          let reverseEmail: string | undefined;
+          if (meta[singleEmail]?.phone === p) {
+            reverseEmail = singleEmail;
+          } else {
+            for (const cand of allCandidateEmails) {
+              if (meta[cand]?.phone === p) {
+                reverseEmail = cand;
+                break;
               }
             }
-            meta[p] = {
-              ...meta[p],
-              accountId: map[singleEmail] || trimmedVal,
-              type: "phone",
-              ownerEmail: singleEmail,
-              phone: p,
-              status: "active",
-              updatedAt: Date.now(),
-            };
-            if (meta[singleEmail]) {
-              meta[singleEmail] = {
-                ...meta[singleEmail],
+            if (!reverseEmail) {
+              for (const [em, emMeta] of Object.entries(meta)) {
+                if (em.includes("@") && emMeta?.phone === p) {
+                  reverseEmail = em.toLowerCase().trim();
+                  break;
+                }
+              }
+            }
+          }
+
+          // 3. Historical order/address records
+          const recordEmail = findOwnerEmailForPhoneInRecords(p, allCandidateEmails, trimmedVal);
+
+          // 4. Active authenticated session
+          let activeSessionEmail: string | undefined;
+          if (activeAuthUser?.mobile) {
+            const rawDigits = activeAuthUser.mobile.replace(/\D/g, "");
+            const tenDigits = rawDigits.length >= 10 ? rawDigits.slice(-10) : rawDigits;
+            if (tenDigits === p && activeUserEmail) {
+              activeSessionEmail = activeUserEmail;
+            }
+          }
+
+          const identifiedOwner = resolvedOwner || reverseEmail || recordEmail || activeSessionEmail;
+
+          if (identifiedOwner) {
+            const isOwnerSingleEmail =
+              identifiedOwner === singleEmail || resolveRootOwner(identifiedOwner, meta) === singleEmail;
+
+            if (isOwnerSingleEmail) {
+              map[p] = targetAccountIdForSingleEmail;
+              meta[p] = {
+                ...meta[p],
+                accountId: targetAccountIdForSingleEmail,
+                type: "phone",
+                ownerEmail: singleEmail,
                 phone: p,
+                status: "active",
                 updatedAt: Date.now(),
               };
+              if (meta[singleEmail]) {
+                meta[singleEmail] = {
+                  ...meta[singleEmail],
+                  phone: p,
+                  updatedAt: Date.now(),
+                };
+              }
+              if (migrationMeta.unresolvedPhoneAliases?.[p]) {
+                delete migrationMeta.unresolvedPhoneAliases[p];
+              }
+              modified = true;
+            } else {
+              // Explicit owner does NOT match singleEmail (e.g. phone caught in legacy collision while email moved).
+              // Do NOT overwrite meta[p].ownerEmail or rebind to singleEmail!
+              const otherOwnerTargetId = map[identifiedOwner] || meta[identifiedOwner]?.accountId;
+              if (otherOwnerTargetId && !isQuarantinedAccountId(otherOwnerTargetId)) {
+                map[p] = otherOwnerTargetId;
+                meta[p] = {
+                  ...meta[p],
+                  accountId: otherOwnerTargetId,
+                  type: "phone",
+                  ownerEmail: identifiedOwner,
+                  phone: p,
+                  status: "active",
+                  updatedAt: Date.now(),
+                };
+                if (meta[identifiedOwner]) {
+                  meta[identifiedOwner] = {
+                    ...meta[identifiedOwner],
+                    phone: p,
+                    updatedAt: Date.now(),
+                  };
+                }
+                if (migrationMeta.unresolvedPhoneAliases?.[p]) {
+                  delete migrationMeta.unresolvedPhoneAliases[p];
+                }
+                modified = true;
+              } else {
+                // Keep unresolved or isolated with recorded owner preserved
+                const isolatedId = `usr_phone_${p}`;
+                map[p] = isolatedId;
+                meta[p] = {
+                  ...meta[p],
+                  accountId: isolatedId,
+                  type: "phone",
+                  phone: p,
+                  ownerEmail: identifiedOwner,
+                  status: "unresolved",
+                  legacyId: trimmedVal,
+                  candidateAccountIds: otherOwnerTargetId ? [otherOwnerTargetId] : [],
+                  candidateEmails: [identifiedOwner],
+                  updatedAt: Date.now(),
+                };
+                migrationMeta.unresolvedPhoneAliases = migrationMeta.unresolvedPhoneAliases || {};
+                migrationMeta.unresolvedPhoneAliases[p] = {
+                  legacyId: trimmedVal,
+                  candidateAccountIds: otherOwnerTargetId ? [otherOwnerTargetId] : [],
+                  candidateEmails: [identifiedOwner],
+                  quarantinedAt: Date.now(),
+                };
+                modified = true;
+              }
             }
-            if (migrationMeta.unresolvedPhoneAliases?.[p]) {
-              delete migrationMeta.unresolvedPhoneAliases[p];
+          } else {
+            // No identified owner from explicit metadata, reverse phone, or historical records
+            const hasOtherCollisionEmails = historicalEmails.some((e) => e !== singleEmail);
+            const singleEmailHasDifferentPhone = Boolean(meta[singleEmail]?.phone && meta[singleEmail]?.phone !== p);
+
+            if (nonEmailKeys.length === 1 && !hasOtherCollisionEmails && !singleEmailHasDifferentPhone) {
+              // Legitimate single-owner legacy account (1 email, 1 phone, no collision history)
+              map[p] = targetAccountIdForSingleEmail;
+              meta[p] = {
+                ...meta[p],
+                accountId: targetAccountIdForSingleEmail,
+                type: "phone",
+                ownerEmail: singleEmail,
+                phone: p,
+                status: "active",
+                updatedAt: Date.now(),
+              };
+              if (meta[singleEmail]) {
+                meta[singleEmail] = {
+                  ...meta[singleEmail],
+                  phone: p,
+                  updatedAt: Date.now(),
+                };
+              }
+              if (migrationMeta.unresolvedPhoneAliases?.[p]) {
+                delete migrationMeta.unresolvedPhoneAliases[p];
+              }
+              modified = true;
+            } else {
+              // Ambiguous phone caught in collision or unverified extra phone:
+              // Keep unresolved and isolated rather than treating as belonging to singleEmail
+              const isolatedId = `usr_phone_${p}`;
+              map[p] = isolatedId;
+              meta[p] = {
+                ...meta[p],
+                accountId: isolatedId,
+                type: "phone",
+                phone: p,
+                status: "unresolved",
+                legacyId: trimmedVal,
+                candidateAccountIds: [targetAccountIdForSingleEmail].filter(Boolean),
+                candidateEmails: allCandidateEmails,
+                updatedAt: Date.now(),
+              };
+              migrationMeta.unresolvedPhoneAliases = migrationMeta.unresolvedPhoneAliases || {};
+              migrationMeta.unresolvedPhoneAliases[p] = {
+                legacyId: trimmedVal,
+                candidateAccountIds: [targetAccountIdForSingleEmail].filter(Boolean),
+                candidateEmails: allCandidateEmails,
+                quarantinedAt: Date.now(),
+              };
+              modified = true;
             }
-            modified = true;
           }
         }
         continue;
@@ -1419,6 +1591,25 @@ export function lookupAccountId(identifier?: string | null): string | null {
     if (isQuarantinedAccountId(val)) {
       const redirectedId = migrationMeta.rekeyedOwnerIds?.[val];
       if (redirectedId && !isQuarantinedAccountId(redirectedId)) {
+        if (!key.includes("@")) {
+          const recordedOwner = meta[key]?.ownerEmail?.toLowerCase().trim();
+          if (recordedOwner && map[recordedOwner] && map[recordedOwner] !== redirectedId && !isQuarantinedAccountId(map[recordedOwner])) {
+            const targetId = map[recordedOwner];
+            map[key] = targetId;
+            meta[key] = {
+              ...meta[key],
+              accountId: targetId,
+              type: "phone",
+              status: "active",
+              updatedAt: Date.now(),
+            };
+            try {
+              localStorage.setItem(ACCOUNT_MAP_KEY, JSON.stringify(map));
+              setAccountMetadata(meta);
+            } catch {}
+            return targetId;
+          }
+        }
         map[key] = redirectedId;
         meta[key] = {
           ...meta[key],
