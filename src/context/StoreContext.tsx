@@ -2411,6 +2411,7 @@ export function lookupAccountId(identifier?: string | null): string | null {
       if (collisionEmails.length > 1) {
         const partition = partitionEmailsByAccountOwner(collisionEmails, meta, activeUserEmail);
         if (partition.isSingleOwner) {
+          const ownerCluster = partition.clusters[0];
           const targetId = (val.startsWith("usr_email_") || val === "usr_demo_radhika")
             ? val
             : ownerCluster.canonicalId;
@@ -2493,6 +2494,10 @@ export function lookupAccountId(identifier?: string | null): string | null {
 
           if (availableCandidates.length === 1) {
             const resolvedId = availableCandidates[0];
+            const copySuccess = copyCustomerData(`usr_phone_${key}`, resolvedId);
+            if (!copySuccess) {
+              return val;
+            }
             map[key] = resolvedId;
             meta[key] = {
               ...meta[key],
@@ -2500,10 +2505,6 @@ export function lookupAccountId(identifier?: string | null): string | null {
               status: "active",
               updatedAt: Date.now(),
             };
-            const copySuccess = copyCustomerData(`usr_phone_${key}`, resolvedId);
-            if (!copySuccess) {
-              return val;
-            }
             if (migrationMeta.unresolvedPhoneAliases?.[key]) {
               delete migrationMeta.unresolvedPhoneAliases[key];
               setMigrationMetadata(migrationMeta);
@@ -2594,6 +2595,20 @@ export function registerAccountAlias(
       }
     }
 
+    // Clean up unresolved tracking and copy customer data if this phone is now registered to an active account
+    if (!isEmail && val !== `usr_phone_${key}` && (migrationMeta.unresolvedPhoneAliases?.[key] || isUnresolvedAlias)) {
+      const copySuccess = copyCustomerData(`usr_phone_${key}`, val);
+      if (!copySuccess) {
+        // Do not persist the phone alias when its data copy fails.
+        // Retain the unresolved mapping/metadata and return false before persisting the map.
+        return false;
+      }
+      if (migrationMeta.unresolvedPhoneAliases?.[key]) {
+        delete migrationMeta.unresolvedPhoneAliases[key];
+        setMigrationMetadata(migrationMeta);
+      }
+    }
+
     map[key] = val;
     meta[key] = {
       accountId: val,
@@ -2618,15 +2633,6 @@ export function registerAccountAlias(
         ownerEmail: key,
         updatedAt: Date.now(),
       };
-    }
-
-    // Clean up unresolved tracking if this phone is now registered to an active account
-    if (!isEmail && migrationMeta.unresolvedPhoneAliases?.[key]) {
-      const copySuccess = copyCustomerData(`usr_phone_${key}`, val);
-      if (copySuccess) {
-        delete migrationMeta.unresolvedPhoneAliases[key];
-        setMigrationMetadata(migrationMeta);
-      }
     }
 
     localStorage.setItem(ACCOUNT_MAP_KEY, JSON.stringify(map));
