@@ -791,87 +791,257 @@ export function partitionEmailsByAccountOwner(
 }
 
 /**
- * Safely copies orders and addresses from a source legacy ID to a canonical account ID.
- * Avoids overwriting if target already contains orders or addresses.
+ * Safely copies and merges orders and addresses from a source legacy ID to a canonical account ID.
+ * Merges and deduplicates records instead of skipping the source when destination records already exist.
+ * Verifies writes to localStorage.
+ * When filterByOwnerEmail is specified, copies only records independently verified to belong to that email,
+ * ensuring multi-owner quarantined records remain strictly isolated.
  */
-export function copyCustomerData(fromAccountId: string, toAccountId: string): void {
+export function copyCustomerData(
+  fromAccountId: string,
+  toAccountId: string,
+  options?: {
+    filterByOwnerEmail?: string;
+    verifiedPhones?: string[];
+  } | string
+): void {
   if (typeof window === "undefined" || !window.localStorage) return;
   if (!fromAccountId || !toAccountId || fromAccountId === toAccountId) return;
   try {
+    const filterEmail = (
+      typeof options === "string" ? options : options?.filterByOwnerEmail
+    )?.toLowerCase().trim();
+
+    const rawPhones = (
+      typeof options === "object" && options && Array.isArray(options.verifiedPhones)
+        ? options.verifiedPhones
+        : []
+    );
+    const verifiedPhoneList = rawPhones
+      .map((p) => p.replace(/\D/g, "").slice(-10))
+      .filter((p) => p.length >= 10);
+
     const fromSafe = fromAccountId.toLowerCase().trim().replace(/[^a-z0-9_]/g, (ch) => `_${ch.charCodeAt(0).toString(16)}_`);
     const toSafe = toAccountId.toLowerCase().trim().replace(/[^a-z0-9_]/g, (ch) => `_${ch.charCodeAt(0).toString(16)}_`);
 
-    const orderSources = [
+    const orderSources = Array.from(new Set([
       `palluvo_ecommerce_orders_${fromSafe}`,
       `palluvo_ecommerce_orders_${fromAccountId}`,
       `palluvo_quarantine_palluvo_ecommerce_orders_${fromSafe}`,
       `palluvo_quarantine_palluvo_ecommerce_orders_${fromAccountId}`,
-    ];
+    ]));
     const targetOrdersKey = `palluvo_ecommerce_orders_${toSafe}`;
 
-    let targetOrdersExist = false;
-    try {
-      const rawTarget = localStorage.getItem(targetOrdersKey);
-      if (rawTarget) {
-        const parsed = JSON.parse(rawTarget);
-        if (Array.isArray(parsed) && parsed.length > 0) {
-          targetOrdersExist = true;
+    const getOrderDedupKey = (ord: Record<string, unknown>): string => {
+      if (typeof ord.id === "string" && ord.id.trim()) {
+        return `id:${ord.id.trim()}`;
+      }
+      if (typeof ord.orderNumber === "string" && ord.orderNumber.trim()) {
+        return `num:${ord.orderNumber.trim()}`;
+      }
+      return `json:${JSON.stringify(ord)}`;
+    };
+
+    const isOrderVerifiedForOwner = (ord: Record<string, unknown>): boolean => {
+      if (!filterEmail) return true;
+      const cust = ord.customer as Record<string, unknown> | undefined;
+      const custEmail = typeof cust?.email === "string" ? cust.email.toLowerCase().trim() : "";
+      if (custEmail) {
+        return custEmail === filterEmail;
+      }
+      const ordEmail = typeof ord.email === "string" ? ord.email.toLowerCase().trim() : "";
+      if (ordEmail) {
+        return ordEmail === filterEmail;
+      }
+      if (verifiedPhoneList.length > 0) {
+        const custPhone = typeof cust?.phone === "string" ? cust.phone.replace(/\D/g, "").slice(-10) : "";
+        if (custPhone && verifiedPhoneList.includes(custPhone)) return true;
+        const ordPhone = typeof ord.phone === "string" ? ord.phone.replace(/\D/g, "").slice(-10) : "";
+        if (ordPhone && verifiedPhoneList.includes(ordPhone)) return true;
+        const shippingStr = typeof ord.shippingAddress === "string" ? ord.shippingAddress : "";
+        if (shippingStr) {
+          const digits = shippingStr.replace(/\D/g, "");
+          for (const vp of verifiedPhoneList) {
+            if (digits.includes(vp)) return true;
+          }
         }
       }
-    } catch {}
+      return false;
+    };
 
-    if (!targetOrdersExist) {
-      for (const src of orderSources) {
-        try {
-          const val = localStorage.getItem(src);
-          if (val) {
-            const parsed = JSON.parse(val);
-            if (Array.isArray(parsed) && parsed.length > 0) {
-              localStorage.setItem(targetOrdersKey, val);
-              const verified = localStorage.getItem(targetOrdersKey);
-              if (verified === val) {
-                break;
+    // Load existing target orders
+    const mergedOrders: Record<string, unknown>[] = [];
+    const seenOrderKeys = new Set<string>();
+
+    const targetOrderKeys = Array.from(new Set([
+      targetOrdersKey,
+      `palluvo_ecommerce_orders_${toAccountId}`,
+    ]));
+
+    for (const tk of targetOrderKeys) {
+      try {
+        const rawTarget = localStorage.getItem(tk);
+        if (rawTarget) {
+          const parsed = JSON.parse(rawTarget);
+          if (Array.isArray(parsed)) {
+            for (const item of parsed) {
+              if (item && typeof item === "object") {
+                const dedupKey = getOrderDedupKey(item as Record<string, unknown>);
+                if (!seenOrderKeys.has(dedupKey)) {
+                  seenOrderKeys.add(dedupKey);
+                  mergedOrders.push(item as Record<string, unknown>);
+                }
               }
             }
           }
-        } catch {}
+        }
+      } catch {}
+    }
+
+    const initialOrderCount = mergedOrders.length;
+
+    for (const src of orderSources) {
+      try {
+        const val = localStorage.getItem(src);
+        if (!val) continue;
+        const parsed = JSON.parse(val);
+        if (!Array.isArray(parsed) || parsed.length === 0) continue;
+
+        for (const item of parsed) {
+          if (!item || typeof item !== "object") continue;
+          const ord = item as Record<string, unknown>;
+          if (!isOrderVerifiedForOwner(ord)) continue;
+
+          const dedupKey = getOrderDedupKey(ord);
+          if (!seenOrderKeys.has(dedupKey)) {
+            seenOrderKeys.add(dedupKey);
+            mergedOrders.push(ord);
+          }
+        }
+      } catch {}
+    }
+
+    if (mergedOrders.length > initialOrderCount || (initialOrderCount === 0 && mergedOrders.length > 0)) {
+      const serialized = JSON.stringify(mergedOrders);
+      localStorage.setItem(targetOrdersKey, serialized);
+      const verified = localStorage.getItem(targetOrdersKey);
+      if (verified !== serialized) {
+        // Write verification failed
       }
     }
 
-    const addrSources = [
+    // Addresses merging
+    const addrSources = Array.from(new Set([
       `palluvo_ecommerce_addresses_${fromSafe}`,
       `palluvo_ecommerce_addresses_${fromAccountId}`,
       `palluvo_quarantine_palluvo_ecommerce_addresses_${fromSafe}`,
       `palluvo_quarantine_palluvo_ecommerce_addresses_${fromAccountId}`,
-    ];
+    ]));
     const targetAddrKey = `palluvo_ecommerce_addresses_${toSafe}`;
 
-    let targetAddrExist = false;
-    try {
-      const rawTarget = localStorage.getItem(targetAddrKey);
-      if (rawTarget) {
-        const parsed = JSON.parse(rawTarget);
-        if (Array.isArray(parsed) && parsed.length > 0) {
-          targetAddrExist = true;
+    const getAddressDedupKey = (addr: Record<string, unknown>): string => {
+      if (typeof addr.id === "string" && addr.id.trim()) {
+        return `id:${addr.id.trim()}`;
+      }
+      const rawPhone = addr.phone;
+      const phone = typeof rawPhone === "string"
+        ? rawPhone.replace(/\D/g, "").slice(-10)
+        : typeof rawPhone === "number" && Number.isFinite(rawPhone)
+        ? String(rawPhone).replace(/\D/g, "").slice(-10)
+        : "";
+      const line = typeof addr.addressLine === "string" ? addr.addressLine.trim().toLowerCase() : "";
+      const pin = typeof addr.pincode === "string" ? addr.pincode.trim() : "";
+      if (line && pin) {
+        return `loc:${phone}_${line}_${pin}`;
+      }
+      return `json:${JSON.stringify(addr)}`;
+    };
+
+    const isAddressVerifiedForOwner = (addr: Record<string, unknown>): boolean => {
+      if (!filterEmail) return true;
+      const addrEmail = typeof addr.email === "string" ? addr.email.toLowerCase().trim() : "";
+      if (addrEmail) {
+        return addrEmail === filterEmail;
+      }
+      const ownerEmail = typeof addr.ownerEmail === "string" ? addr.ownerEmail.toLowerCase().trim() : "";
+      if (ownerEmail) {
+        return ownerEmail === filterEmail;
+      }
+      const userEmail = typeof addr.userEmail === "string" ? addr.userEmail.toLowerCase().trim() : "";
+      if (userEmail) {
+        return userEmail === filterEmail;
+      }
+      if (verifiedPhoneList.length > 0) {
+        const rawPhone = addr.phone;
+        const phone = typeof rawPhone === "string"
+          ? rawPhone.replace(/\D/g, "").slice(-10)
+          : typeof rawPhone === "number" && Number.isFinite(rawPhone)
+          ? String(rawPhone).replace(/\D/g, "").slice(-10)
+          : "";
+        if (phone && verifiedPhoneList.includes(phone)) {
+          return true;
         }
       }
-    } catch {}
+      return false;
+    };
 
-    if (!targetAddrExist) {
-      for (const src of addrSources) {
-        try {
-          const val = localStorage.getItem(src);
-          if (val) {
-            const parsed = JSON.parse(val);
-            if (Array.isArray(parsed) && parsed.length > 0) {
-              localStorage.setItem(targetAddrKey, val);
-              const verified = localStorage.getItem(targetAddrKey);
-              if (verified === val) {
-                break;
+    const mergedAddrs: Record<string, unknown>[] = [];
+    const seenAddrKeys = new Set<string>();
+
+    const targetAddrKeys = Array.from(new Set([
+      targetAddrKey,
+      `palluvo_ecommerce_addresses_${toAccountId}`,
+    ]));
+
+    for (const tk of targetAddrKeys) {
+      try {
+        const rawTarget = localStorage.getItem(tk);
+        if (rawTarget) {
+          const parsed = JSON.parse(rawTarget);
+          if (Array.isArray(parsed)) {
+            for (const item of parsed) {
+              if (item && typeof item === "object") {
+                const dedupKey = getAddressDedupKey(item as Record<string, unknown>);
+                if (!seenAddrKeys.has(dedupKey)) {
+                  seenAddrKeys.add(dedupKey);
+                  mergedAddrs.push(item as Record<string, unknown>);
+                }
               }
             }
           }
-        } catch {}
+        }
+      } catch {}
+    }
+
+    const initialAddrCount = mergedAddrs.length;
+
+    for (const src of addrSources) {
+      try {
+        const val = localStorage.getItem(src);
+        if (!val) continue;
+        const parsed = JSON.parse(val);
+        if (!Array.isArray(parsed) || parsed.length === 0) continue;
+
+        for (const item of parsed) {
+          if (!item || typeof item !== "object") continue;
+          const addr = item as Record<string, unknown>;
+          if (!isAddressVerifiedForOwner(addr)) continue;
+
+          const dedupKey = getAddressDedupKey(addr);
+          if (!seenAddrKeys.has(dedupKey)) {
+            seenAddrKeys.add(dedupKey);
+            mergedAddrs.push(addr);
+          }
+        }
+      } catch {}
+    }
+
+    if (mergedAddrs.length > initialAddrCount || (initialAddrCount === 0 && mergedAddrs.length > 0)) {
+      const serialized = JSON.stringify(mergedAddrs);
+      localStorage.setItem(targetAddrKey, serialized);
+      const verified = localStorage.getItem(targetAddrKey);
+      if (verified !== serialized) {
+        // Write verification failed
       }
     }
   } catch {}
@@ -1278,23 +1448,70 @@ export function migrateLegacyAccountAliases(): void {
           ? "usr_demo_radhika"
           : `usr_email_${encodeIdentifierToId(singleEmail)}`;
 
-        if (isQuarantinedAccountId(trimmedVal)) {
-          // Copy quarantined records to the new ID before completing the rekey,
-          // preserving the quarantined source until copy is verified
-          copyCustomerData(trimmedVal, expectedInjectiveId);
+        const safeVal = trimmedVal.toLowerCase().replace(/[^a-z0-9_]/g, (ch) => `_${ch.charCodeAt(0).toString(16)}_`);
+        const historicalEmails = Array.from(
+          new Set([
+            ...(migrationMeta.quarantinedLegacyBuckets?.[trimmedVal]?.emails || []),
+            ...(migrationMeta.quarantinedLegacyBuckets?.[safeVal]?.emails || []),
+            ...(migrationMeta.quarantinedCollisionIds?.[trimmedVal] || []),
+            ...(migrationMeta.quarantinedCollisionIds?.[safeVal] || []),
+            ...(migrationMeta.migratedCollisionIds?.[trimmedVal] || []),
+            ...(migrationMeta.migratedCollisionIds?.[safeVal] || []),
+          ])
+        );
+        const allCandidateEmails = Array.from(new Set([...historicalEmails, singleEmail]));
+        const hasCollisionHistory = historicalEmails.some((e) => e !== singleEmail);
 
-          map[singleEmail] = expectedInjectiveId;
-          meta[singleEmail] = {
-            accountId: expectedInjectiveId,
-            type: meta[singleEmail]?.type || "primary",
-            phone: meta[singleEmail]?.phone,
-            updatedAt: Date.now(),
-          };
-          migrationMeta.rekeyedOwnerIds[trimmedVal] = expectedInjectiveId;
-          migrationMeta.migratedCollisionIds[trimmedVal] = Array.from(
-            new Set([...(migrationMeta.migratedCollisionIds[trimmedVal] || []), singleEmail])
-          );
-          modified = true;
+        if (isQuarantinedAccountId(trimmedVal)) {
+          if (hasCollisionHistory) {
+            // Multi-owner quarantined records: keep the legacy bucket quarantined.
+            // Do NOT restore wholesale; copy ONLY records whose owner is independently verified.
+            const verifiedPhones: string[] = [];
+            if (meta[singleEmail]?.phone) {
+              verifiedPhones.push(meta[singleEmail].phone!);
+            }
+            for (const p of nonEmailKeys) {
+              const recordedOwner = meta[p]?.ownerEmail?.toLowerCase().trim();
+              const resolvedOwner = recordedOwner ? (resolveRootOwner(recordedOwner, meta) || recordedOwner) : undefined;
+              if (recordedOwner === singleEmail || resolvedOwner === singleEmail) {
+                verifiedPhones.push(p);
+              }
+            }
+
+            copyCustomerData(trimmedVal, expectedInjectiveId, {
+              filterByOwnerEmail: singleEmail,
+              verifiedPhones,
+            });
+
+            map[singleEmail] = expectedInjectiveId;
+            meta[singleEmail] = {
+              accountId: expectedInjectiveId,
+              type: meta[singleEmail]?.type || "primary",
+              phone: meta[singleEmail]?.phone,
+              updatedAt: Date.now(),
+            };
+            migrationMeta.migratedCollisionIds[trimmedVal] = Array.from(
+              new Set([...(migrationMeta.migratedCollisionIds[trimmedVal] || []), singleEmail])
+            );
+            modified = true;
+          } else {
+            // Single-owner legacy bucket without collision history:
+            // Safely merge records into expectedInjectiveId and record rekey
+            copyCustomerData(trimmedVal, expectedInjectiveId);
+
+            map[singleEmail] = expectedInjectiveId;
+            meta[singleEmail] = {
+              accountId: expectedInjectiveId,
+              type: meta[singleEmail]?.type || "primary",
+              phone: meta[singleEmail]?.phone,
+              updatedAt: Date.now(),
+            };
+            migrationMeta.rekeyedOwnerIds[trimmedVal] = expectedInjectiveId;
+            migrationMeta.migratedCollisionIds[trimmedVal] = Array.from(
+              new Set([...(migrationMeta.migratedCollisionIds[trimmedVal] || []), singleEmail])
+            );
+            modified = true;
+          }
 
           if (activeUserId === trimmedVal && activeUserEmail === singleEmail) {
             try {
@@ -1313,15 +1530,6 @@ export function migrateLegacyAccountAliases(): void {
         const targetAccountIdForSingleEmail = isQuarantinedAccountId(trimmedVal)
           ? expectedInjectiveId
           : (map[singleEmail] || trimmedVal);
-
-        const historicalEmails = Array.from(
-          new Set([
-            ...(migrationMeta.quarantinedLegacyBuckets?.[trimmedVal]?.emails || []),
-            ...(migrationMeta.quarantinedCollisionIds?.[trimmedVal] || []),
-            ...(migrationMeta.migratedCollisionIds?.[trimmedVal] || []),
-          ])
-        );
-        const allCandidateEmails = Array.from(new Set([...historicalEmails, singleEmail]));
 
         // Validate phone alias ownership rather than unconditionally re-binding to singleEmail
         for (const p of nonEmailKeys) {
