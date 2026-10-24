@@ -2017,8 +2017,9 @@ export function migrateLegacyAccountAliases(): void {
           // Collect all claiming emails and accept ONLY if all resolve to a single verified root owner.
           let reverseEmail: string | undefined;
           let hasContestedReverseClaims = false;
+          const claimingEmails = new Set<string>();
+
           if (!resolvedOwner) {
-            const claimingEmails = new Set<string>();
             const normP = normalizeExplicitPhoneToken(p) || p;
 
             if (meta[singleEmail]?.phone) {
@@ -2044,16 +2045,20 @@ export function migrateLegacyAccountAliases(): void {
 
             if (claimingEmails.size > 0) {
               const resolvedOwners = new Set<string>();
+              let hasUnresolvedClaims = false;
+
               for (const em of claimingEmails) {
                 const root = getVerifiedRootOwner(em, meta);
                 if (!root) {
-                  resolvedOwners.add(`unresolved_${em}`);
+                  hasUnresolvedClaims = true;
                 } else {
                   resolvedOwners.add(root);
                 }
               }
 
-              if (resolvedOwners.size === 1) {
+              // Reject unresolved claims before treating the set as a single owner!
+              // Only accept when no claim failed resolution AND all resolve to a single verified root owner.
+              if (!hasUnresolvedClaims && resolvedOwners.size === 1) {
                 reverseEmail = Array.from(resolvedOwners)[0];
               } else {
                 hasContestedReverseClaims = true;
@@ -2157,62 +2162,30 @@ export function migrateLegacyAccountAliases(): void {
               }
             }
           } else {
-            // No identified owner from explicit metadata, reverse phone, or historical records
-            const hasOtherCollisionEmails = historicalEmails.some((e) => e !== singleEmail);
-            const singleEmailHasDifferentPhone = Boolean(meta[singleEmail]?.phone && meta[singleEmail]?.phone !== p);
-            const isMarkedUnresolved = Boolean(
-              meta[p]?.status === "unresolved" ||
-              migrationMeta.unresolvedPhoneAliases?.[p]
-            );
-
-            if (!hasContestedReverseClaims && nonEmailKeys.length === 1 && !hasOtherCollisionEmails && !singleEmailHasDifferentPhone && !isMarkedUnresolved) {
-              // Legitimate single-owner legacy account (1 email, 1 phone, no collision history)
-              map[p] = targetAccountIdForSingleEmail;
-              meta[p] = {
-                ...meta[p],
-                accountId: targetAccountIdForSingleEmail,
-                type: "phone",
-                ownerEmail: singleEmail,
-                phone: p,
-                status: "active",
-                updatedAt: Date.now(),
-              };
-              if (meta[singleEmail]) {
-                meta[singleEmail] = {
-                  ...meta[singleEmail],
-                  phone: p,
-                  updatedAt: Date.now(),
-                };
-              }
-              if (migrationMeta.unresolvedPhoneAliases?.[p]) {
-                delete migrationMeta.unresolvedPhoneAliases[p];
-              }
-              modified = true;
-            } else {
-              // Ambiguous phone caught in collision or unverified extra phone:
-              // Keep unresolved and isolated rather than treating as belonging to singleEmail
-              const isolatedId = `usr_phone_${p}`;
-              map[p] = isolatedId;
-              meta[p] = {
-                ...meta[p],
-                accountId: isolatedId,
-                type: "phone",
-                phone: p,
-                status: "unresolved",
-                legacyId: trimmedVal,
-                candidateAccountIds: [targetAccountIdForSingleEmail].filter(Boolean),
-                candidateEmails: allCandidateEmails,
-                updatedAt: Date.now(),
-              };
-              migrationMeta.unresolvedPhoneAliases = migrationMeta.unresolvedPhoneAliases || {};
-              migrationMeta.unresolvedPhoneAliases[p] = {
-                legacyId: trimmedVal,
-                candidateAccountIds: [targetAccountIdForSingleEmail].filter(Boolean),
-                candidateEmails: allCandidateEmails,
-                quarantinedAt: Date.now(),
-              };
-              modified = true;
-            }
+            // No affirmative ownership evidence from explicit metadata, verified reverse phone, historical records, or active session.
+            // Do NOT infer ownership from single-phone cardinality! Keep unresolved and quarantined.
+            const isolatedId = `usr_phone_${p}`;
+            map[p] = isolatedId;
+            meta[p] = {
+              ...meta[p],
+              accountId: isolatedId,
+              type: "phone",
+              phone: p,
+              ownerEmail: meta[p]?.ownerEmail,
+              status: "unresolved",
+              legacyId: trimmedVal,
+              candidateAccountIds: [targetAccountIdForSingleEmail].filter(Boolean),
+              candidateEmails: Array.from(new Set([...allCandidateEmails, ...claimingEmails])),
+              updatedAt: Date.now(),
+            };
+            migrationMeta.unresolvedPhoneAliases = migrationMeta.unresolvedPhoneAliases || {};
+            migrationMeta.unresolvedPhoneAliases[p] = {
+              legacyId: trimmedVal,
+              candidateAccountIds: [targetAccountIdForSingleEmail].filter(Boolean),
+              candidateEmails: Array.from(new Set([...allCandidateEmails, ...claimingEmails])),
+              quarantinedAt: Date.now(),
+            };
+            modified = true;
           }
         }
         continue;
@@ -2351,6 +2324,7 @@ export function migrateLegacyAccountAliases(): void {
 
         // Migrate non-email aliases (phones) using affirmative owner evidence
         const matchedClusterByPhone = new Map<string, typeof partition.clusters[0]>();
+        const claimingEmailsByPhone = new Map<string, string[]>();
 
         // Pass 1: Direct metadata on phone, reverse metadata on emails, record scanning, active session
         for (const p of nonEmailKeys) {
@@ -2364,13 +2338,14 @@ export function migrateLegacyAccountAliases(): void {
             : undefined;
 
           let hasContestedReverseClaims = false;
+          const claimingEmails = new Set<string>();
+
           // 2. Reverse phone metadata on emails
           // Do NOT trust reverse phone metadata if explicit owner is unresolved or conflicting!
           // Reject conflicting reverse-phone claims before assigning an owner:
           // Collect all claiming emails across accounts and accept only a single verified root owner cluster;
           // otherwise keep the phone unassigned so it remains quarantined.
           if (!matchedCluster && !hasUnresolvedExplicitOwner && !resolvedOwner) {
-            const claimingEmails = new Set<string>();
             const normP = normalizeExplicitPhoneToken(p) || p;
 
             for (const e of emailKeys) {
@@ -2389,13 +2364,16 @@ export function migrateLegacyAccountAliases(): void {
             }
 
             if (claimingEmails.size > 0) {
+              claimingEmailsByPhone.set(p, Array.from(claimingEmails));
               const resolvedOwners = new Set<string>();
               const matchedClusters = new Set<typeof partition.clusters[0]>();
+              let hasUnresolvedClaims = false;
+              let hasExternalConflict = false;
 
               for (const em of claimingEmails) {
                 const root = getVerifiedRootOwner(em, meta);
                 if (!root) {
-                  resolvedOwners.add(`unresolved_${em}`);
+                  hasUnresolvedClaims = true;
                   continue;
                 }
                 resolvedOwners.add(root);
@@ -2403,14 +2381,15 @@ export function migrateLegacyAccountAliases(): void {
                 if (cl) {
                   matchedClusters.add(cl);
                 } else {
-                  resolvedOwners.add(`external_${root}`);
+                  hasExternalConflict = true;
                 }
               }
 
-              if (resolvedOwners.size === 1 && matchedClusters.size === 1) {
+              // Reject unresolved claims before treating the set as a single owner/cluster!
+              if (!hasUnresolvedClaims && !hasExternalConflict && resolvedOwners.size === 1 && matchedClusters.size === 1) {
                 matchedCluster = Array.from(matchedClusters)[0];
               } else {
-                // Hard ambiguity: reverse metadata resolves to multiple roots or contested clusters.
+                // Hard ambiguity: reverse metadata resolves to multiple roots, unresolved claims, or external clusters.
                 // Mark as contested so subsequent historical-record and session inference are bypassed!
                 hasContestedReverseClaims = true;
               }
@@ -2474,17 +2453,18 @@ export function migrateLegacyAccountAliases(): void {
               accountId: isolatedId,
               type: "phone",
               phone: p,
+              ownerEmail: meta[p]?.ownerEmail,
               status: "unresolved",
               legacyId: trimmedVal,
               candidateAccountIds: partition.clusters.map((c) => c.canonicalId),
-              candidateEmails: partition.clusters.flatMap((c) => c.emails),
+              candidateEmails: Array.from(new Set([...partition.clusters.flatMap((c) => c.emails), ...(claimingEmailsByPhone.get(p) || [])])),
               updatedAt: Date.now(),
             };
             migrationMeta.unresolvedPhoneAliases = migrationMeta.unresolvedPhoneAliases || {};
             migrationMeta.unresolvedPhoneAliases[p] = {
               legacyId: trimmedVal,
               candidateAccountIds: partition.clusters.map((c) => c.canonicalId),
-              candidateEmails: partition.clusters.flatMap((c) => c.emails),
+              candidateEmails: Array.from(new Set([...partition.clusters.flatMap((c) => c.emails), ...(claimingEmailsByPhone.get(p) || [])])),
               quarantinedAt: Date.now(),
             };
             modified = true;
