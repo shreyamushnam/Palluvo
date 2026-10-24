@@ -573,8 +573,9 @@ export function extractExplicitPhoneTokens(source: unknown): string[] {
     // Pattern A: Explicitly labeled phone prefixes
     // Parse exactly one phone number immediately after the label, bounded so trailing digits
     // (such as a pincode, e.g. "Phone: 9876598765 560001") are never captured or sliced into synthetic phones.
+    // Accepts parenthesized subscriber grouping (e.g. "Phone: (987) 654-3210") while retaining the extra-digit guard.
     const labeledRegex =
-      /(?:phone|ph|mobile|mob|tel|contact|cell)\b[\s.:#-]*((?:\+?91[\s.-]?|\(\+?91\)[\s.-]?|0)?(?:\(\d{2,4}\)[\s.-]?)?(?:\d[\s.-]?){9}\d)(?!\d)/gi;
+      /(?:phone|ph|mobile|mob|tel|contact|cell)\b[\s.:#-]*((?:\+?91[\s.-]?|\(\+?91\)[\s.-]?|0[\s.-]?)?(?:\(\s*\d{2}\s*\)[\s.-]?(?:\d[\s.-]?){7}\d|\(\s*\d{3}\s*\)[\s.-]?(?:\d[\s.-]?){6}\d|\(\s*\d{4}\s*\)[\s.-]?(?:\d[\s.-]?){5}\d|\(\s*\d{5}\s*\)[\s.-]?(?:\d[\s.-]?){4}\d|(?:\d[\s.-]?){9}\d))(?!\d)/gi;
     let match: RegExpExecArray | null;
     while ((match = labeledRegex.exec(str)) !== null) {
       const captured = match[1];
@@ -639,20 +640,7 @@ export function findOwnerEmailForPhoneInRecords(
   let hasAmbiguousOwner = false;
 
   const getVerifiedCanonicalOwner = (email: string): string | undefined => {
-    if (!email || typeof email !== "string") return undefined;
-    const norm = email.toLowerCase().trim();
-    if (!norm || !norm.includes("@")) return undefined;
-
-    const m = meta[norm];
-    if (m?.type === "changed_email") {
-      const root = resolveRootOwner(norm, meta);
-      // For changed_email, resolveRootOwner MUST return a valid base owner.
-      // If undefined (missing predecessor, cyclic, or ambiguous), do NOT treat the alias itself as root!
-      return root ? root.toLowerCase().trim() : undefined;
-    }
-
-    const root = resolveRootOwner(norm, meta);
-    return (root || norm).toLowerCase().trim();
+    return getVerifiedRootOwner(email, meta);
   };
 
   for (const k of orderKeys) {
@@ -679,16 +667,16 @@ export function findOwnerEmailForPhoneInRecords(
             const norm = em.toLowerCase().trim();
             const m = meta[norm];
             if (m?.type === "changed_email") {
-              const root = resolveRootOwner(norm, meta);
+              const root = getVerifiedRootOwner(norm, meta);
               if (!root) {
                 // Unresolved changed_email entry: ambiguous ownership!
                 // Skip treating alias as root and fail closed.
                 hasAmbiguousOwner = true;
                 continue;
               }
-              matchedCanonicalOwners.add(root.toLowerCase().trim());
+              matchedCanonicalOwners.add(root);
             } else {
-              const canonical = (resolveRootOwner(norm, meta) || norm).toLowerCase().trim();
+              const canonical = getVerifiedRootOwner(norm, meta) || norm;
               matchedCanonicalOwners.add(canonical);
             }
           }
@@ -728,16 +716,16 @@ export function findOwnerEmailForPhoneInRecords(
             const norm = em.toLowerCase().trim();
             const m = meta[norm];
             if (m?.type === "changed_email") {
-              const root = resolveRootOwner(norm, meta);
+              const root = getVerifiedRootOwner(norm, meta);
               if (!root) {
                 // Unresolved changed_email entry: ambiguous ownership!
                 // Skip treating alias as root and fail closed.
                 hasAmbiguousOwner = true;
                 continue;
               }
-              matchedCanonicalOwners.add(root.toLowerCase().trim());
+              matchedCanonicalOwners.add(root);
             } else {
-              const canonical = (resolveRootOwner(norm, meta) || norm).toLowerCase().trim();
+              const canonical = getVerifiedRootOwner(norm, meta) || norm;
               matchedCanonicalOwners.add(canonical);
             }
           }
@@ -828,6 +816,31 @@ export function resolveRootOwner(
   }
 
   return undefined;
+}
+
+/**
+ * Resolves the verified root owner for an email address.
+ * Strictly excludes unresolved changed_email aliases (missing predecessor, cyclic, or ambiguous chains)
+ * by returning undefined, failing closed instead of falling back to the alias itself.
+ */
+export function getVerifiedRootOwner(
+  email: string | undefined | null,
+  meta: Record<string, AccountAliasMeta>
+): string | undefined {
+  if (!email || typeof email !== "string") return undefined;
+  const norm = email.toLowerCase().trim();
+  if (!norm || !norm.includes("@")) return undefined;
+
+  const m = meta[norm];
+  if (m?.type === "changed_email") {
+    const root = resolveRootOwner(norm, meta);
+    // For changed_email, resolveRootOwner MUST return a valid base owner.
+    // If undefined (missing predecessor, cyclic, or ambiguous), fail closed and return undefined.
+    return root ? root.toLowerCase().trim() : undefined;
+  }
+
+  const root = resolveRootOwner(norm, meta);
+  return (root || norm).toLowerCase().trim();
 }
 
 /**
@@ -1508,13 +1521,13 @@ export function migrateLegacyAccountAliases(): void {
 
             for (const p of nonEmailKeys) {
               const recordedOwner = meta[p]?.ownerEmail?.toLowerCase().trim();
-              const resolvedOwner = recordedOwner ? (resolveRootOwner(recordedOwner, meta) || recordedOwner) : undefined;
+              const resolvedOwner = getVerifiedRootOwner(recordedOwner, meta);
 
-              if (recordedOwner) {
+              if (resolvedOwner) {
                 const isRedirectOwner = Boolean(
-                  map[recordedOwner] === redirectedId ||
-                  meta[recordedOwner]?.accountId === redirectedId ||
-                  (redirectOwnerEmail && (recordedOwner === redirectOwnerEmail || resolvedOwner === redirectOwnerEmail))
+                  map[resolvedOwner] === redirectedId ||
+                  meta[resolvedOwner]?.accountId === redirectedId ||
+                  (redirectOwnerEmail && resolvedOwner === redirectOwnerEmail)
                 );
 
                 if (isRedirectOwner) {
@@ -1523,13 +1536,13 @@ export function migrateLegacyAccountAliases(): void {
                     ...meta[p],
                     accountId: redirectedId,
                     type: "phone",
-                    ownerEmail: recordedOwner,
+                    ownerEmail: resolvedOwner,
                     status: "active",
                     updatedAt: Date.now(),
                   };
-                  if (meta[recordedOwner]) {
-                    meta[recordedOwner] = {
-                      ...meta[recordedOwner],
+                  if (meta[resolvedOwner]) {
+                    meta[resolvedOwner] = {
+                      ...meta[resolvedOwner],
                       phone: p,
                       updatedAt: Date.now(),
                     };
@@ -1543,20 +1556,20 @@ export function migrateLegacyAccountAliases(): void {
 
                 // Explicit owner names a different owner (e.g. Bob, while redirectedId is Alice).
                 // Check if that owner can be safely resolved to a usable non-quarantined account.
-                const otherOwnerTargetId = (resolvedOwner && map[resolvedOwner]) || map[recordedOwner] || meta[recordedOwner]?.accountId;
+                const otherOwnerTargetId = map[resolvedOwner] || meta[resolvedOwner]?.accountId;
                 if (otherOwnerTargetId && !isQuarantinedAccountId(otherOwnerTargetId) && otherOwnerTargetId !== trimmedVal) {
                   map[p] = otherOwnerTargetId;
                   meta[p] = {
                     ...meta[p],
                     accountId: otherOwnerTargetId,
                     type: "phone",
-                    ownerEmail: recordedOwner,
+                    ownerEmail: resolvedOwner,
                     status: "active",
                     updatedAt: Date.now(),
                   };
-                  if (meta[recordedOwner]) {
-                    meta[recordedOwner] = {
-                      ...meta[recordedOwner],
+                  if (meta[resolvedOwner]) {
+                    meta[resolvedOwner] = {
+                      ...meta[resolvedOwner],
                       phone: p,
                       updatedAt: Date.now(),
                     };
@@ -1576,17 +1589,44 @@ export function migrateLegacyAccountAliases(): void {
                   accountId: safePhoneId,
                   type: "phone",
                   phone: p,
-                  ownerEmail: recordedOwner,
+                  ownerEmail: resolvedOwner,
                   status: "unresolved",
                   legacyId: trimmedVal,
                   candidateAccountIds: otherOwnerTargetId && otherOwnerTargetId !== trimmedVal && !isQuarantinedAccountId(otherOwnerTargetId) ? [otherOwnerTargetId] : [],
-                  candidateEmails: [recordedOwner],
+                  candidateEmails: [resolvedOwner],
                   updatedAt: Date.now(),
                 };
                 migrationMeta.unresolvedPhoneAliases = migrationMeta.unresolvedPhoneAliases || {};
                 migrationMeta.unresolvedPhoneAliases[p] = {
                   legacyId: trimmedVal,
                   candidateAccountIds: otherOwnerTargetId && otherOwnerTargetId !== trimmedVal && !isQuarantinedAccountId(otherOwnerTargetId) ? [otherOwnerTargetId] : [],
+                  candidateEmails: [resolvedOwner],
+                  quarantinedAt: Date.now(),
+                };
+                modified = true;
+                continue;
+              }
+
+              if (recordedOwner && !resolvedOwner) {
+                // Unresolved changed_email owner: keep phone unresolved/isolated!
+                const safePhoneId = `usr_phone_${p}`;
+                map[p] = safePhoneId;
+                meta[p] = {
+                  ...meta[p],
+                  accountId: safePhoneId,
+                  type: "phone",
+                  phone: p,
+                  ownerEmail: recordedOwner,
+                  status: "unresolved",
+                  legacyId: trimmedVal,
+                  candidateAccountIds: [],
+                  candidateEmails: [recordedOwner],
+                  updatedAt: Date.now(),
+                };
+                migrationMeta.unresolvedPhoneAliases = migrationMeta.unresolvedPhoneAliases || {};
+                migrationMeta.unresolvedPhoneAliases[p] = {
+                  legacyId: trimmedVal,
+                  candidateAccountIds: [],
                   candidateEmails: [recordedOwner],
                   quarantinedAt: Date.now(),
                 };
@@ -1691,10 +1731,10 @@ export function migrateLegacyAccountAliases(): void {
             // Check metadata and historical records before isolating. Do NOT delete!
             for (const p of nonEmailKeys) {
               const recordedOwner = meta[p]?.ownerEmail?.toLowerCase().trim();
-              const resolvedOwner = recordedOwner ? (resolveRootOwner(recordedOwner, meta) || recordedOwner) : undefined;
+              const resolvedOwner = getVerifiedRootOwner(recordedOwner, meta);
               let targetId: string | undefined;
 
-              const checkOwner = resolvedOwner || recordedOwner;
+              const checkOwner = resolvedOwner;
               if (checkOwner && map[checkOwner] && !isQuarantinedAccountId(map[checkOwner]) && map[checkOwner] !== trimmedVal) {
                 targetId = map[checkOwner];
               }
@@ -1707,7 +1747,7 @@ export function migrateLegacyAccountAliases(): void {
 
               if (targetId) {
                 map[p] = targetId;
-                meta[p] = { ...meta[p], accountId: targetId, type: "phone", ownerEmail: meta[p]?.ownerEmail, status: "active", updatedAt: Date.now() };
+                meta[p] = { ...meta[p], accountId: targetId, type: "phone", ownerEmail: checkOwner || meta[p]?.ownerEmail, status: "active", updatedAt: Date.now() };
                 modified = true;
               } else {
                 // Isolate to safe non-quarantined ID and keep recoverable with recorded owner preserved
@@ -1779,8 +1819,8 @@ export function migrateLegacyAccountAliases(): void {
             }
             for (const p of nonEmailKeys) {
               const recordedOwner = meta[p]?.ownerEmail?.toLowerCase().trim();
-              const resolvedOwner = recordedOwner ? (resolveRootOwner(recordedOwner, meta) || recordedOwner) : undefined;
-              if (recordedOwner === singleEmail || resolvedOwner === singleEmail) {
+              const resolvedOwner = getVerifiedRootOwner(recordedOwner, meta);
+              if (resolvedOwner && resolvedOwner === singleEmail) {
                 verifiedPhones.push(p);
               }
             }
@@ -1892,7 +1932,7 @@ export function migrateLegacyAccountAliases(): void {
 
           // 1. Explicit owner metadata on phone alias
           const recordedOwner = meta[p]?.ownerEmail?.toLowerCase().trim();
-          const resolvedOwner = recordedOwner ? (resolveRootOwner(recordedOwner, meta) || recordedOwner) : undefined;
+          const resolvedOwner = getVerifiedRootOwner(recordedOwner, meta);
 
           // 2. Reverse phone metadata on emails
           let reverseEmail: string | undefined;
@@ -2336,14 +2376,14 @@ export function lookupAccountId(identifier?: string | null): string | null {
       if (redirectedId && !isQuarantinedAccountId(redirectedId)) {
         if (!key.includes("@")) {
           const recordedOwner = meta[key]?.ownerEmail?.toLowerCase().trim();
-          const resolvedOwner = recordedOwner ? (resolveRootOwner(recordedOwner, meta) || recordedOwner) : undefined;
+          const resolvedOwner = getVerifiedRootOwner(recordedOwner, meta);
           const redirectOwnerEmail = lookupEmailByAccountId(redirectedId)?.toLowerCase().trim();
 
-          if (recordedOwner) {
+          if (resolvedOwner) {
             const isRedirectOwner = Boolean(
-              map[recordedOwner] === redirectedId ||
-              meta[recordedOwner]?.accountId === redirectedId ||
-              (redirectOwnerEmail && (recordedOwner === redirectOwnerEmail || resolvedOwner === redirectOwnerEmail))
+              map[resolvedOwner] === redirectedId ||
+              meta[resolvedOwner]?.accountId === redirectedId ||
+              (redirectOwnerEmail && resolvedOwner === redirectOwnerEmail)
             );
 
             if (isRedirectOwner) {
@@ -2352,7 +2392,7 @@ export function lookupAccountId(identifier?: string | null): string | null {
                 ...meta[key],
                 accountId: redirectedId,
                 type: "phone",
-                ownerEmail: recordedOwner,
+                ownerEmail: resolvedOwner,
                 status: "active",
                 updatedAt: Date.now(),
               };
@@ -2363,14 +2403,14 @@ export function lookupAccountId(identifier?: string | null): string | null {
               return redirectedId;
             }
 
-            const otherOwnerTargetId = (resolvedOwner && map[resolvedOwner]) || map[recordedOwner] || meta[recordedOwner]?.accountId;
+            const otherOwnerTargetId = map[resolvedOwner] || meta[resolvedOwner]?.accountId;
             if (otherOwnerTargetId && !isQuarantinedAccountId(otherOwnerTargetId) && otherOwnerTargetId !== val) {
               map[key] = otherOwnerTargetId;
               meta[key] = {
                 ...meta[key],
                 accountId: otherOwnerTargetId,
                 type: "phone",
-                ownerEmail: recordedOwner,
+                ownerEmail: resolvedOwner,
                 status: "active",
                 updatedAt: Date.now(),
               };
@@ -2389,17 +2429,48 @@ export function lookupAccountId(identifier?: string | null): string | null {
               accountId: safePhoneId,
               type: "phone",
               phone: key,
-              ownerEmail: recordedOwner,
+              ownerEmail: resolvedOwner,
               status: "unresolved",
               legacyId: val,
               candidateAccountIds: otherOwnerTargetId && otherOwnerTargetId !== val && !isQuarantinedAccountId(otherOwnerTargetId) ? [otherOwnerTargetId] : [],
-              candidateEmails: [recordedOwner],
+              candidateEmails: [resolvedOwner],
               updatedAt: Date.now(),
             };
             migrationMeta.unresolvedPhoneAliases = migrationMeta.unresolvedPhoneAliases || {};
             migrationMeta.unresolvedPhoneAliases[key] = {
               legacyId: val,
               candidateAccountIds: otherOwnerTargetId && otherOwnerTargetId !== val && !isQuarantinedAccountId(otherOwnerTargetId) ? [otherOwnerTargetId] : [],
+              candidateEmails: [resolvedOwner],
+              quarantinedAt: Date.now(),
+            };
+            try {
+              localStorage.setItem(ACCOUNT_MAP_KEY, JSON.stringify(map));
+              setAccountMetadata(meta);
+              setMigrationMetadata(migrationMeta);
+            } catch {}
+            return null;
+          }
+
+          if (recordedOwner && !resolvedOwner) {
+            // Unresolved changed_email owner: keep phone unresolved/isolated!
+            const safePhoneId = `usr_phone_${key}`;
+            map[key] = safePhoneId;
+            meta[key] = {
+              ...meta[key],
+              accountId: safePhoneId,
+              type: "phone",
+              phone: key,
+              ownerEmail: recordedOwner,
+              status: "unresolved",
+              legacyId: val,
+              candidateAccountIds: [],
+              candidateEmails: [recordedOwner],
+              updatedAt: Date.now(),
+            };
+            migrationMeta.unresolvedPhoneAliases = migrationMeta.unresolvedPhoneAliases || {};
+            migrationMeta.unresolvedPhoneAliases[key] = {
+              legacyId: val,
+              candidateAccountIds: [],
               candidateEmails: [recordedOwner],
               quarantinedAt: Date.now(),
             };
@@ -2499,10 +2570,10 @@ export function lookupAccountId(identifier?: string | null): string | null {
       // For non-email identifier (e.g. phone) without a valid owner redirect:
       // Check metadata and historical records before isolating. Do NOT delete!
       const ownerEmail = meta[key]?.ownerEmail?.toLowerCase().trim();
-      const resolvedOwner = ownerEmail ? (resolveRootOwner(ownerEmail, meta) || ownerEmail) : undefined;
+      const resolvedOwner = getVerifiedRootOwner(ownerEmail, meta);
       let targetId: string | undefined;
 
-      const checkOwner = resolvedOwner || ownerEmail;
+      const checkOwner = resolvedOwner;
       if (checkOwner && map[checkOwner] && !isQuarantinedAccountId(map[checkOwner]) && map[checkOwner] !== val) {
         targetId = map[checkOwner];
       }
@@ -2515,7 +2586,7 @@ export function lookupAccountId(identifier?: string | null): string | null {
 
       if (targetId) {
         map[key] = targetId;
-        meta[key] = { ...meta[key], accountId: targetId, type: "phone", ownerEmail: meta[key]?.ownerEmail, status: "active", updatedAt: Date.now() };
+        meta[key] = { ...meta[key], accountId: targetId, type: "phone", ownerEmail: checkOwner || meta[key]?.ownerEmail, status: "active", updatedAt: Date.now() };
         try {
           localStorage.setItem(ACCOUNT_MAP_KEY, JSON.stringify(map));
           setAccountMetadata(meta);
@@ -2674,8 +2745,8 @@ export function lookupAccountId(identifier?: string | null): string | null {
 
         // Evidence 1: Explicit recorded owner on this phone alias
         const recordedOwner = meta[key]?.ownerEmail?.toLowerCase().trim();
-        const resolvedOwner = recordedOwner ? (resolveRootOwner(recordedOwner, meta) || recordedOwner) : undefined;
-        const checkOwner = resolvedOwner || recordedOwner;
+        const resolvedOwner = getVerifiedRootOwner(recordedOwner, meta);
+        const checkOwner = resolvedOwner;
 
         if (checkOwner) {
           const ownerTarget = map[checkOwner] || meta[checkOwner]?.accountId;
