@@ -2016,6 +2016,7 @@ export function migrateLegacyAccountAliases(): void {
           // Reject conflicting reverse claims across distinct accounts:
           // Collect all claiming emails and accept ONLY if all resolve to a single verified root owner.
           let reverseEmail: string | undefined;
+          let hasContestedReverseClaims = false;
           if (!resolvedOwner) {
             const claimingEmails = new Set<string>();
             const normP = normalizeExplicitPhoneToken(p) || p;
@@ -2054,18 +2055,20 @@ export function migrateLegacyAccountAliases(): void {
 
               if (resolvedOwners.size === 1) {
                 reverseEmail = Array.from(resolvedOwners)[0];
+              } else {
+                hasContestedReverseClaims = true;
               }
             }
           }
 
           // 3. Historical order/address records
-          const recordEmail = (!resolvedOwner && !reverseEmail)
+          const recordEmail = (!resolvedOwner && !reverseEmail && !hasContestedReverseClaims)
             ? findOwnerEmailForPhoneInRecords(p, allCandidateEmails, trimmedVal)
             : undefined;
 
           // 4. Active authenticated session
           let activeSessionEmail: string | undefined;
-          if (!resolvedOwner && !reverseEmail && !recordEmail && activeAuthUser?.mobile) {
+          if (!resolvedOwner && !reverseEmail && !recordEmail && !hasContestedReverseClaims && activeAuthUser?.mobile) {
             const rawDigits = activeAuthUser.mobile.replace(/\D/g, "");
             const tenDigits = rawDigits.length >= 10 ? rawDigits.slice(-10) : rawDigits;
             if (tenDigits === p && activeUserEmail) {
@@ -2157,8 +2160,12 @@ export function migrateLegacyAccountAliases(): void {
             // No identified owner from explicit metadata, reverse phone, or historical records
             const hasOtherCollisionEmails = historicalEmails.some((e) => e !== singleEmail);
             const singleEmailHasDifferentPhone = Boolean(meta[singleEmail]?.phone && meta[singleEmail]?.phone !== p);
+            const isMarkedUnresolved = Boolean(
+              meta[p]?.status === "unresolved" ||
+              migrationMeta.unresolvedPhoneAliases?.[p]
+            );
 
-            if (nonEmailKeys.length === 1 && !hasOtherCollisionEmails && !singleEmailHasDifferentPhone) {
+            if (!hasContestedReverseClaims && nonEmailKeys.length === 1 && !hasOtherCollisionEmails && !singleEmailHasDifferentPhone && !isMarkedUnresolved) {
               // Legitimate single-owner legacy account (1 email, 1 phone, no collision history)
               map[p] = targetAccountIdForSingleEmail;
               meta[p] = {
@@ -2356,6 +2363,7 @@ export function migrateLegacyAccountAliases(): void {
             ? partition.clusters.find((cl) => cl.emails.includes(resolvedOwner) || cl.canonicalEmail === resolvedOwner)
             : undefined;
 
+          let hasContestedReverseClaims = false;
           // 2. Reverse phone metadata on emails
           // Do NOT trust reverse phone metadata if explicit owner is unresolved or conflicting!
           // Reject conflicting reverse-phone claims before assigning an owner:
@@ -2401,12 +2409,16 @@ export function migrateLegacyAccountAliases(): void {
 
               if (resolvedOwners.size === 1 && matchedClusters.size === 1) {
                 matchedCluster = Array.from(matchedClusters)[0];
+              } else {
+                // Hard ambiguity: reverse metadata resolves to multiple roots or contested clusters.
+                // Mark as contested so subsequent historical-record and session inference are bypassed!
+                hasContestedReverseClaims = true;
               }
             }
           }
 
           // 3. Historical order/address records scanning
-          if (!matchedCluster && !hasUnresolvedExplicitOwner && !resolvedOwner) {
+          if (!matchedCluster && !hasUnresolvedExplicitOwner && !resolvedOwner && !hasContestedReverseClaims) {
             const recordEmail = findOwnerEmailForPhoneInRecords(p, emailKeys, trimmedVal);
             if (recordEmail) {
               matchedCluster = partition.clusters.find((cl) => cl.emails.includes(recordEmail) || cl.canonicalEmail === recordEmail);
@@ -2414,7 +2426,7 @@ export function migrateLegacyAccountAliases(): void {
           }
 
           // 4. Active authenticated session
-          if (!matchedCluster && !hasUnresolvedExplicitOwner && !resolvedOwner && activeAuthUser?.mobile) {
+          if (!matchedCluster && !hasUnresolvedExplicitOwner && !resolvedOwner && !hasContestedReverseClaims && activeAuthUser?.mobile) {
             const rawDigits = activeAuthUser.mobile.replace(/\D/g, "");
             const tenDigits = rawDigits.length >= 10 ? rawDigits.slice(-10) : rawDigits;
             if (tenDigits === p && activeUserEmail) {
