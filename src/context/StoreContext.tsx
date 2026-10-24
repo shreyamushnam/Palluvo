@@ -2012,25 +2012,48 @@ export function migrateLegacyAccountAliases(): void {
           }
 
           // 2. Reverse phone metadata on emails
-          // Only trust reverse phone metadata when explicit owner is not unresolved and has no conflict
+          // Only trust reverse phone metadata when explicit owner is not unresolved and has no conflict.
+          // Reject conflicting reverse claims across distinct accounts:
+          // Collect all claiming emails and accept ONLY if all resolve to a single verified root owner.
           let reverseEmail: string | undefined;
           if (!resolvedOwner) {
-            if (meta[singleEmail]?.phone === p) {
-              reverseEmail = singleEmail;
-            } else {
-              for (const cand of allCandidateEmails) {
-                if (meta[cand]?.phone === p) {
-                  reverseEmail = cand;
-                  break;
+            const claimingEmails = new Set<string>();
+            const normP = normalizeExplicitPhoneToken(p) || p;
+
+            if (meta[singleEmail]?.phone) {
+              const rawRev = meta[singleEmail].phone;
+              if (rawRev === p || normalizeExplicitPhoneToken(rawRev) === normP) {
+                claimingEmails.add(singleEmail.toLowerCase().trim());
+              }
+            }
+            for (const cand of allCandidateEmails) {
+              const rawRev = meta[cand]?.phone;
+              if (rawRev && (rawRev === p || normalizeExplicitPhoneToken(rawRev) === normP)) {
+                claimingEmails.add(cand.toLowerCase().trim());
+              }
+            }
+            for (const [em, emMeta] of Object.entries(meta)) {
+              if (em.includes("@")) {
+                const rawRev = emMeta?.phone;
+                if (rawRev && (rawRev === p || normalizeExplicitPhoneToken(rawRev) === normP)) {
+                  claimingEmails.add(em.toLowerCase().trim());
                 }
               }
-              if (!reverseEmail) {
-                for (const [em, emMeta] of Object.entries(meta)) {
-                  if (em.includes("@") && emMeta?.phone === p) {
-                    reverseEmail = em.toLowerCase().trim();
-                    break;
-                  }
+            }
+
+            if (claimingEmails.size > 0) {
+              const resolvedOwners = new Set<string>();
+              for (const em of claimingEmails) {
+                const root = getVerifiedRootOwner(em, meta);
+                if (!root) {
+                  resolvedOwners.add(`unresolved_${em}`);
+                } else {
+                  resolvedOwners.add(root);
                 }
+              }
+
+              if (resolvedOwners.size === 1) {
+                reverseEmail = Array.from(resolvedOwners)[0];
               }
             }
           }
@@ -2319,8 +2342,7 @@ export function migrateLegacyAccountAliases(): void {
           }
         }
 
-        // Migrate non-email aliases (phones) using owner mapping
-        const assignedPhoneByCluster = new Map<string, string>();
+        // Migrate non-email aliases (phones) using affirmative owner evidence
         const matchedClusterByPhone = new Map<string, typeof partition.clusters[0]>();
 
         // Pass 1: Direct metadata on phone, reverse metadata on emails, record scanning, active session
@@ -2336,11 +2358,50 @@ export function migrateLegacyAccountAliases(): void {
 
           // 2. Reverse phone metadata on emails
           // Do NOT trust reverse phone metadata if explicit owner is unresolved or conflicting!
+          // Reject conflicting reverse-phone claims before assigning an owner:
+          // Collect all claiming emails across accounts and accept only a single verified root owner cluster;
+          // otherwise keep the phone unassigned so it remains quarantined.
           if (!matchedCluster && !hasUnresolvedExplicitOwner && !resolvedOwner) {
-            const reverseEmail = emailKeys.find((e) => meta[e]?.phone === p);
-            if (reverseEmail) {
-              const resolvedRev = getVerifiedRootOwner(reverseEmail, meta) || reverseEmail;
-              matchedCluster = partition.clusters.find((cl) => cl.emails.includes(resolvedRev) || cl.canonicalEmail === resolvedRev);
+            const claimingEmails = new Set<string>();
+            const normP = normalizeExplicitPhoneToken(p) || p;
+
+            for (const e of emailKeys) {
+              const rawPhone = meta[e]?.phone;
+              if (rawPhone && (rawPhone === p || normalizeExplicitPhoneToken(rawPhone) === normP)) {
+                claimingEmails.add(e.toLowerCase().trim());
+              }
+            }
+            for (const [em, emMeta] of Object.entries(meta)) {
+              if (em.includes("@")) {
+                const rawPhone = emMeta?.phone;
+                if (rawPhone && (rawPhone === p || normalizeExplicitPhoneToken(rawPhone) === normP)) {
+                  claimingEmails.add(em.toLowerCase().trim());
+                }
+              }
+            }
+
+            if (claimingEmails.size > 0) {
+              const resolvedOwners = new Set<string>();
+              const matchedClusters = new Set<typeof partition.clusters[0]>();
+
+              for (const em of claimingEmails) {
+                const root = getVerifiedRootOwner(em, meta);
+                if (!root) {
+                  resolvedOwners.add(`unresolved_${em}`);
+                  continue;
+                }
+                resolvedOwners.add(root);
+                const cl = partition.clusters.find((c) => c.emails.includes(root) || c.canonicalEmail === root);
+                if (cl) {
+                  matchedClusters.add(cl);
+                } else {
+                  resolvedOwners.add(`external_${root}`);
+                }
+              }
+
+              if (resolvedOwners.size === 1 && matchedClusters.size === 1) {
+                matchedCluster = Array.from(matchedClusters)[0];
+              }
             }
           }
 
@@ -2363,32 +2424,10 @@ export function migrateLegacyAccountAliases(): void {
 
           if (matchedCluster) {
             matchedClusterByPhone.set(p, matchedCluster);
-            assignedPhoneByCluster.set(matchedCluster.canonicalId, p);
           }
         }
 
-        // Pass 2: Injective 1-to-1 matching for unassigned phones and unassigned clusters
-        const unassignedPhones = nonEmailKeys.filter((p) => !matchedClusterByPhone.has(p));
-        const unassignedClusters = partition.clusters.filter((cl) => !assignedPhoneByCluster.has(cl.canonicalId));
-
-        if (unassignedPhones.length === 1 && unassignedClusters.length === 1) {
-          const onlyPhone = unassignedPhones[0];
-          const onlyCluster = unassignedClusters[0];
-          const phoneOwner = meta[onlyPhone]?.ownerEmail?.toLowerCase().trim();
-          const phoneResolvedOwner = getVerifiedRootOwner(phoneOwner, meta);
-          const hasUnresolvedExplicitOwner = Boolean(phoneOwner && !phoneResolvedOwner);
-          const hasConflictingExplicitOwner = Boolean(
-            phoneResolvedOwner &&
-            !onlyCluster.emails.includes(phoneResolvedOwner) &&
-            onlyCluster.canonicalEmail !== phoneResolvedOwner
-          );
-          if (!hasUnresolvedExplicitOwner && !hasConflictingExplicitOwner) {
-            matchedClusterByPhone.set(onlyPhone, onlyCluster);
-            assignedPhoneByCluster.set(onlyCluster.canonicalId, onlyPhone);
-          }
-        }
-
-        // Pass 3: Apply migrations and handle unresolved aliases
+        // Pass 2: Apply migrations for verified phones, and quarantine aliases lacking affirmative ownership evidence
         for (const p of nonEmailKeys) {
           const matchedCluster = matchedClusterByPhone.get(p);
           if (matchedCluster) {
