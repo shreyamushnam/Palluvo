@@ -497,23 +497,32 @@ export function lookupEmailByAccountId(accountId?: string | null): string | null
 
 /**
  * Normalizes an explicit phone value to its exact 10-digit subscriber number.
- * Accepts exact 10-digit numbers, 11-digit numbers with leading '0',
- * or 12-digit numbers with leading '91' (Indian country code).
- * Strictly rejects strings with extra or fewer digits rather than truncating/slicing.
+/**
+ * Normalizes phone tokens into a standard 10-digit Indian subscriber number.
+ * Accepts exact 10-digit numbers starting with 6-9, 11-digit numbers with leading '0' followed by 6-9,
+ * or 12-digit numbers with leading '91' or '+91' followed by 6-9.
+ * Validates subscriber numbers against Indian mobile rules (/^[6-9]\d{9}$/) and rejects
+ * malformed tokens or unsupported international country codes.
  */
 export function normalizeExplicitPhoneToken(raw: unknown): string | null {
   if (typeof raw !== "string" && typeof raw !== "number") return null;
-  const digits = String(raw).replace(/\D/g, "");
+  const rawStr = String(raw).trim();
+  if (rawStr.startsWith("+") && !rawStr.startsWith("+91")) {
+    return null;
+  }
+  const digits = rawStr.replace(/\D/g, "");
+  let tenDigits: string | null = null;
   if (digits.length === 10) {
-    return digits;
+    tenDigits = digits;
+  } else if (digits.length === 11 && digits.startsWith("0")) {
+    tenDigits = digits.slice(1);
+  } else if (digits.length === 12 && digits.startsWith("91")) {
+    tenDigits = digits.slice(2);
   }
-  if (digits.length === 11 && digits.startsWith("0")) {
-    return digits.slice(1);
+  if (tenDigits && /^[6-9]\d{9}$/.test(tenDigits)) {
+    return tenDigits;
   }
-  if (digits.length === 12 && digits.startsWith("91")) {
-    return digits.slice(2);
-  }
-  // Reject extra trailing or leading digits; fail closed rather than slicing
+  // Reject extra trailing or leading digits or non-Indian mobile format; fail closed rather than slicing
   return null;
 }
 
@@ -618,7 +627,7 @@ export function findOwnerEmailForPhoneInRecords(
   if (typeof window === "undefined" || !window.localStorage) return null;
   if (!phoneDigits || !candidateEmails.length || !legacyAccountId) return null;
 
-  const targetPhone = normalizeExplicitPhoneToken(phoneDigits) || (phoneDigits.replace(/\D/g, "").length === 10 ? phoneDigits.replace(/\D/g, "") : null);
+  const targetPhone = normalizeExplicitPhoneToken(phoneDigits);
   if (!targetPhone) return null;
 
   const lowerCandidates = candidateEmails
@@ -1034,8 +1043,8 @@ export function copyCustomerData(
         : []
     );
     const verifiedPhoneList = rawPhones
-      .map((p) => p.replace(/\D/g, "").slice(-10))
-      .filter((p) => p.length >= 10);
+      .map((p) => normalizeExplicitPhoneToken(p))
+      .filter(Boolean) as string[];
 
     const fromSafe = fromAccountId.toLowerCase().trim().replace(/[^a-z0-9_]/g, (ch) => `_${ch.charCodeAt(0).toString(16)}_`);
     const toSafe = toAccountId.toLowerCase().trim().replace(/[^a-z0-9_]/g, (ch) => `_${ch.charCodeAt(0).toString(16)}_`);
@@ -1814,14 +1823,54 @@ export function migrateLegacyAccountAliases(): void {
             // Multi-owner quarantined records: keep the legacy bucket quarantined.
             // Do NOT restore wholesale; copy ONLY records whose owner is independently verified.
             const verifiedPhones: string[] = [];
+            const singleEmailRoot = (resolveRootOwner(singleEmail, meta) || singleEmail).toLowerCase().trim();
             if (meta[singleEmail]?.phone) {
-              verifiedPhones.push(meta[singleEmail].phone!);
+              const revPhone = normalizeExplicitPhoneToken(meta[singleEmail].phone);
+              if (revPhone) {
+                const revRecordedOwner = meta[revPhone]?.ownerEmail?.toLowerCase().trim();
+                const revResolvedOwner = revRecordedOwner ? getVerifiedRootOwner(revRecordedOwner, meta) : undefined;
+                const revResolvedRoot = revResolvedOwner ? (resolveRootOwner(revResolvedOwner, meta) || revResolvedOwner).toLowerCase().trim() : undefined;
+
+                const hasUnresolvedExplicitOwner = Boolean(revRecordedOwner && !revResolvedOwner);
+                const hasConflictingExplicitOwner = Boolean(revResolvedOwner && revResolvedRoot !== singleEmailRoot);
+                const isExplicitlyUnresolved = Boolean(
+                  (meta[revPhone]?.status === "unresolved" || migrationMeta.unresolvedPhoneAliases?.[revPhone]) &&
+                  revResolvedRoot !== singleEmailRoot
+                );
+                const hasConflictingReverseEmail = Object.entries(meta).some(([em, emMeta]) => {
+                  if (!em.includes("@")) return false;
+                  const normEm = em.toLowerCase().trim();
+                  const emRoot = (resolveRootOwner(normEm, meta) || normEm).toLowerCase().trim();
+                  if (emRoot === singleEmailRoot) return false;
+                  return normalizeExplicitPhoneToken(emMeta?.phone) === revPhone;
+                });
+
+                const resolvesToSameOwner = Boolean(
+                  revResolvedRoot === singleEmailRoot ||
+                  (!revRecordedOwner && meta[revPhone]?.status !== "unresolved" && !migrationMeta.unresolvedPhoneAliases?.[revPhone])
+                );
+
+                if (
+                  !hasUnresolvedExplicitOwner &&
+                  !hasConflictingExplicitOwner &&
+                  !isExplicitlyUnresolved &&
+                  !hasConflictingReverseEmail &&
+                  resolvesToSameOwner
+                ) {
+                  verifiedPhones.push(revPhone);
+                }
+              }
             }
             for (const p of nonEmailKeys) {
+              const normP = normalizeExplicitPhoneToken(p);
+              if (!normP) continue;
               const recordedOwner = meta[p]?.ownerEmail?.toLowerCase().trim();
               const resolvedOwner = getVerifiedRootOwner(recordedOwner, meta);
-              if (resolvedOwner && resolvedOwner === singleEmail) {
-                verifiedPhones.push(p);
+              const resolvedRoot = resolvedOwner ? (resolveRootOwner(resolvedOwner, meta) || resolvedOwner).toLowerCase().trim() : undefined;
+              if (resolvedRoot && resolvedRoot === singleEmailRoot) {
+                if (!verifiedPhones.includes(normP)) {
+                  verifiedPhones.push(normP);
+                }
               }
             }
 
@@ -1934,33 +1983,66 @@ export function migrateLegacyAccountAliases(): void {
           const recordedOwner = meta[p]?.ownerEmail?.toLowerCase().trim();
           const resolvedOwner = getVerifiedRootOwner(recordedOwner, meta);
 
+          // If phone alias has an explicit recorded owner that cannot be resolved (unresolved changed_email),
+          // it must NOT be claimed by reverse phone metadata or record scanning. It must stay quarantined/unresolved.
+          if (recordedOwner && !resolvedOwner) {
+            const isolatedId = `usr_phone_${p}`;
+            map[p] = isolatedId;
+            meta[p] = {
+              ...meta[p],
+              accountId: isolatedId,
+              type: "phone",
+              phone: p,
+              ownerEmail: recordedOwner,
+              status: "unresolved",
+              legacyId: trimmedVal,
+              candidateAccountIds: [],
+              candidateEmails: [recordedOwner],
+              updatedAt: Date.now(),
+            };
+            migrationMeta.unresolvedPhoneAliases = migrationMeta.unresolvedPhoneAliases || {};
+            migrationMeta.unresolvedPhoneAliases[p] = {
+              legacyId: trimmedVal,
+              candidateAccountIds: [],
+              candidateEmails: [recordedOwner],
+              quarantinedAt: Date.now(),
+            };
+            modified = true;
+            continue;
+          }
+
           // 2. Reverse phone metadata on emails
+          // Only trust reverse phone metadata when explicit owner is not unresolved and has no conflict
           let reverseEmail: string | undefined;
-          if (meta[singleEmail]?.phone === p) {
-            reverseEmail = singleEmail;
-          } else {
-            for (const cand of allCandidateEmails) {
-              if (meta[cand]?.phone === p) {
-                reverseEmail = cand;
-                break;
-              }
-            }
-            if (!reverseEmail) {
-              for (const [em, emMeta] of Object.entries(meta)) {
-                if (em.includes("@") && emMeta?.phone === p) {
-                  reverseEmail = em.toLowerCase().trim();
+          if (!resolvedOwner) {
+            if (meta[singleEmail]?.phone === p) {
+              reverseEmail = singleEmail;
+            } else {
+              for (const cand of allCandidateEmails) {
+                if (meta[cand]?.phone === p) {
+                  reverseEmail = cand;
                   break;
+                }
+              }
+              if (!reverseEmail) {
+                for (const [em, emMeta] of Object.entries(meta)) {
+                  if (em.includes("@") && emMeta?.phone === p) {
+                    reverseEmail = em.toLowerCase().trim();
+                    break;
+                  }
                 }
               }
             }
           }
 
           // 3. Historical order/address records
-          const recordEmail = findOwnerEmailForPhoneInRecords(p, allCandidateEmails, trimmedVal);
+          const recordEmail = (!resolvedOwner && !reverseEmail)
+            ? findOwnerEmailForPhoneInRecords(p, allCandidateEmails, trimmedVal)
+            : undefined;
 
           // 4. Active authenticated session
           let activeSessionEmail: string | undefined;
-          if (activeAuthUser?.mobile) {
+          if (!resolvedOwner && !reverseEmail && !recordEmail && activeAuthUser?.mobile) {
             const rawDigits = activeAuthUser.mobile.replace(/\D/g, "");
             const tenDigits = rawDigits.length >= 10 ? rawDigits.slice(-10) : rawDigits;
             if (tenDigits === p && activeUserEmail) {
@@ -2141,6 +2223,40 @@ export function migrateLegacyAccountAliases(): void {
         }
 
         for (const p of nonEmailKeys) {
+          const recordedOwner = meta[p]?.ownerEmail?.toLowerCase().trim();
+          const resolvedOwner = getVerifiedRootOwner(recordedOwner, meta);
+          const belongsToCluster = Boolean(
+            !recordedOwner ||
+            (resolvedOwner && ownerCluster.emails.includes(resolvedOwner)) ||
+            (resolvedOwner && resolvedOwner === ownerCluster.canonicalEmail)
+          );
+
+          if (!belongsToCluster) {
+            const isolatedId = `usr_phone_${p}`;
+            map[p] = isolatedId;
+            meta[p] = {
+              ...meta[p],
+              accountId: isolatedId,
+              type: "phone",
+              phone: p,
+              ownerEmail: recordedOwner,
+              status: "unresolved",
+              legacyId: trimmedVal,
+              candidateAccountIds: [canonicalId],
+              candidateEmails: ownerCluster.emails,
+              updatedAt: Date.now(),
+            };
+            migrationMeta.unresolvedPhoneAliases = migrationMeta.unresolvedPhoneAliases || {};
+            migrationMeta.unresolvedPhoneAliases[p] = {
+              legacyId: trimmedVal,
+              candidateAccountIds: [canonicalId],
+              candidateEmails: ownerCluster.emails,
+              quarantinedAt: Date.now(),
+            };
+            modified = true;
+            continue;
+          }
+
           map[p] = canonicalId;
           meta[p] = {
             ...meta[p],
@@ -2210,21 +2326,26 @@ export function migrateLegacyAccountAliases(): void {
         // Pass 1: Direct metadata on phone, reverse metadata on emails, record scanning, active session
         for (const p of nonEmailKeys) {
           // 1. Direct metadata on phone
-          const ownerEmail = meta[p]?.ownerEmail;
-          let matchedCluster = ownerEmail
-            ? partition.clusters.find((cl) => cl.emails.includes(ownerEmail) || cl.canonicalEmail === ownerEmail)
+          const recordedOwner = meta[p]?.ownerEmail?.toLowerCase().trim();
+          const resolvedOwner = getVerifiedRootOwner(recordedOwner, meta);
+          const hasUnresolvedExplicitOwner = Boolean(recordedOwner && !resolvedOwner);
+
+          let matchedCluster = resolvedOwner
+            ? partition.clusters.find((cl) => cl.emails.includes(resolvedOwner) || cl.canonicalEmail === resolvedOwner)
             : undefined;
 
           // 2. Reverse phone metadata on emails
-          if (!matchedCluster) {
+          // Do NOT trust reverse phone metadata if explicit owner is unresolved or conflicting!
+          if (!matchedCluster && !hasUnresolvedExplicitOwner && !resolvedOwner) {
             const reverseEmail = emailKeys.find((e) => meta[e]?.phone === p);
             if (reverseEmail) {
-              matchedCluster = partition.clusters.find((cl) => cl.emails.includes(reverseEmail) || cl.canonicalEmail === reverseEmail);
+              const resolvedRev = getVerifiedRootOwner(reverseEmail, meta) || reverseEmail;
+              matchedCluster = partition.clusters.find((cl) => cl.emails.includes(resolvedRev) || cl.canonicalEmail === resolvedRev);
             }
           }
 
           // 3. Historical order/address records scanning
-          if (!matchedCluster) {
+          if (!matchedCluster && !hasUnresolvedExplicitOwner && !resolvedOwner) {
             const recordEmail = findOwnerEmailForPhoneInRecords(p, emailKeys, trimmedVal);
             if (recordEmail) {
               matchedCluster = partition.clusters.find((cl) => cl.emails.includes(recordEmail) || cl.canonicalEmail === recordEmail);
@@ -2232,7 +2353,7 @@ export function migrateLegacyAccountAliases(): void {
           }
 
           // 4. Active authenticated session
-          if (!matchedCluster && activeAuthUser?.mobile) {
+          if (!matchedCluster && !hasUnresolvedExplicitOwner && !resolvedOwner && activeAuthUser?.mobile) {
             const rawDigits = activeAuthUser.mobile.replace(/\D/g, "");
             const tenDigits = rawDigits.length >= 10 ? rawDigits.slice(-10) : rawDigits;
             if (tenDigits === p && activeUserEmail) {
@@ -2253,8 +2374,18 @@ export function migrateLegacyAccountAliases(): void {
         if (unassignedPhones.length === 1 && unassignedClusters.length === 1) {
           const onlyPhone = unassignedPhones[0];
           const onlyCluster = unassignedClusters[0];
-          matchedClusterByPhone.set(onlyPhone, onlyCluster);
-          assignedPhoneByCluster.set(onlyCluster.canonicalId, onlyPhone);
+          const phoneOwner = meta[onlyPhone]?.ownerEmail?.toLowerCase().trim();
+          const phoneResolvedOwner = getVerifiedRootOwner(phoneOwner, meta);
+          const hasUnresolvedExplicitOwner = Boolean(phoneOwner && !phoneResolvedOwner);
+          const hasConflictingExplicitOwner = Boolean(
+            phoneResolvedOwner &&
+            !onlyCluster.emails.includes(phoneResolvedOwner) &&
+            onlyCluster.canonicalEmail !== phoneResolvedOwner
+          );
+          if (!hasUnresolvedExplicitOwner && !hasConflictingExplicitOwner) {
+            matchedClusterByPhone.set(onlyPhone, onlyCluster);
+            assignedPhoneByCluster.set(onlyCluster.canonicalId, onlyPhone);
+          }
         }
 
         // Pass 3: Apply migrations and handle unresolved aliases
@@ -2807,7 +2938,7 @@ export function lookupAccountId(identifier?: string | null): string | null {
           const copyOptions: CopyCustomerDataOptions = {
             filterByOwnerEmail: resolvedOwnerEmail,
             allowedEmails: Array.from(allowedEmailSet),
-            verifiedPhones: Array.from(new Set([key, meta[key]?.phone].filter(Boolean) as string[])),
+            verifiedPhones: Array.from(new Set([key, meta[key]?.phone].map((p) => normalizeExplicitPhoneToken(p)).filter(Boolean) as string[])),
           };
 
           let copySuccess = true;
@@ -2973,7 +3104,7 @@ export function registerAccountAlias(
       const copyOptions: CopyCustomerDataOptions = {
         filterByOwnerEmail: resolvedOwnerEmail,
         allowedEmails: Array.from(allowedEmailSet),
-        verifiedPhones: Array.from(new Set([key, effectivePhone, meta[key]?.phone].filter(Boolean) as string[])),
+        verifiedPhones: Array.from(new Set([key, effectivePhone, meta[key]?.phone].map((p) => normalizeExplicitPhoneToken(p)).filter(Boolean) as string[])),
       };
 
       let copySuccess = true;
