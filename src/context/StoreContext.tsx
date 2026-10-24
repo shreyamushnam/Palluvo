@@ -1819,135 +1819,111 @@ export function migrateLegacyAccountAliases(): void {
         const hasCollisionHistory = historicalEmails.some((e) => e !== singleEmail);
 
         if (isQuarantinedAccountId(trimmedVal)) {
-          if (hasCollisionHistory) {
-            // Multi-owner quarantined records: keep the legacy bucket quarantined.
-            // Do NOT restore wholesale; copy ONLY records whose owner is independently verified.
-            const verifiedPhones: string[] = [];
-            const singleEmailRoot = (resolveRootOwner(singleEmail, meta) || singleEmail).toLowerCase().trim();
-            if (meta[singleEmail]?.phone) {
-              const revPhone = normalizeExplicitPhoneToken(meta[singleEmail].phone);
-              if (revPhone) {
-                const revRecordedOwner = meta[revPhone]?.ownerEmail?.toLowerCase().trim();
-                const revResolvedOwner = revRecordedOwner ? getVerifiedRootOwner(revRecordedOwner, meta) : undefined;
-                const revResolvedRoot = revResolvedOwner ? (resolveRootOwner(revResolvedOwner, meta) || revResolvedOwner).toLowerCase().trim() : undefined;
+          // Both collision-history and no-collision-history branches must filter by verified owner:
+          // do NOT copy wholesale into expectedInjectiveId, as shared legacy buckets may contain foreign records.
+          const verifiedPhones: string[] = [];
+          const singleEmailRoot = (resolveRootOwner(singleEmail, meta) || singleEmail).toLowerCase().trim();
+          if (meta[singleEmail]?.phone) {
+            const revPhone = normalizeExplicitPhoneToken(meta[singleEmail].phone);
+            if (revPhone) {
+              const revRecordedOwner = meta[revPhone]?.ownerEmail?.toLowerCase().trim();
+              const revResolvedOwner = revRecordedOwner ? getVerifiedRootOwner(revRecordedOwner, meta) : undefined;
+              const revResolvedRoot = revResolvedOwner ? (resolveRootOwner(revResolvedOwner, meta) || revResolvedOwner).toLowerCase().trim() : undefined;
 
-                const hasUnresolvedExplicitOwner = Boolean(revRecordedOwner && !revResolvedOwner);
-                const hasConflictingExplicitOwner = Boolean(revResolvedOwner && revResolvedRoot !== singleEmailRoot);
-                const isExplicitlyUnresolved = Boolean(
-                  (meta[revPhone]?.status === "unresolved" || migrationMeta.unresolvedPhoneAliases?.[revPhone]) &&
-                  revResolvedRoot !== singleEmailRoot
-                );
-                const hasConflictingReverseEmail = Object.entries(meta).some(([em, emMeta]) => {
-                  if (!em.includes("@")) return false;
-                  const normEm = em.toLowerCase().trim();
-                  const emRoot = (resolveRootOwner(normEm, meta) || normEm).toLowerCase().trim();
-                  if (emRoot === singleEmailRoot) return false;
-                  return normalizeExplicitPhoneToken(emMeta?.phone) === revPhone;
-                });
+              const hasUnresolvedExplicitOwner = Boolean(revRecordedOwner && !revResolvedOwner);
+              const hasConflictingExplicitOwner = Boolean(revResolvedOwner && revResolvedRoot !== singleEmailRoot);
+              const isExplicitlyUnresolved = Boolean(
+                (meta[revPhone]?.status === "unresolved" || migrationMeta.unresolvedPhoneAliases?.[revPhone]) &&
+                revResolvedRoot !== singleEmailRoot
+              );
+              const hasConflictingReverseEmail = Object.entries(meta).some(([em, emMeta]) => {
+                if (!em.includes("@")) return false;
+                const normEm = em.toLowerCase().trim();
+                const emRoot = (resolveRootOwner(normEm, meta) || normEm).toLowerCase().trim();
+                if (emRoot === singleEmailRoot) return false;
+                return normalizeExplicitPhoneToken(emMeta?.phone) === revPhone;
+              });
 
-                const resolvesToSameOwner = Boolean(
-                  revResolvedRoot === singleEmailRoot ||
-                  (!revRecordedOwner && meta[revPhone]?.status !== "unresolved" && !migrationMeta.unresolvedPhoneAliases?.[revPhone])
-                );
+              const resolvesToSameOwner = Boolean(
+                revResolvedRoot === singleEmailRoot ||
+                (!revRecordedOwner && meta[revPhone]?.status !== "unresolved" && !migrationMeta.unresolvedPhoneAliases?.[revPhone])
+              );
 
-                if (
-                  !hasUnresolvedExplicitOwner &&
-                  !hasConflictingExplicitOwner &&
-                  !isExplicitlyUnresolved &&
-                  !hasConflictingReverseEmail &&
-                  resolvesToSameOwner
-                ) {
-                  verifiedPhones.push(revPhone);
-                }
+              if (
+                !hasUnresolvedExplicitOwner &&
+                !hasConflictingExplicitOwner &&
+                !isExplicitlyUnresolved &&
+                !hasConflictingReverseEmail &&
+                resolvesToSameOwner
+              ) {
+                verifiedPhones.push(revPhone);
               }
             }
-            for (const p of nonEmailKeys) {
-              const normP = normalizeExplicitPhoneToken(p);
-              if (!normP) continue;
-              const recordedOwner = meta[p]?.ownerEmail?.toLowerCase().trim();
-              const resolvedOwner = getVerifiedRootOwner(recordedOwner, meta);
-              const resolvedRoot = resolvedOwner ? (resolveRootOwner(resolvedOwner, meta) || resolvedOwner).toLowerCase().trim() : undefined;
-              if (resolvedRoot && resolvedRoot === singleEmailRoot) {
-                if (!verifiedPhones.includes(normP)) {
-                  verifiedPhones.push(normP);
-                }
-              }
-            }
-
-            // Collect all verified alias emails in this account owner chain
-            const verifiedAliasEmails = new Set<string>();
-            verifiedAliasEmails.add(singleEmail);
-            const rootOfSingle = resolveRootOwner(singleEmail, meta);
-            if (rootOfSingle) verifiedAliasEmails.add(rootOfSingle.toLowerCase().trim());
-            for (const [em] of Object.entries(meta)) {
-              if (em.includes("@")) {
-                const norm = em.toLowerCase().trim();
-                const emRoot = resolveRootOwner(norm, meta);
-                if (emRoot && (emRoot === rootOfSingle || emRoot === singleEmail)) {
-                  verifiedAliasEmails.add(norm);
-                }
-              }
-            }
-
-            const copySuccess = copyCustomerData(trimmedVal, expectedInjectiveId, {
-              filterByOwnerEmail: singleEmail,
-              allowedEmails: Array.from(verifiedAliasEmails),
-              verifiedPhones,
-            });
-
-            if (!copySuccess) {
-              // Write verification failed for destination datasets (e.g. storage quota/security error).
-              // Do NOT commit the rekey! Leave the mapping unchanged and mark the migration retryable.
-              migrationMeta.failedQuarantineKeys = migrationMeta.failedQuarantineKeys || {};
-              migrationMeta.failedQuarantineKeys[`retry_migration_${trimmedVal}`] = true;
-              setMigrationMetadata(migrationMeta);
-              continue;
-            }
-
-            if (migrationMeta.failedQuarantineKeys?.[`retry_migration_${trimmedVal}`]) {
-              delete migrationMeta.failedQuarantineKeys[`retry_migration_${trimmedVal}`];
-            }
-
-            map[singleEmail] = expectedInjectiveId;
-            meta[singleEmail] = {
-              accountId: expectedInjectiveId,
-              type: meta[singleEmail]?.type || "primary",
-              phone: meta[singleEmail]?.phone,
-              updatedAt: Date.now(),
-            };
-            migrationMeta.migratedCollisionIds[trimmedVal] = Array.from(
-              new Set([...(migrationMeta.migratedCollisionIds[trimmedVal] || []), singleEmail])
-            );
-            modified = true;
-          } else {
-            // Single-owner legacy bucket without collision history:
-            // Safely merge records into expectedInjectiveId and record rekey
-            const copySuccess = copyCustomerData(trimmedVal, expectedInjectiveId);
-
-            if (!copySuccess) {
-              migrationMeta.failedQuarantineKeys = migrationMeta.failedQuarantineKeys || {};
-              migrationMeta.failedQuarantineKeys[`retry_migration_${trimmedVal}`] = true;
-              setMigrationMetadata(migrationMeta);
-              continue;
-            }
-
-            if (migrationMeta.failedQuarantineKeys?.[`retry_migration_${trimmedVal}`]) {
-              delete migrationMeta.failedQuarantineKeys[`retry_migration_${trimmedVal}`];
-            }
-
-            map[singleEmail] = expectedInjectiveId;
-            meta[singleEmail] = {
-              accountId: expectedInjectiveId,
-              type: meta[singleEmail]?.type || "primary",
-              phone: meta[singleEmail]?.phone,
-              updatedAt: Date.now(),
-            };
-            migrationMeta.rekeyedOwnerIds[trimmedVal] = expectedInjectiveId;
-            migrationMeta.migratedCollisionIds[trimmedVal] = Array.from(
-              new Set([...(migrationMeta.migratedCollisionIds[trimmedVal] || []), singleEmail])
-            );
-            modified = true;
           }
+          for (const p of nonEmailKeys) {
+            const normP = normalizeExplicitPhoneToken(p);
+            if (!normP) continue;
+            const recordedOwner = meta[p]?.ownerEmail?.toLowerCase().trim();
+            const resolvedOwner = getVerifiedRootOwner(recordedOwner, meta);
+            const resolvedRoot = resolvedOwner ? (resolveRootOwner(resolvedOwner, meta) || resolvedOwner).toLowerCase().trim() : undefined;
+            if (resolvedRoot && resolvedRoot === singleEmailRoot) {
+              if (!verifiedPhones.includes(normP)) {
+                verifiedPhones.push(normP);
+              }
+            }
+          }
+
+          // Collect all verified alias emails in this account owner chain
+          const verifiedAliasEmails = new Set<string>();
+          verifiedAliasEmails.add(singleEmail);
+          const rootOfSingle = resolveRootOwner(singleEmail, meta);
+          if (rootOfSingle) verifiedAliasEmails.add(rootOfSingle.toLowerCase().trim());
+          for (const [em] of Object.entries(meta)) {
+            if (em.includes("@")) {
+              const norm = em.toLowerCase().trim();
+              const emRoot = resolveRootOwner(norm, meta);
+              if (emRoot && (emRoot === rootOfSingle || emRoot === singleEmail)) {
+                verifiedAliasEmails.add(norm);
+              }
+            }
+          }
+
+          const copySuccess = copyCustomerData(trimmedVal, expectedInjectiveId, {
+            filterByOwnerEmail: singleEmail,
+            allowedEmails: Array.from(verifiedAliasEmails),
+            verifiedPhones,
+          });
+
+          if (!copySuccess) {
+            // Write verification failed for destination datasets (e.g. storage quota/security error).
+            // Do NOT commit the rekey! Leave the mapping unchanged and mark the migration retryable.
+            migrationMeta.failedQuarantineKeys = migrationMeta.failedQuarantineKeys || {};
+            migrationMeta.failedQuarantineKeys[`retry_migration_${trimmedVal}`] = true;
+            setMigrationMetadata(migrationMeta);
+            continue;
+          }
+
+          if (migrationMeta.failedQuarantineKeys?.[`retry_migration_${trimmedVal}`]) {
+            delete migrationMeta.failedQuarantineKeys[`retry_migration_${trimmedVal}`];
+          }
+
+          map[singleEmail] = expectedInjectiveId;
+          meta[singleEmail] = {
+            accountId: expectedInjectiveId,
+            type: meta[singleEmail]?.type || "primary",
+            phone: meta[singleEmail]?.phone,
+            updatedAt: Date.now(),
+          };
+
+          if (!hasCollisionHistory) {
+            // Single-owner legacy bucket without collision history: record rekey
+            migrationMeta.rekeyedOwnerIds[trimmedVal] = expectedInjectiveId;
+          }
+
+          migrationMeta.migratedCollisionIds[trimmedVal] = Array.from(
+            new Set([...(migrationMeta.migratedCollisionIds[trimmedVal] || []), singleEmail])
+          );
+          modified = true;
 
           if (activeUserId === trimmedVal && activeUserEmail === singleEmail) {
             try {
@@ -2166,6 +2142,36 @@ export function migrateLegacyAccountAliases(): void {
             // Do NOT infer ownership from single-phone cardinality! Keep unresolved and quarantined.
             const isolatedId = `usr_phone_${p}`;
             map[p] = isolatedId;
+
+            const allCandEmails = Array.from(new Set([...allCandidateEmails, ...claimingEmails]));
+            const candAccIds = new Set<string>([targetAccountIdForSingleEmail].filter(Boolean));
+            for (const em of claimingEmails) {
+              const root = getVerifiedRootOwner(em, meta) || em;
+              const mappedId = map[root] || meta[root]?.accountId || map[em] || meta[em]?.accountId;
+              if (mappedId && !isQuarantinedAccountId(mappedId)) {
+                candAccIds.add(mappedId);
+              } else if (root.includes("@")) {
+                const defaultId = root === "radhika.sharma@example.com"
+                  ? "usr_demo_radhika"
+                  : `usr_email_${encodeIdentifierToId(root)}`;
+                candAccIds.add(defaultId);
+              }
+            }
+            if (meta[p]?.ownerEmail) {
+              const oEmail = meta[p].ownerEmail!.toLowerCase().trim();
+              const root = getVerifiedRootOwner(oEmail, meta) || oEmail;
+              const mappedId = map[root] || meta[root]?.accountId || map[oEmail] || meta[oEmail]?.accountId;
+              if (mappedId && !isQuarantinedAccountId(mappedId)) {
+                candAccIds.add(mappedId);
+              } else if (root.includes("@")) {
+                const defaultId = root === "radhika.sharma@example.com"
+                  ? "usr_demo_radhika"
+                  : `usr_email_${encodeIdentifierToId(root)}`;
+                candAccIds.add(defaultId);
+              }
+            }
+            const candidateAccountIds = Array.from(candAccIds);
+
             meta[p] = {
               ...meta[p],
               accountId: isolatedId,
@@ -2174,15 +2180,15 @@ export function migrateLegacyAccountAliases(): void {
               ownerEmail: meta[p]?.ownerEmail,
               status: "unresolved",
               legacyId: trimmedVal,
-              candidateAccountIds: [targetAccountIdForSingleEmail].filter(Boolean),
-              candidateEmails: Array.from(new Set([...allCandidateEmails, ...claimingEmails])),
+              candidateAccountIds,
+              candidateEmails: allCandEmails,
               updatedAt: Date.now(),
             };
             migrationMeta.unresolvedPhoneAliases = migrationMeta.unresolvedPhoneAliases || {};
             migrationMeta.unresolvedPhoneAliases[p] = {
               legacyId: trimmedVal,
-              candidateAccountIds: [targetAccountIdForSingleEmail].filter(Boolean),
-              candidateEmails: Array.from(new Set([...allCandidateEmails, ...claimingEmails])),
+              candidateAccountIds,
+              candidateEmails: allCandEmails,
               quarantinedAt: Date.now(),
             };
             modified = true;
@@ -2196,11 +2202,65 @@ export function migrateLegacyAccountAliases(): void {
 
       if (partition.isSingleOwner) {
         // Single customer who changed their email!
-        // DO NOT quarantine the legacy bucket.
+        // Filter the legacy copy by the resolved owner, and quarantine records if other explicit owners exist.
         const ownerCluster = partition.clusters[0];
         const canonicalId = ownerCluster.canonicalId;
 
-        const copySuccess = copyCustomerData(trimmedVal, canonicalId);
+        const singleOwnerPhones: string[] = [];
+        for (const em of ownerCluster.emails) {
+          if (meta[em]?.phone) {
+            const p = normalizeExplicitPhoneToken(meta[em].phone);
+            if (p && !singleOwnerPhones.includes(p)) {
+              const recOwner = meta[p]?.ownerEmail?.toLowerCase().trim();
+              const resOwner = recOwner ? getVerifiedRootOwner(recOwner, meta) : undefined;
+              const hasConflictingReverse = Object.entries(meta).some(([otherEm, otherMeta]) => {
+                if (!otherEm.includes("@")) return false;
+                const normEm = otherEm.toLowerCase().trim();
+                if (ownerCluster.emails.includes(normEm)) return false;
+                return normalizeExplicitPhoneToken(otherMeta?.phone) === p;
+              });
+              if (!hasConflictingReverse && (!recOwner || (resOwner && ownerCluster.emails.includes(resOwner)))) {
+                singleOwnerPhones.push(p);
+              }
+            }
+          }
+        }
+        for (const p of nonEmailKeys) {
+          const normP = normalizeExplicitPhoneToken(p);
+          if (!normP) continue;
+          const recordedOwner = meta[p]?.ownerEmail?.toLowerCase().trim();
+          const resolvedOwner = getVerifiedRootOwner(recordedOwner, meta);
+          const belongsToCluster = Boolean(
+            !recordedOwner ||
+            (resolvedOwner && ownerCluster.emails.includes(resolvedOwner)) ||
+            (resolvedOwner && resolvedOwner === ownerCluster.canonicalEmail)
+          );
+          if (belongsToCluster && !singleOwnerPhones.includes(normP)) {
+            singleOwnerPhones.push(normP);
+          }
+        }
+
+        const singleOwnerAllowedEmails = new Set<string>(ownerCluster.emails);
+        for (const em of ownerCluster.emails) {
+          const root = resolveRootOwner(em, meta);
+          if (root) singleOwnerAllowedEmails.add(root.toLowerCase().trim());
+        }
+        for (const [em] of Object.entries(meta)) {
+          if (em.includes("@")) {
+            const norm = em.toLowerCase().trim();
+            const root = resolveRootOwner(norm, meta);
+            if (root && (singleOwnerAllowedEmails.has(root) || ownerCluster.emails.includes(root))) {
+              singleOwnerAllowedEmails.add(norm);
+            }
+          }
+        }
+
+        const copySuccess = copyCustomerData(trimmedVal, canonicalId, {
+          filterByOwnerEmail: ownerCluster.canonicalEmail,
+          allowedEmails: Array.from(singleOwnerAllowedEmails),
+          verifiedPhones: singleOwnerPhones,
+        });
+
         if (!copySuccess) {
           migrationMeta.failedQuarantineKeys = migrationMeta.failedQuarantineKeys || {};
           migrationMeta.failedQuarantineKeys[`retry_migration_${trimmedVal}`] = true;
@@ -2212,7 +2272,61 @@ export function migrateLegacyAccountAliases(): void {
           delete migrationMeta.failedQuarantineKeys[`retry_migration_${trimmedVal}`];
         }
 
-        clearFalseQuarantine(trimmedVal, canonicalId, migrationMeta);
+        // Check if the legacy bucket still contains records belonging to a different explicit owner
+        const hasRecordsFromDifferentOwner = (() => {
+          try {
+            const safeVal = trimmedVal.toLowerCase().replace(/[^a-z0-9_]/g, (ch) => `_${ch.charCodeAt(0).toString(16)}_`);
+            const sources = [
+              `palluvo_ecommerce_orders_${safeVal}`,
+              `palluvo_ecommerce_orders_${trimmedVal}`,
+              `palluvo_quarantine_palluvo_ecommerce_orders_${safeVal}`,
+              `palluvo_quarantine_palluvo_ecommerce_orders_${trimmedVal}`,
+              `palluvo_ecommerce_addresses_${safeVal}`,
+              `palluvo_ecommerce_addresses_${trimmedVal}`,
+              `palluvo_quarantine_palluvo_ecommerce_addresses_${safeVal}`,
+              `palluvo_quarantine_palluvo_ecommerce_addresses_${trimmedVal}`,
+            ];
+            for (const src of sources) {
+              const raw = localStorage.getItem(src);
+              if (!raw) continue;
+              const parsed = JSON.parse(raw);
+              if (!Array.isArray(parsed)) continue;
+              for (const item of parsed) {
+                if (!item || typeof item !== "object") continue;
+                const rec = item as Record<string, unknown>;
+                const cust = rec.customer as Record<string, unknown> | undefined;
+                const ems = [
+                  typeof cust?.email === "string" ? cust.email.toLowerCase().trim() : "",
+                  typeof rec.email === "string" ? rec.email.toLowerCase().trim() : "",
+                  typeof rec.ownerEmail === "string" ? rec.ownerEmail.toLowerCase().trim() : "",
+                  typeof rec.userEmail === "string" ? rec.userEmail.toLowerCase().trim() : "",
+                ].filter(Boolean);
+                for (const em of ems) {
+                  const root = (resolveRootOwner(em, meta) || em).toLowerCase().trim();
+                  if (!singleOwnerAllowedEmails.has(em) && !singleOwnerAllowedEmails.has(root)) {
+                    return true;
+                  }
+                }
+              }
+            }
+          } catch {}
+          return false;
+        })();
+
+        if (hasRecordsFromDifferentOwner) {
+          // Shared legacy bucket still contains records from another explicit owner:
+          // Keep the legacy bucket quarantined so records with a different owner remain isolated!
+          quarantineLegacyBucket(trimmedVal);
+          migrationMeta.quarantinedLegacyBuckets = migrationMeta.quarantinedLegacyBuckets || {};
+          migrationMeta.quarantinedLegacyBuckets[trimmedVal] = {
+            quarantinedAt: Date.now(),
+            emails: ownerCluster.emails,
+          };
+          migrationMeta.quarantinedCollisionIds = migrationMeta.quarantinedCollisionIds || {};
+          migrationMeta.quarantinedCollisionIds[trimmedVal] = ownerCluster.emails;
+        } else {
+          clearFalseQuarantine(trimmedVal, canonicalId, migrationMeta);
+        }
 
         for (const e of emailKeys) {
           map[e] = canonicalId;
@@ -2237,6 +2351,32 @@ export function migrateLegacyAccountAliases(): void {
           if (!belongsToCluster) {
             const isolatedId = `usr_phone_${p}`;
             map[p] = isolatedId;
+
+            const candEmails = Array.from(new Set([
+              ...ownerCluster.emails,
+              ...(recordedOwner ? [recordedOwner] : []),
+              ...(resolvedOwner ? [resolvedOwner] : []),
+            ]));
+
+            const candAccIds = new Set<string>([canonicalId]);
+            if (resolvedOwner) {
+              const otherTarget = map[resolvedOwner] || meta[resolvedOwner]?.accountId;
+              if (otherTarget && !isQuarantinedAccountId(otherTarget)) {
+                candAccIds.add(otherTarget);
+              } else if (resolvedOwner.includes("@")) {
+                candAccIds.add(resolvedOwner === "radhika.sharma@example.com" ? "usr_demo_radhika" : `usr_email_${encodeIdentifierToId(resolvedOwner)}`);
+              }
+            }
+            if (recordedOwner) {
+              const otherTarget = map[recordedOwner] || meta[recordedOwner]?.accountId;
+              if (otherTarget && !isQuarantinedAccountId(otherTarget)) {
+                candAccIds.add(otherTarget);
+              } else if (recordedOwner.includes("@")) {
+                candAccIds.add(recordedOwner === "radhika.sharma@example.com" ? "usr_demo_radhika" : `usr_email_${encodeIdentifierToId(recordedOwner)}`);
+              }
+            }
+            const candidateAccountIds = Array.from(candAccIds);
+
             meta[p] = {
               ...meta[p],
               accountId: isolatedId,
@@ -2245,15 +2385,15 @@ export function migrateLegacyAccountAliases(): void {
               ownerEmail: recordedOwner,
               status: "unresolved",
               legacyId: trimmedVal,
-              candidateAccountIds: [canonicalId],
-              candidateEmails: ownerCluster.emails,
+              candidateAccountIds,
+              candidateEmails: candEmails,
               updatedAt: Date.now(),
             };
             migrationMeta.unresolvedPhoneAliases = migrationMeta.unresolvedPhoneAliases || {};
             migrationMeta.unresolvedPhoneAliases[p] = {
               legacyId: trimmedVal,
-              candidateAccountIds: [canonicalId],
-              candidateEmails: ownerCluster.emails,
+              candidateAccountIds,
+              candidateEmails: candEmails,
               quarantinedAt: Date.now(),
             };
             modified = true;
@@ -2448,6 +2588,45 @@ export function migrateLegacyAccountAliases(): void {
             // DO NOT silently discard or delete! Keep recoverable and isolate from ambiguous legacy bucket.
             const isolatedId = `usr_phone_${p}`;
             map[p] = isolatedId;
+
+            const recordedOwner = meta[p]?.ownerEmail?.toLowerCase().trim();
+            const claimantEmails = claimingEmailsByPhone.get(p) || [];
+            const allCandidateEmails = Array.from(
+              new Set([
+                ...partition.clusters.flatMap((c) => c.emails),
+                ...claimantEmails,
+                ...(recordedOwner ? [recordedOwner] : []),
+              ])
+            );
+
+            const candAccountIds = new Set<string>(partition.clusters.map((c) => c.canonicalId));
+            for (const em of claimantEmails) {
+              const root = getVerifiedRootOwner(em, meta) || em;
+              const mappedId = map[root] || meta[root]?.accountId || map[em] || meta[em]?.accountId;
+              if (mappedId && !isQuarantinedAccountId(mappedId)) {
+                candAccountIds.add(mappedId);
+              } else if (root.includes("@")) {
+                const defaultId = root === "radhika.sharma@example.com"
+                  ? "usr_demo_radhika"
+                  : `usr_email_${encodeIdentifierToId(root)}`;
+                candAccountIds.add(defaultId);
+              }
+            }
+            if (recordedOwner) {
+              const root = getVerifiedRootOwner(recordedOwner, meta) || recordedOwner;
+              const mappedId = map[root] || meta[root]?.accountId || map[recordedOwner] || meta[recordedOwner]?.accountId;
+              if (mappedId && !isQuarantinedAccountId(mappedId)) {
+                candAccountIds.add(mappedId);
+              } else if (root.includes("@")) {
+                const defaultId = root === "radhika.sharma@example.com"
+                  ? "usr_demo_radhika"
+                  : `usr_email_${encodeIdentifierToId(root)}`;
+                candAccountIds.add(defaultId);
+              }
+            }
+
+            const candidateAccountIds = Array.from(candAccountIds);
+
             meta[p] = {
               ...meta[p],
               accountId: isolatedId,
@@ -2456,15 +2635,15 @@ export function migrateLegacyAccountAliases(): void {
               ownerEmail: meta[p]?.ownerEmail,
               status: "unresolved",
               legacyId: trimmedVal,
-              candidateAccountIds: partition.clusters.map((c) => c.canonicalId),
-              candidateEmails: Array.from(new Set([...partition.clusters.flatMap((c) => c.emails), ...(claimingEmailsByPhone.get(p) || [])])),
+              candidateAccountIds,
+              candidateEmails: allCandidateEmails,
               updatedAt: Date.now(),
             };
             migrationMeta.unresolvedPhoneAliases = migrationMeta.unresolvedPhoneAliases || {};
             migrationMeta.unresolvedPhoneAliases[p] = {
               legacyId: trimmedVal,
-              candidateAccountIds: partition.clusters.map((c) => c.canonicalId),
-              candidateEmails: Array.from(new Set([...partition.clusters.flatMap((c) => c.emails), ...(claimingEmailsByPhone.get(p) || [])])),
+              candidateAccountIds,
+              candidateEmails: allCandidateEmails,
               quarantinedAt: Date.now(),
             };
             modified = true;
@@ -2831,7 +3010,11 @@ export function lookupAccountId(identifier?: string | null): string | null {
           const targetId = (val.startsWith("usr_email_") || val === "usr_demo_radhika")
             ? val
             : ownerCluster.canonicalId;
-          const copySuccess = copyCustomerData(val, targetId);
+          const copySuccess = copyCustomerData(val, targetId, {
+            filterByOwnerEmail: ownerCluster.canonicalEmail,
+            allowedEmails: ownerCluster.emails,
+            verifiedPhones: [key].map((p) => normalizeExplicitPhoneToken(p)).filter(Boolean) as string[],
+          });
           if (!copySuccess) {
             return val;
           }
@@ -2911,9 +3094,20 @@ export function lookupAccountId(identifier?: string | null): string | null {
         const checkOwner = resolvedOwner;
 
         if (checkOwner) {
-          const ownerTarget = map[checkOwner] || meta[checkOwner]?.accountId;
+          const ownerTarget = map[checkOwner] || meta[checkOwner]?.accountId || (
+            checkOwner === "radhika.sharma@example.com"
+              ? "usr_demo_radhika"
+              : `usr_email_${encodeIdentifierToId(checkOwner)}`
+          );
           if (ownerTarget && !isQuarantinedAccountId(ownerTarget) && ownerTarget !== val) {
-            if (candidateAccountIds.length === 0 || candidateAccountIds.includes(ownerTarget)) {
+            const isCandidate = candidateAccountIds.length === 0 ||
+              candidateAccountIds.includes(ownerTarget) ||
+              candidateEmails.includes(checkOwner) ||
+              candidateEmails.some((ce) => {
+                const ceRoot = getVerifiedRootOwner(ce, meta) || ce;
+                return ceRoot.toLowerCase().trim() === checkOwner;
+              });
+            if (isCandidate) {
               resolvedId = ownerTarget;
               resolvedOwnerEmail = checkOwner;
             }
@@ -2924,11 +3118,23 @@ export function lookupAccountId(identifier?: string | null): string | null {
         if (!resolvedId && recordedLegacyId && candidateEmails.length > 0) {
           const foundEmail = findOwnerEmailForPhoneInRecords(key, candidateEmails, recordedLegacyId);
           if (foundEmail) {
-            const targetId = map[foundEmail] || meta[foundEmail]?.accountId;
+            const normFound = foundEmail.toLowerCase().trim();
+            const targetId = map[normFound] || meta[normFound]?.accountId || (
+              normFound === "radhika.sharma@example.com"
+                ? "usr_demo_radhika"
+                : `usr_email_${encodeIdentifierToId(normFound)}`
+            );
             if (targetId && !isQuarantinedAccountId(targetId) && targetId !== val) {
-              if (candidateAccountIds.length === 0 || candidateAccountIds.includes(targetId)) {
+              const isCandidate = candidateAccountIds.length === 0 ||
+                candidateAccountIds.includes(targetId) ||
+                candidateEmails.includes(normFound) ||
+                candidateEmails.some((ce) => {
+                  const ceRoot = getVerifiedRootOwner(ce, meta) || ce;
+                  return ceRoot.toLowerCase().trim() === normFound;
+                });
+              if (isCandidate) {
                 resolvedId = targetId;
-                resolvedOwnerEmail = foundEmail;
+                resolvedOwnerEmail = normFound;
               }
             }
           }
