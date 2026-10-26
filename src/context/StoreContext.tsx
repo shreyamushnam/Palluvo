@@ -1127,6 +1127,24 @@ export function copyCustomerData(
       return `json:${JSON.stringify(ord)}`;
     };
 
+    const getExactOrderRowKey = (ord: Record<string, unknown>): string => {
+      if (typeof ord.id === "string" && ord.id.trim()) {
+        return `id:${ord.id.trim()}`;
+      }
+      if (typeof ord.orderNumber === "string" && ord.orderNumber.trim()) {
+        return `num:${ord.orderNumber.trim()}`;
+      }
+      const sortedKeys = Object.keys(ord).sort();
+      const parts: string[] = [];
+      for (const k of sortedKeys) {
+        const val = ord[k];
+        if (val !== undefined && typeof val !== "function") {
+          parts.push(`${k}:${typeof val === "object" && val !== null ? JSON.stringify(val) : String(val)}`);
+        }
+      }
+      return `exact_ord:${parts.join("|")}`;
+    };
+
     const isOrderVerifiedForOwner = (ord: Record<string, unknown>, isSameBucket = false): boolean => {
       const cust = ord.customer as Record<string, unknown> | undefined;
       const custEmail = typeof cust?.email === "string" ? cust.email.toLowerCase().trim() : "";
@@ -1181,7 +1199,9 @@ export function copyCustomerData(
     const mergedOrders: Record<string, unknown>[] = [];
     const foreignOrders: Record<string, unknown>[] = [];
     const seenOrderKeys = new Set<string>();
+    const seenForeignOrderKeys = new Set<string>();
     let targetOrdersFilteredCount = 0;
+    let totalTargetOrdersRead = 0;
 
     const targetOrderKeys = Array.from(new Set([
       targetOrdersKey,
@@ -1196,14 +1216,21 @@ export function copyCustomerData(
           if (Array.isArray(parsed)) {
             for (const item of parsed) {
               if (item && typeof item === "object") {
-                const dedupKey = getOrderDedupKey(item as Record<string, unknown>);
-                if (!seenOrderKeys.has(dedupKey)) {
-                  seenOrderKeys.add(dedupKey);
-                  if (hasFilter && !isOrderVerifiedForOwner(item as Record<string, unknown>, true)) {
-                    foreignOrders.push(item as Record<string, unknown>);
-                    targetOrdersFilteredCount++;
-                  } else {
-                    mergedOrders.push(item as Record<string, unknown>);
+                totalTargetOrdersRead++;
+                const ord = item as Record<string, unknown>;
+                const isForeign = hasFilter && !isOrderVerifiedForOwner(ord, true);
+                if (isForeign) {
+                  targetOrdersFilteredCount++;
+                  const dedupKey = getOrderDedupKey(ord);
+                  if (!seenForeignOrderKeys.has(dedupKey)) {
+                    seenForeignOrderKeys.add(dedupKey);
+                    foreignOrders.push(ord);
+                  }
+                } else {
+                  const dedupKey = getOrderDedupKey(ord);
+                  if (!seenOrderKeys.has(dedupKey)) {
+                    seenOrderKeys.add(dedupKey);
+                    mergedOrders.push(ord);
                   }
                 }
               }
@@ -1233,12 +1260,17 @@ export function copyCustomerData(
         for (const item of parsed) {
           if (!item || typeof item !== "object") continue;
           const ord = item as Record<string, unknown>;
-          const dedupKey = getOrderDedupKey(ord);
-          if (!seenOrderKeys.has(dedupKey)) {
-            seenOrderKeys.add(dedupKey);
-            if (isOrderVerifiedForOwner(ord, false)) {
+          const isVerifiedOwner = isOrderVerifiedForOwner(ord, false);
+          if (isVerifiedOwner) {
+            const dedupKey = getOrderDedupKey(ord);
+            if (!seenOrderKeys.has(dedupKey)) {
+              seenOrderKeys.add(dedupKey);
               mergedOrders.push(ord);
-            } else if (hasFilter) {
+            }
+          } else if (hasFilter) {
+            const dedupKey = getOrderDedupKey(ord);
+            if (!seenForeignOrderKeys.has(dedupKey)) {
+              seenForeignOrderKeys.add(dedupKey);
               foreignOrders.push(ord);
             }
           }
@@ -1249,7 +1281,7 @@ export function copyCustomerData(
     }
 
     // Recover any legacy entries from shared unknown quarantine that positively belong to this account
-    const claimedUnknownOrderKeys = new Set<string>();
+    const claimedUnknownOrderCounts = new Map<string, number>();
     const unknownOrdersKey = "palluvo_quarantine_palluvo_ecommerce_orders_unknown";
     try {
       const rawUnknown = localStorage.getItem(unknownOrdersKey);
@@ -1259,10 +1291,11 @@ export function copyCustomerData(
           for (const item of parsed) {
             if (!item || typeof item !== "object") continue;
             const ord = item as Record<string, unknown>;
-            const dedupKey = getOrderDedupKey(ord);
             // Require affirmative ownership evidence to claim from unknown
             if (isOrderVerifiedForOwner(ord, false)) {
-              claimedUnknownOrderKeys.add(dedupKey);
+              const exactKey = getExactOrderRowKey(ord);
+              claimedUnknownOrderCounts.set(exactKey, (claimedUnknownOrderCounts.get(exactKey) || 0) + 1);
+              const dedupKey = getOrderDedupKey(ord);
               if (!seenOrderKeys.has(dedupKey)) {
                 seenOrderKeys.add(dedupKey);
                 mergedOrders.push(ord);
@@ -1362,6 +1395,10 @@ export function copyCustomerData(
       localStorage.getItem(`palluvo_quarantine_foreign_palluvo_ecommerce_orders_${toSafe}`) ||
       (toAccountId !== toSafe && localStorage.getItem(`palluvo_quarantine_foreign_palluvo_ecommerce_orders_${toAccountId}`))
     );
+    const hasRawTargetOrders = Boolean(
+      toAccountId !== toSafe &&
+      localStorage.getItem(`palluvo_ecommerce_orders_${toAccountId}`)
+    );
 
     let ordersWriteSuccess = true;
     const shouldWriteOrders = sourceReadSuccess && foreignOrdersQuarantineSuccess && (
@@ -1369,8 +1406,10 @@ export function copyCustomerData(
       (initialOrderCount === 0 && mergedOrders.length > 0) ||
       (isSameAccount && hasFilter) ||
       (hasForeignBackupToClear && foreignOrders.length === 0 && mergedOrders.length > 0) ||
+      (hasRawTargetOrders && mergedOrders.length > 0) ||
       targetOrdersFilteredCount > 0 ||
-      (claimedUnknownOrderKeys.size > 0 && mergedOrders.length > 0)
+      (totalTargetOrdersRead > mergedOrders.length && mergedOrders.length > 0) ||
+      (claimedUnknownOrderCounts.size > 0 && mergedOrders.length > 0)
     );
 
     if (shouldWriteOrders) {
@@ -1395,16 +1434,28 @@ export function copyCustomerData(
               }
             } catch {}
           }
-          if (claimedUnknownOrderKeys.size > 0) {
+          if (claimedUnknownOrderCounts.size > 0) {
             try {
               const rawUnknown = localStorage.getItem(unknownOrdersKey);
               if (rawUnknown && rawUnknown.trim()) {
                 const parsed = JSON.parse(rawUnknown);
                 if (Array.isArray(parsed)) {
-                  const remaining = parsed.filter((item) => {
-                    if (!item || typeof item !== "object") return true;
-                    return !claimedUnknownOrderKeys.has(getOrderDedupKey(item as Record<string, unknown>));
-                  });
+                  const countsToConsume = new Map(claimedUnknownOrderCounts);
+                  const remaining: Record<string, unknown>[] = [];
+                  for (const item of parsed) {
+                    if (!item || typeof item !== "object") {
+                      remaining.push(item);
+                      continue;
+                    }
+                    const ord = item as Record<string, unknown>;
+                    const exactKey = getExactOrderRowKey(ord);
+                    const remainingCount = countsToConsume.get(exactKey) || 0;
+                    if (remainingCount > 0) {
+                      countsToConsume.set(exactKey, remainingCount - 1);
+                    } else {
+                      remaining.push(ord);
+                    }
+                  }
                   if (remaining.length === 0) {
                     localStorage.removeItem(unknownOrdersKey);
                   } else {
@@ -1455,6 +1506,7 @@ export function copyCustomerData(
       if (typeof addr.id === "string" && addr.id.trim()) {
         return `id:${addr.id.trim()}`;
       }
+      const rawName = typeof addr.name === "string" ? addr.name.trim().toLowerCase() : "";
       const rawPhone = addr.phone;
       const phone = typeof rawPhone === "string"
         ? rawPhone.replace(/\D/g, "").slice(-10)
@@ -1462,11 +1514,31 @@ export function copyCustomerData(
         ? String(rawPhone).replace(/\D/g, "").slice(-10)
         : "";
       const line = typeof addr.addressLine === "string" ? addr.addressLine.trim().toLowerCase() : "";
+      const line2 = typeof addr.addressLine2 === "string" ? addr.addressLine2.trim().toLowerCase() : "";
+      const city = typeof addr.city === "string" ? addr.city.trim().toLowerCase() : "";
+      const state = typeof addr.state === "string" ? addr.state.trim().toLowerCase() : "";
       const pin = typeof addr.pincode === "string" ? addr.pincode.trim() : "";
+      const type = typeof addr.type === "string" ? addr.type.trim().toLowerCase() : "";
+      const isDefault = Boolean(addr.isDefault);
       if (line && pin) {
-        return `loc:${phone}_${line}_${pin}`;
+        return `loc:${rawName}_${phone}_${line}_${line2}_${city}_${state}_${pin}_${type}_${isDefault}`;
       }
       return `json:${JSON.stringify(addr)}`;
+    };
+
+    const getExactAddressRowKey = (addr: Record<string, unknown>): string => {
+      if (typeof addr.id === "string" && addr.id.trim()) {
+        return `id:${addr.id.trim()}`;
+      }
+      const sortedKeys = Object.keys(addr).sort();
+      const parts: string[] = [];
+      for (const k of sortedKeys) {
+        const val = addr[k];
+        if (val !== undefined && typeof val !== "function") {
+          parts.push(`${k}:${typeof val === "object" && val !== null ? JSON.stringify(val) : String(val)}`);
+        }
+      }
+      return `exact_addr:${parts.join("|")}`;
     };
 
     const isAddressVerifiedForOwner = (addr: Record<string, unknown>, isSameBucket = false): boolean => {
@@ -1515,7 +1587,9 @@ export function copyCustomerData(
     const mergedAddrs: Record<string, unknown>[] = [];
     const foreignAddrs: Record<string, unknown>[] = [];
     const seenAddrKeys = new Set<string>();
+    const seenForeignAddrKeys = new Set<string>();
     let targetAddrsFilteredCount = 0;
+    let totalTargetAddrsRead = 0;
 
     const targetAddrKeys = Array.from(new Set([
       targetAddrKey,
@@ -1530,14 +1604,21 @@ export function copyCustomerData(
           if (Array.isArray(parsed)) {
             for (const item of parsed) {
               if (item && typeof item === "object") {
-                const dedupKey = getAddressDedupKey(item as Record<string, unknown>);
-                if (!seenAddrKeys.has(dedupKey)) {
-                  seenAddrKeys.add(dedupKey);
-                  if (hasFilter && !isAddressVerifiedForOwner(item as Record<string, unknown>, true)) {
-                    foreignAddrs.push(item as Record<string, unknown>);
-                    targetAddrsFilteredCount++;
-                  } else {
-                    mergedAddrs.push(item as Record<string, unknown>);
+                totalTargetAddrsRead++;
+                const addr = item as Record<string, unknown>;
+                const isForeign = hasFilter && !isAddressVerifiedForOwner(addr, true);
+                if (isForeign) {
+                  targetAddrsFilteredCount++;
+                  const dedupKey = getAddressDedupKey(addr);
+                  if (!seenForeignAddrKeys.has(dedupKey)) {
+                    seenForeignAddrKeys.add(dedupKey);
+                    foreignAddrs.push(addr);
+                  }
+                } else {
+                  const dedupKey = getAddressDedupKey(addr);
+                  if (!seenAddrKeys.has(dedupKey)) {
+                    seenAddrKeys.add(dedupKey);
+                    mergedAddrs.push(addr);
                   }
                 }
               }
@@ -1567,12 +1648,17 @@ export function copyCustomerData(
         for (const item of parsed) {
           if (!item || typeof item !== "object") continue;
           const addr = item as Record<string, unknown>;
-          const dedupKey = getAddressDedupKey(addr);
-          if (!seenAddrKeys.has(dedupKey)) {
-            seenAddrKeys.add(dedupKey);
-            if (isAddressVerifiedForOwner(addr, false)) {
+          const isVerifiedOwner = isAddressVerifiedForOwner(addr, false);
+          if (isVerifiedOwner) {
+            const dedupKey = getAddressDedupKey(addr);
+            if (!seenAddrKeys.has(dedupKey)) {
+              seenAddrKeys.add(dedupKey);
               mergedAddrs.push(addr);
-            } else if (hasFilter) {
+            }
+          } else if (hasFilter) {
+            const dedupKey = getAddressDedupKey(addr);
+            if (!seenForeignAddrKeys.has(dedupKey)) {
+              seenForeignAddrKeys.add(dedupKey);
               foreignAddrs.push(addr);
             }
           }
@@ -1583,7 +1669,7 @@ export function copyCustomerData(
     }
 
     // Recover any legacy entries from shared unknown quarantine that positively belong to this account
-    const claimedUnknownAddrKeys = new Set<string>();
+    const claimedUnknownAddrCounts = new Map<string, number>();
     const unknownAddrsKey = "palluvo_quarantine_palluvo_ecommerce_addresses_unknown";
     try {
       const rawUnknown = localStorage.getItem(unknownAddrsKey);
@@ -1593,10 +1679,11 @@ export function copyCustomerData(
           for (const item of parsed) {
             if (!item || typeof item !== "object") continue;
             const addr = item as Record<string, unknown>;
-            const dedupKey = getAddressDedupKey(addr);
             // Require affirmative ownership evidence to claim from unknown
             if (isAddressVerifiedForOwner(addr, false)) {
-              claimedUnknownAddrKeys.add(dedupKey);
+              const exactKey = getExactAddressRowKey(addr);
+              claimedUnknownAddrCounts.set(exactKey, (claimedUnknownAddrCounts.get(exactKey) || 0) + 1);
+              const dedupKey = getAddressDedupKey(addr);
               if (!seenAddrKeys.has(dedupKey)) {
                 seenAddrKeys.add(dedupKey);
                 mergedAddrs.push(addr);
@@ -1694,6 +1781,10 @@ export function copyCustomerData(
       localStorage.getItem(`palluvo_quarantine_foreign_palluvo_ecommerce_addresses_${toSafe}`) ||
       (toAccountId !== toSafe && localStorage.getItem(`palluvo_quarantine_foreign_palluvo_ecommerce_addresses_${toAccountId}`))
     );
+    const hasRawTargetAddrs = Boolean(
+      toAccountId !== toSafe &&
+      localStorage.getItem(`palluvo_ecommerce_addresses_${toAccountId}`)
+    );
 
     let addrsWriteSuccess = true;
     const shouldWriteAddrs = sourceReadSuccess && foreignAddrsQuarantineSuccess && (
@@ -1701,8 +1792,10 @@ export function copyCustomerData(
       (initialAddrCount === 0 && mergedAddrs.length > 0) ||
       (isSameAccount && hasFilter) ||
       (hasForeignAddrBackupToClear && foreignAddrs.length === 0 && mergedAddrs.length > 0) ||
+      (hasRawTargetAddrs && mergedAddrs.length > 0) ||
       targetAddrsFilteredCount > 0 ||
-      (claimedUnknownAddrKeys.size > 0 && mergedAddrs.length > 0)
+      (totalTargetAddrsRead > mergedAddrs.length && mergedAddrs.length > 0) ||
+      (claimedUnknownAddrCounts.size > 0 && mergedAddrs.length > 0)
     );
 
     if (shouldWriteAddrs) {
@@ -1727,16 +1820,28 @@ export function copyCustomerData(
               }
             } catch {}
           }
-          if (claimedUnknownAddrKeys.size > 0) {
+          if (claimedUnknownAddrCounts.size > 0) {
             try {
               const rawUnknown = localStorage.getItem(unknownAddrsKey);
               if (rawUnknown && rawUnknown.trim()) {
                 const parsed = JSON.parse(rawUnknown);
                 if (Array.isArray(parsed)) {
-                  const remaining = parsed.filter((item) => {
-                    if (!item || typeof item !== "object") return true;
-                    return !claimedUnknownAddrKeys.has(getAddressDedupKey(item as Record<string, unknown>));
-                  });
+                  const countsToConsume = new Map(claimedUnknownAddrCounts);
+                  const remaining: Record<string, unknown>[] = [];
+                  for (const item of parsed) {
+                    if (!item || typeof item !== "object") {
+                      remaining.push(item);
+                      continue;
+                    }
+                    const addr = item as Record<string, unknown>;
+                    const exactKey = getExactAddressRowKey(addr);
+                    const remainingCount = countsToConsume.get(exactKey) || 0;
+                    if (remainingCount > 0) {
+                      countsToConsume.set(exactKey, remainingCount - 1);
+                    } else {
+                      remaining.push(addr);
+                    }
+                  }
                   if (remaining.length === 0) {
                     localStorage.removeItem(unknownAddrsKey);
                   } else {
