@@ -2285,8 +2285,11 @@ export function reviewAndRepairQuarantinedUnknownRecords(
             const rootOwners = Array.from(new Set(validEmails.map((e) => (resolveRootOwner(e, meta) || e).toLowerCase().trim())));
             if (rootOwners.length === 1) {
               const root = rootOwners[0];
-              const accId = map[root] || meta[root]?.accountId;
-              if (accId) targetAccounts.add(root);
+              const accId = map[root] || meta[root]?.accountId || getDirectLegacyEmailId(root);
+              if (accId && !isQuarantinedAccountId(accId)) {
+                map[root] = accId;
+                targetAccounts.add(root);
+              }
             }
           }
           const phones = extractExplicitPhoneTokens(ord);
@@ -2300,13 +2303,17 @@ export function reviewAndRepairQuarantinedUnknownRecords(
             );
             if (!isUnresolved && meta[p]?.ownerEmail) {
               const root = (resolveRootOwner(meta[p].ownerEmail, meta) || meta[p].ownerEmail).toLowerCase().trim();
-              if (map[root] || meta[root]?.accountId) targetAccounts.add(root);
+              const accId = map[root] || meta[root]?.accountId || getDirectLegacyEmailId(root);
+              if (accId && !isQuarantinedAccountId(accId)) {
+                map[root] = accId;
+                targetAccounts.add(root);
+              }
             }
           }
         }
 
         for (const root of targetAccounts) {
-          const accId = map[root] || meta[root]?.accountId;
+          const accId = map[root] || meta[root]?.accountId || getDirectLegacyEmailId(root);
           if (accId) {
             const success = copyCustomerData(accId, accId, {
               filterByOwnerEmail: root,
@@ -2342,8 +2349,11 @@ export function reviewAndRepairQuarantinedUnknownRecords(
             const rootOwners = Array.from(new Set(validEmails.map((e) => (resolveRootOwner(e, meta) || e).toLowerCase().trim())));
             if (rootOwners.length === 1) {
               const root = rootOwners[0];
-              const accId = map[root] || meta[root]?.accountId;
-              if (accId) targetAccounts.add(root);
+              const accId = map[root] || meta[root]?.accountId || getDirectLegacyEmailId(root);
+              if (accId && !isQuarantinedAccountId(accId)) {
+                map[root] = accId;
+                targetAccounts.add(root);
+              }
             }
           }
           const phone = normalizeExplicitPhoneToken(addr.phone);
@@ -2356,13 +2366,17 @@ export function reviewAndRepairQuarantinedUnknownRecords(
             );
             if (!isUnresolved && meta[phone]?.ownerEmail) {
               const root = (resolveRootOwner(meta[phone].ownerEmail, meta) || meta[phone].ownerEmail).toLowerCase().trim();
-              if (map[root] || meta[root]?.accountId) targetAccounts.add(root);
+              const accId = map[root] || meta[root]?.accountId || getDirectLegacyEmailId(root);
+              if (accId && !isQuarantinedAccountId(accId)) {
+                map[root] = accId;
+                targetAccounts.add(root);
+              }
             }
           }
         }
 
         for (const root of targetAccounts) {
-          const accId = map[root] || meta[root]?.accountId;
+          const accId = map[root] || meta[root]?.accountId || getDirectLegacyEmailId(root);
           if (accId) {
             const success = copyCustomerData(accId, accId, {
               filterByOwnerEmail: root,
@@ -2372,6 +2386,15 @@ export function reviewAndRepairQuarantinedUnknownRecords(
           }
         }
       }
+    }
+
+    if (Object.keys(map).length > 0) {
+      try {
+        const existingRaw = localStorage.getItem(ACCOUNT_MAP_KEY);
+        if (!existingRaw) {
+          localStorage.setItem(ACCOUNT_MAP_KEY, JSON.stringify(map));
+        }
+      } catch {}
     }
   } catch {}
 
@@ -2485,13 +2508,24 @@ export function migrateLegacyAccountAliases(): void {
               }
             }
           } catch {}
+        } else if (!localStorage.getItem(ACCOUNT_MAP_KEY)) {
+          const newMap: Record<string, string> = { [lowerEmail]: activeAuthUser.id || expectedInjectiveId };
+          try {
+            localStorage.setItem(ACCOUNT_MAP_KEY, JSON.stringify(newMap));
+          } catch {}
         }
       }
+
+      // Run quarantine recovery when the identity map is missing
+      reviewAndRepairQuarantinedUnknownRecords();
       return;
     }
 
     const map = JSON.parse(raw);
-    if (!map || typeof map !== "object" || Array.isArray(map)) return;
+    if (!map || typeof map !== "object" || Array.isArray(map)) {
+      reviewAndRepairQuarantinedUnknownRecords();
+      return;
+    }
     let modified = false;
 
     const meta = getAccountMetadata();
