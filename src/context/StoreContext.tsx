@@ -1181,6 +1181,7 @@ export function copyCustomerData(
     const mergedOrders: Record<string, unknown>[] = [];
     const foreignOrders: Record<string, unknown>[] = [];
     const seenOrderKeys = new Set<string>();
+    let targetOrdersFilteredCount = 0;
 
     const targetOrderKeys = Array.from(new Set([
       targetOrdersKey,
@@ -1200,6 +1201,7 @@ export function copyCustomerData(
                   seenOrderKeys.add(dedupKey);
                   if (hasFilter && !isOrderVerifiedForOwner(item as Record<string, unknown>, true)) {
                     foreignOrders.push(item as Record<string, unknown>);
+                    targetOrdersFilteredCount++;
                   } else {
                     mergedOrders.push(item as Record<string, unknown>);
                   }
@@ -1245,6 +1247,31 @@ export function copyCustomerData(
         sourceReadSuccess = false;
       }
     }
+
+    // Recover any legacy entries from shared unknown quarantine that positively belong to this account
+    const claimedUnknownOrderKeys = new Set<string>();
+    const unknownOrdersKey = "palluvo_quarantine_palluvo_ecommerce_orders_unknown";
+    try {
+      const rawUnknown = localStorage.getItem(unknownOrdersKey);
+      if (rawUnknown && rawUnknown.trim()) {
+        const parsed = JSON.parse(rawUnknown);
+        if (Array.isArray(parsed)) {
+          for (const item of parsed) {
+            if (!item || typeof item !== "object") continue;
+            const ord = item as Record<string, unknown>;
+            const dedupKey = getOrderDedupKey(ord);
+            // Require affirmative ownership evidence to claim from unknown
+            if (isOrderVerifiedForOwner(ord, false)) {
+              claimedUnknownOrderKeys.add(dedupKey);
+              if (!seenOrderKeys.has(dedupKey)) {
+                seenOrderKeys.add(dedupKey);
+                mergedOrders.push(ord);
+              }
+            }
+          }
+        }
+      }
+    } catch {}
 
     let foreignOrdersQuarantineSuccess = true;
 
@@ -1341,7 +1368,9 @@ export function copyCustomerData(
       mergedOrders.length > initialOrderCount ||
       (initialOrderCount === 0 && mergedOrders.length > 0) ||
       (isSameAccount && hasFilter) ||
-      (hasForeignBackupToClear && foreignOrders.length === 0 && mergedOrders.length > 0)
+      (hasForeignBackupToClear && foreignOrders.length === 0 && mergedOrders.length > 0) ||
+      targetOrdersFilteredCount > 0 ||
+      (claimedUnknownOrderKeys.size > 0 && mergedOrders.length > 0)
     );
 
     if (shouldWriteOrders) {
@@ -1363,6 +1392,25 @@ export function copyCustomerData(
               localStorage.removeItem(`palluvo_quarantine_foreign_palluvo_ecommerce_orders_${toSafe}`);
               if (toAccountId !== toSafe) {
                 localStorage.removeItem(`palluvo_quarantine_foreign_palluvo_ecommerce_orders_${toAccountId}`);
+              }
+            } catch {}
+          }
+          if (claimedUnknownOrderKeys.size > 0) {
+            try {
+              const rawUnknown = localStorage.getItem(unknownOrdersKey);
+              if (rawUnknown && rawUnknown.trim()) {
+                const parsed = JSON.parse(rawUnknown);
+                if (Array.isArray(parsed)) {
+                  const remaining = parsed.filter((item) => {
+                    if (!item || typeof item !== "object") return true;
+                    return !claimedUnknownOrderKeys.has(getOrderDedupKey(item as Record<string, unknown>));
+                  });
+                  if (remaining.length === 0) {
+                    localStorage.removeItem(unknownOrdersKey);
+                  } else {
+                    localStorage.setItem(unknownOrdersKey, JSON.stringify(remaining));
+                  }
+                }
               }
             } catch {}
           }
@@ -1467,6 +1515,7 @@ export function copyCustomerData(
     const mergedAddrs: Record<string, unknown>[] = [];
     const foreignAddrs: Record<string, unknown>[] = [];
     const seenAddrKeys = new Set<string>();
+    let targetAddrsFilteredCount = 0;
 
     const targetAddrKeys = Array.from(new Set([
       targetAddrKey,
@@ -1486,6 +1535,7 @@ export function copyCustomerData(
                   seenAddrKeys.add(dedupKey);
                   if (hasFilter && !isAddressVerifiedForOwner(item as Record<string, unknown>, true)) {
                     foreignAddrs.push(item as Record<string, unknown>);
+                    targetAddrsFilteredCount++;
                   } else {
                     mergedAddrs.push(item as Record<string, unknown>);
                   }
@@ -1531,6 +1581,31 @@ export function copyCustomerData(
         sourceReadSuccess = false;
       }
     }
+
+    // Recover any legacy entries from shared unknown quarantine that positively belong to this account
+    const claimedUnknownAddrKeys = new Set<string>();
+    const unknownAddrsKey = "palluvo_quarantine_palluvo_ecommerce_addresses_unknown";
+    try {
+      const rawUnknown = localStorage.getItem(unknownAddrsKey);
+      if (rawUnknown && rawUnknown.trim()) {
+        const parsed = JSON.parse(rawUnknown);
+        if (Array.isArray(parsed)) {
+          for (const item of parsed) {
+            if (!item || typeof item !== "object") continue;
+            const addr = item as Record<string, unknown>;
+            const dedupKey = getAddressDedupKey(addr);
+            // Require affirmative ownership evidence to claim from unknown
+            if (isAddressVerifiedForOwner(addr, false)) {
+              claimedUnknownAddrKeys.add(dedupKey);
+              if (!seenAddrKeys.has(dedupKey)) {
+                seenAddrKeys.add(dedupKey);
+                mergedAddrs.push(addr);
+              }
+            }
+          }
+        }
+      }
+    } catch {}
 
     let foreignAddrsQuarantineSuccess = true;
 
@@ -1625,7 +1700,9 @@ export function copyCustomerData(
       mergedAddrs.length > initialAddrCount ||
       (initialAddrCount === 0 && mergedAddrs.length > 0) ||
       (isSameAccount && hasFilter) ||
-      (hasForeignAddrBackupToClear && foreignAddrs.length === 0 && mergedAddrs.length > 0)
+      (hasForeignAddrBackupToClear && foreignAddrs.length === 0 && mergedAddrs.length > 0) ||
+      targetAddrsFilteredCount > 0 ||
+      (claimedUnknownAddrKeys.size > 0 && mergedAddrs.length > 0)
     );
 
     if (shouldWriteAddrs) {
@@ -1647,6 +1724,25 @@ export function copyCustomerData(
               localStorage.removeItem(`palluvo_quarantine_foreign_palluvo_ecommerce_addresses_${toSafe}`);
               if (toAccountId !== toSafe) {
                 localStorage.removeItem(`palluvo_quarantine_foreign_palluvo_ecommerce_addresses_${toAccountId}`);
+              }
+            } catch {}
+          }
+          if (claimedUnknownAddrKeys.size > 0) {
+            try {
+              const rawUnknown = localStorage.getItem(unknownAddrsKey);
+              if (rawUnknown && rawUnknown.trim()) {
+                const parsed = JSON.parse(rawUnknown);
+                if (Array.isArray(parsed)) {
+                  const remaining = parsed.filter((item) => {
+                    if (!item || typeof item !== "object") return true;
+                    return !claimedUnknownAddrKeys.has(getAddressDedupKey(item as Record<string, unknown>));
+                  });
+                  if (remaining.length === 0) {
+                    localStorage.removeItem(unknownAddrsKey);
+                  } else {
+                    localStorage.setItem(unknownAddrsKey, JSON.stringify(remaining));
+                  }
+                }
               }
             } catch {}
           }
@@ -1708,8 +1804,6 @@ export function clearFalseQuarantine(accountId: string, canonicalId: string, mig
     localStorage.removeItem(`palluvo_quarantine_palluvo_ecommerce_orders_${safeId}`);
     localStorage.removeItem(`palluvo_quarantine_palluvo_ecommerce_addresses_${trimmed}`);
     localStorage.removeItem(`palluvo_quarantine_palluvo_ecommerce_addresses_${safeId}`);
-    localStorage.removeItem("palluvo_quarantine_palluvo_ecommerce_orders_unknown");
-    localStorage.removeItem("palluvo_quarantine_palluvo_ecommerce_addresses_unknown");
 
     const metaToUpdate = migrationMeta || getMigrationMetadata();
     if (metaToUpdate.quarantinedLegacyBuckets) {
