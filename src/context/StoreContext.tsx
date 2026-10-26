@@ -1228,15 +1228,13 @@ export function copyCustomerData(
         }
         if (parsed.length === 0) continue;
 
-        const isSrcSameBucket = isSameAccount || src.includes(toSafe) || src.includes(toAccountId);
-
         for (const item of parsed) {
           if (!item || typeof item !== "object") continue;
           const ord = item as Record<string, unknown>;
           const dedupKey = getOrderDedupKey(ord);
           if (!seenOrderKeys.has(dedupKey)) {
             seenOrderKeys.add(dedupKey);
-            if (isOrderVerifiedForOwner(ord, isSrcSameBucket)) {
+            if (isOrderVerifiedForOwner(ord, false)) {
               mergedOrders.push(ord);
             } else if (hasFilter) {
               foreignOrders.push(ord);
@@ -1331,20 +1329,19 @@ export function copyCustomerData(
           setMigrationMetadata(migrationMeta);
         } catch {}
       }
-    } else {
-      try {
-        localStorage.removeItem(`palluvo_quarantine_foreign_palluvo_ecommerce_orders_${toSafe}`);
-        if (toAccountId !== toSafe) {
-          localStorage.removeItem(`palluvo_quarantine_foreign_palluvo_ecommerce_orders_${toAccountId}`);
-        }
-      } catch {}
     }
+
+    const hasForeignBackupToClear = Boolean(
+      localStorage.getItem(`palluvo_quarantine_foreign_palluvo_ecommerce_orders_${toSafe}`) ||
+      (toAccountId !== toSafe && localStorage.getItem(`palluvo_quarantine_foreign_palluvo_ecommerce_orders_${toAccountId}`))
+    );
 
     let ordersWriteSuccess = true;
     const shouldWriteOrders = sourceReadSuccess && foreignOrdersQuarantineSuccess && (
       mergedOrders.length > initialOrderCount ||
       (initialOrderCount === 0 && mergedOrders.length > 0) ||
-      (isSameAccount && hasFilter)
+      (isSameAccount && hasFilter) ||
+      (hasForeignBackupToClear && foreignOrders.length === 0 && mergedOrders.length > 0)
     );
 
     if (shouldWriteOrders) {
@@ -1361,6 +1358,14 @@ export function copyCustomerData(
               localStorage.removeItem(`palluvo_ecommerce_orders_${toAccountId}`);
             } catch {}
           }
+          if (foreignOrders.length === 0) {
+            try {
+              localStorage.removeItem(`palluvo_quarantine_foreign_palluvo_ecommerce_orders_${toSafe}`);
+              if (toAccountId !== toSafe) {
+                localStorage.removeItem(`palluvo_quarantine_foreign_palluvo_ecommerce_orders_${toAccountId}`);
+              }
+            } catch {}
+          }
           try {
             const migrationMeta = getMigrationMetadata();
             if (migrationMeta.failedQuarantineKeys?.[targetOrdersKey]) {
@@ -1374,6 +1379,15 @@ export function copyCustomerData(
       }
     } else if (!sourceReadSuccess || !foreignOrdersQuarantineSuccess) {
       ordersWriteSuccess = false;
+    }
+
+    if (ordersWriteSuccess && foreignOrders.length === 0 && initialOrderCount === 0 && mergedOrders.length === 0) {
+      try {
+        localStorage.removeItem(`palluvo_quarantine_foreign_palluvo_ecommerce_orders_${toSafe}`);
+        if (toAccountId !== toSafe) {
+          localStorage.removeItem(`palluvo_quarantine_foreign_palluvo_ecommerce_orders_${toAccountId}`);
+        }
+      } catch {}
     }
 
     // Addresses merging
@@ -1500,15 +1514,13 @@ export function copyCustomerData(
         }
         if (parsed.length === 0) continue;
 
-        const isSrcSameBucket = isSameAccount || src.includes(toSafe) || src.includes(toAccountId);
-
         for (const item of parsed) {
           if (!item || typeof item !== "object") continue;
           const addr = item as Record<string, unknown>;
           const dedupKey = getAddressDedupKey(addr);
           if (!seenAddrKeys.has(dedupKey)) {
             seenAddrKeys.add(dedupKey);
-            if (isAddressVerifiedForOwner(addr, isSrcSameBucket)) {
+            if (isAddressVerifiedForOwner(addr, false)) {
               mergedAddrs.push(addr);
             } else if (hasFilter) {
               foreignAddrs.push(addr);
@@ -1601,20 +1613,19 @@ export function copyCustomerData(
           setMigrationMetadata(migrationMeta);
         } catch {}
       }
-    } else {
-      try {
-        localStorage.removeItem(`palluvo_quarantine_foreign_palluvo_ecommerce_addresses_${toSafe}`);
-        if (toAccountId !== toSafe) {
-          localStorage.removeItem(`palluvo_quarantine_foreign_palluvo_ecommerce_addresses_${toAccountId}`);
-        }
-      } catch {}
     }
+
+    const hasForeignAddrBackupToClear = Boolean(
+      localStorage.getItem(`palluvo_quarantine_foreign_palluvo_ecommerce_addresses_${toSafe}`) ||
+      (toAccountId !== toSafe && localStorage.getItem(`palluvo_quarantine_foreign_palluvo_ecommerce_addresses_${toAccountId}`))
+    );
 
     let addrsWriteSuccess = true;
     const shouldWriteAddrs = sourceReadSuccess && foreignAddrsQuarantineSuccess && (
       mergedAddrs.length > initialAddrCount ||
       (initialAddrCount === 0 && mergedAddrs.length > 0) ||
-      (isSameAccount && hasFilter)
+      (isSameAccount && hasFilter) ||
+      (hasForeignAddrBackupToClear && foreignAddrs.length === 0 && mergedAddrs.length > 0)
     );
 
     if (shouldWriteAddrs) {
@@ -1631,6 +1642,14 @@ export function copyCustomerData(
               localStorage.removeItem(`palluvo_ecommerce_addresses_${toAccountId}`);
             } catch {}
           }
+          if (foreignAddrs.length === 0) {
+            try {
+              localStorage.removeItem(`palluvo_quarantine_foreign_palluvo_ecommerce_addresses_${toSafe}`);
+              if (toAccountId !== toSafe) {
+                localStorage.removeItem(`palluvo_quarantine_foreign_palluvo_ecommerce_addresses_${toAccountId}`);
+              }
+            } catch {}
+          }
           try {
             const migrationMeta = getMigrationMetadata();
             if (migrationMeta.failedQuarantineKeys?.[targetAddrKey]) {
@@ -1644,6 +1663,15 @@ export function copyCustomerData(
       }
     } else if (!sourceReadSuccess || !foreignAddrsQuarantineSuccess) {
       addrsWriteSuccess = false;
+    }
+
+    if (addrsWriteSuccess && foreignAddrs.length === 0 && initialAddrCount === 0 && mergedAddrs.length === 0) {
+      try {
+        localStorage.removeItem(`palluvo_quarantine_foreign_palluvo_ecommerce_addresses_${toSafe}`);
+        if (toAccountId !== toSafe) {
+          localStorage.removeItem(`palluvo_quarantine_foreign_palluvo_ecommerce_addresses_${toAccountId}`);
+        }
+      } catch {}
     }
 
     return (
