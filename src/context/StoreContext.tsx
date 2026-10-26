@@ -642,6 +642,8 @@ export function findOwnerEmailForPhoneInRecords(
     `palluvo_ecommerce_orders_${legacyAccountId}`,
     `palluvo_quarantine_palluvo_ecommerce_orders_${safeLegacyId}`,
     `palluvo_quarantine_palluvo_ecommerce_orders_${legacyAccountId}`,
+    `palluvo_quarantine_foreign_palluvo_ecommerce_orders_${safeLegacyId}`,
+    `palluvo_quarantine_foreign_palluvo_ecommerce_orders_${legacyAccountId}`,
   ]));
 
   const meta = getAccountMetadata();
@@ -699,6 +701,8 @@ export function findOwnerEmailForPhoneInRecords(
     `palluvo_ecommerce_addresses_${legacyAccountId}`,
     `palluvo_quarantine_palluvo_ecommerce_addresses_${safeLegacyId}`,
     `palluvo_quarantine_palluvo_ecommerce_addresses_${legacyAccountId}`,
+    `palluvo_quarantine_foreign_palluvo_ecommerce_addresses_${safeLegacyId}`,
+    `palluvo_quarantine_foreign_palluvo_ecommerce_addresses_${legacyAccountId}`,
   ]));
 
   for (const k of addressKeys) {
@@ -1106,6 +1110,10 @@ export function copyCustomerData(
       `palluvo_ecommerce_orders_${fromAccountId}`,
       `palluvo_quarantine_palluvo_ecommerce_orders_${fromSafe}`,
       `palluvo_quarantine_palluvo_ecommerce_orders_${fromAccountId}`,
+      `palluvo_quarantine_foreign_palluvo_ecommerce_orders_${fromSafe}`,
+      `palluvo_quarantine_foreign_palluvo_ecommerce_orders_${fromAccountId}`,
+      `palluvo_quarantine_foreign_palluvo_ecommerce_orders_${toSafe}`,
+      `palluvo_quarantine_foreign_palluvo_ecommerce_orders_${toAccountId}`,
     ]));
     const targetOrdersKey = `palluvo_ecommerce_orders_${toSafe}`;
 
@@ -1119,30 +1127,43 @@ export function copyCustomerData(
       return `json:${JSON.stringify(ord)}`;
     };
 
-    const isOrderVerifiedForOwner = (ord: Record<string, unknown>): boolean => {
+    const isOrderVerifiedForOwner = (ord: Record<string, unknown>, isSameBucket = false): boolean => {
       const cust = ord.customer as Record<string, unknown> | undefined;
       const custEmail = typeof cust?.email === "string" ? cust.email.toLowerCase().trim() : "";
       const ordEmail = typeof ord.email === "string" ? ord.email.toLowerCase().trim() : "";
+      const ownerEmail = typeof ord.ownerEmail === "string" ? ord.ownerEmail.toLowerCase().trim() : "";
+      const userEmail = typeof ord.userEmail === "string" ? ord.userEmail.toLowerCase().trim() : "";
 
       if (!filterEmail && allowedEmailSet.size === 0 && verifiedPhoneList.length === 0) {
-        if (custEmail && ordEmail && custEmail !== ordEmail) {
-          const root1 = resolveRootOwner(custEmail, meta) || custEmail;
-          const root2 = resolveRootOwner(ordEmail, meta) || ordEmail;
-          if (root1.toLowerCase().trim() !== root2.toLowerCase().trim()) {
-            return false;
+        const nonNulls = [custEmail, ordEmail, ownerEmail, userEmail].filter(Boolean);
+        if (nonNulls.length > 1) {
+          const root1 = (resolveRootOwner(nonNulls[0], meta) || nonNulls[0]).toLowerCase().trim();
+          for (let i = 1; i < nonNulls.length; i++) {
+            const root2 = (resolveRootOwner(nonNulls[i], meta) || nonNulls[i]).toLowerCase().trim();
+            if (root1 !== root2) {
+              return false;
+            }
           }
         }
         return true;
       }
 
-      const orderEmails = [custEmail, ordEmail].filter(Boolean);
+      const orderEmails = [custEmail, ordEmail, ownerEmail, userEmail].filter(Boolean);
       if (orderEmails.length > 0) {
         // Require every non-empty owner email to resolve to this account,
         // and fail closed on a conflict.
         return orderEmails.every((e) => isEmailVerified(e));
       }
 
-      // If no email was attached to the order, check if phone matches this owner's verified phone
+      // If no email was attached to the order:
+      // Records that already sit in the canonical / same-key bucket have no positive evidence
+      // of another owner, so they must stay.
+      if (isSameBucket) {
+        return true;
+      }
+
+      // When migrating from an external source bucket with no email,
+      // require affirmative proof that it belongs to this owner via verified phone.
       if (verifiedPhoneList.length > 0) {
         const explicitTokens = extractExplicitPhoneTokens(ord);
         for (const token of explicitTokens) {
@@ -1177,7 +1198,7 @@ export function copyCustomerData(
                 const dedupKey = getOrderDedupKey(item as Record<string, unknown>);
                 if (!seenOrderKeys.has(dedupKey)) {
                   seenOrderKeys.add(dedupKey);
-                  if (hasFilter && !isOrderVerifiedForOwner(item as Record<string, unknown>)) {
+                  if (hasFilter && !isOrderVerifiedForOwner(item as Record<string, unknown>, true)) {
                     foreignOrders.push(item as Record<string, unknown>);
                   } else {
                     mergedOrders.push(item as Record<string, unknown>);
@@ -1207,13 +1228,15 @@ export function copyCustomerData(
         }
         if (parsed.length === 0) continue;
 
+        const isSrcSameBucket = isSameAccount || src.includes(toSafe) || src.includes(toAccountId);
+
         for (const item of parsed) {
           if (!item || typeof item !== "object") continue;
           const ord = item as Record<string, unknown>;
           const dedupKey = getOrderDedupKey(ord);
           if (!seenOrderKeys.has(dedupKey)) {
             seenOrderKeys.add(dedupKey);
-            if (isOrderVerifiedForOwner(ord)) {
+            if (isOrderVerifiedForOwner(ord, isSrcSameBucket)) {
               mergedOrders.push(ord);
             } else if (hasFilter) {
               foreignOrders.push(ord);
@@ -1225,32 +1248,7 @@ export function copyCustomerData(
       }
     }
 
-    let ordersWriteSuccess = true;
-    const shouldWriteOrders = sourceReadSuccess && (
-      mergedOrders.length > initialOrderCount ||
-      (initialOrderCount === 0 && mergedOrders.length > 0) ||
-      (isSameAccount && hasFilter)
-    );
-
-    if (shouldWriteOrders) {
-      try {
-        const serialized = JSON.stringify(mergedOrders);
-        localStorage.setItem(targetOrdersKey, serialized);
-        const verified = localStorage.getItem(targetOrdersKey);
-        if (verified !== serialized) {
-          ordersWriteSuccess = false;
-        }
-        if (toAccountId !== toSafe && toAccountId !== targetOrdersKey) {
-          try {
-            localStorage.removeItem(`palluvo_ecommerce_orders_${toAccountId}`);
-          } catch {}
-        }
-      } catch {
-        ordersWriteSuccess = false;
-      }
-    } else if (!sourceReadSuccess) {
-      ordersWriteSuccess = false;
-    }
+    let foreignOrdersQuarantineSuccess = true;
 
     if (foreignOrders.length > 0) {
       try {
@@ -1263,15 +1261,15 @@ export function copyCustomerData(
             (typeof ord.ownerEmail === "string" ? ord.ownerEmail : "") ||
             (typeof ord.userEmail === "string" ? ord.userEmail : "")
           ).toLowerCase().trim();
-          const key = fEm && fEm.includes("@") ? fEm : "unknown";
+          const key = fEm && fEm.includes("@") ? fEm : (fromSafe || toSafe);
           if (!ordersByForeignEmail.has(key)) {
             ordersByForeignEmail.set(key, []);
           }
           ordersByForeignEmail.get(key)!.push(ord);
         }
 
-        for (const [fEm, fOrds] of ordersByForeignEmail.entries()) {
-          const fSafe = fEm.replace(/[^a-z0-9_]/g, (ch) => `_${ch.charCodeAt(0).toString(16)}_`);
+        for (const [fKey, fOrds] of ordersByForeignEmail.entries()) {
+          const fSafe = fKey.replace(/[^a-z0-9_]/g, (ch) => `_${ch.charCodeAt(0).toString(16)}_`);
           const qKey = `palluvo_quarantine_palluvo_ecommerce_orders_${fSafe}`;
           const existingRaw = localStorage.getItem(qKey);
           let existingList: Record<string, unknown>[] = [];
@@ -1289,32 +1287,93 @@ export function copyCustomerData(
               existingList.push(fo);
             }
           }
-          try {
-            localStorage.setItem(qKey, JSON.stringify(existingList));
-          } catch {}
-        }
-
-        const foreignQKey = `palluvo_quarantine_foreign_palluvo_ecommerce_orders_${toSafe}`;
-        const existingForeignRaw = localStorage.getItem(foreignQKey);
-        let existingForeignList: Record<string, unknown>[] = [];
-        if (existingForeignRaw) {
-          try {
-            const p = JSON.parse(existingForeignRaw);
-            if (Array.isArray(p)) existingForeignList = p;
-          } catch {}
-        }
-        const foreignSeen = new Set(existingForeignList.map(getOrderDedupKey));
-        for (const fo of foreignOrders) {
-          const k = getOrderDedupKey(fo);
-          if (!foreignSeen.has(k)) {
-            foreignSeen.add(k);
-            existingForeignList.push(fo);
+          const serialized = JSON.stringify(existingList);
+          localStorage.setItem(qKey, serialized);
+          if (localStorage.getItem(qKey) !== serialized) {
+            foreignOrdersQuarantineSuccess = false;
+            break;
           }
         }
+
+        if (foreignOrdersQuarantineSuccess) {
+          const foreignQKey = `palluvo_quarantine_foreign_palluvo_ecommerce_orders_${toSafe}`;
+          const existingForeignRaw = localStorage.getItem(foreignQKey);
+          let existingForeignList: Record<string, unknown>[] = [];
+          if (existingForeignRaw) {
+            try {
+              const p = JSON.parse(existingForeignRaw);
+              if (Array.isArray(p)) existingForeignList = p;
+            } catch {}
+          }
+          const foreignSeen = new Set(existingForeignList.map(getOrderDedupKey));
+          for (const fo of foreignOrders) {
+            const k = getOrderDedupKey(fo);
+            if (!foreignSeen.has(k)) {
+              foreignSeen.add(k);
+              existingForeignList.push(fo);
+            }
+          }
+          const serializedForeign = JSON.stringify(existingForeignList);
+          localStorage.setItem(foreignQKey, serializedForeign);
+          if (localStorage.getItem(foreignQKey) !== serializedForeign) {
+            foreignOrdersQuarantineSuccess = false;
+          }
+        }
+      } catch {
+        foreignOrdersQuarantineSuccess = false;
+      }
+
+      if (!foreignOrdersQuarantineSuccess) {
         try {
-          localStorage.setItem(foreignQKey, JSON.stringify(existingForeignList));
+          const migrationMeta = getMigrationMetadata();
+          migrationMeta.failedQuarantineKeys = migrationMeta.failedQuarantineKeys || {};
+          migrationMeta.failedQuarantineKeys[targetOrdersKey] = true;
+          setMigrationMetadata(migrationMeta);
         } catch {}
+      }
+    } else {
+      try {
+        localStorage.removeItem(`palluvo_quarantine_foreign_palluvo_ecommerce_orders_${toSafe}`);
+        if (toAccountId !== toSafe) {
+          localStorage.removeItem(`palluvo_quarantine_foreign_palluvo_ecommerce_orders_${toAccountId}`);
+        }
       } catch {}
+    }
+
+    let ordersWriteSuccess = true;
+    const shouldWriteOrders = sourceReadSuccess && foreignOrdersQuarantineSuccess && (
+      mergedOrders.length > initialOrderCount ||
+      (initialOrderCount === 0 && mergedOrders.length > 0) ||
+      (isSameAccount && hasFilter)
+    );
+
+    if (shouldWriteOrders) {
+      try {
+        const serialized = JSON.stringify(mergedOrders);
+        localStorage.setItem(targetOrdersKey, serialized);
+        const verified = localStorage.getItem(targetOrdersKey);
+        if (verified !== serialized) {
+          ordersWriteSuccess = false;
+        }
+        if (ordersWriteSuccess) {
+          if (toAccountId !== toSafe && toAccountId !== targetOrdersKey) {
+            try {
+              localStorage.removeItem(`palluvo_ecommerce_orders_${toAccountId}`);
+            } catch {}
+          }
+          try {
+            const migrationMeta = getMigrationMetadata();
+            if (migrationMeta.failedQuarantineKeys?.[targetOrdersKey]) {
+              delete migrationMeta.failedQuarantineKeys[targetOrdersKey];
+              setMigrationMetadata(migrationMeta);
+            }
+          } catch {}
+        }
+      } catch {
+        ordersWriteSuccess = false;
+      }
+    } else if (!sourceReadSuccess || !foreignOrdersQuarantineSuccess) {
+      ordersWriteSuccess = false;
     }
 
     // Addresses merging
@@ -1323,6 +1382,10 @@ export function copyCustomerData(
       `palluvo_ecommerce_addresses_${fromAccountId}`,
       `palluvo_quarantine_palluvo_ecommerce_addresses_${fromSafe}`,
       `palluvo_quarantine_palluvo_ecommerce_addresses_${fromAccountId}`,
+      `palluvo_quarantine_foreign_palluvo_ecommerce_addresses_${fromSafe}`,
+      `palluvo_quarantine_foreign_palluvo_ecommerce_addresses_${fromAccountId}`,
+      `palluvo_quarantine_foreign_palluvo_ecommerce_addresses_${toSafe}`,
+      `palluvo_quarantine_foreign_palluvo_ecommerce_addresses_${toAccountId}`,
     ]));
     const targetAddrKey = `palluvo_ecommerce_addresses_${toSafe}`;
 
@@ -1344,7 +1407,7 @@ export function copyCustomerData(
       return `json:${JSON.stringify(addr)}`;
     };
 
-    const isAddressVerifiedForOwner = (addr: Record<string, unknown>): boolean => {
+    const isAddressVerifiedForOwner = (addr: Record<string, unknown>, isSameBucket = false): boolean => {
       const addrEmail = typeof addr.email === "string" ? addr.email.toLowerCase().trim() : "";
       const ownerEmail = typeof addr.ownerEmail === "string" ? addr.ownerEmail.toLowerCase().trim() : "";
       const userEmail = typeof addr.userEmail === "string" ? addr.userEmail.toLowerCase().trim() : "";
@@ -1366,6 +1429,13 @@ export function copyCustomerData(
         // Require every non-empty owner email to resolve to this account,
         // and fail closed on a conflict.
         return addrEmails.every((e) => isEmailVerified(e));
+      }
+
+      // If no email was attached to the address:
+      // Records that already sit in the canonical / same-key bucket have no positive evidence
+      // of another owner, so they must stay.
+      if (isSameBucket) {
+        return true;
       }
 
       // If no email was attached to the address, check verified phone
@@ -1400,7 +1470,7 @@ export function copyCustomerData(
                 const dedupKey = getAddressDedupKey(item as Record<string, unknown>);
                 if (!seenAddrKeys.has(dedupKey)) {
                   seenAddrKeys.add(dedupKey);
-                  if (hasFilter && !isAddressVerifiedForOwner(item as Record<string, unknown>)) {
+                  if (hasFilter && !isAddressVerifiedForOwner(item as Record<string, unknown>, true)) {
                     foreignAddrs.push(item as Record<string, unknown>);
                   } else {
                     mergedAddrs.push(item as Record<string, unknown>);
@@ -1430,13 +1500,15 @@ export function copyCustomerData(
         }
         if (parsed.length === 0) continue;
 
+        const isSrcSameBucket = isSameAccount || src.includes(toSafe) || src.includes(toAccountId);
+
         for (const item of parsed) {
           if (!item || typeof item !== "object") continue;
           const addr = item as Record<string, unknown>;
           const dedupKey = getAddressDedupKey(addr);
           if (!seenAddrKeys.has(dedupKey)) {
             seenAddrKeys.add(dedupKey);
-            if (isAddressVerifiedForOwner(addr)) {
+            if (isAddressVerifiedForOwner(addr, isSrcSameBucket)) {
               mergedAddrs.push(addr);
             } else if (hasFilter) {
               foreignAddrs.push(addr);
@@ -1448,32 +1520,7 @@ export function copyCustomerData(
       }
     }
 
-    let addrsWriteSuccess = true;
-    const shouldWriteAddrs = sourceReadSuccess && (
-      mergedAddrs.length > initialAddrCount ||
-      (initialAddrCount === 0 && mergedAddrs.length > 0) ||
-      (isSameAccount && hasFilter)
-    );
-
-    if (shouldWriteAddrs) {
-      try {
-        const serialized = JSON.stringify(mergedAddrs);
-        localStorage.setItem(targetAddrKey, serialized);
-        const verified = localStorage.getItem(targetAddrKey);
-        if (verified !== serialized) {
-          addrsWriteSuccess = false;
-        }
-        if (toAccountId !== toSafe && toAccountId !== targetAddrKey) {
-          try {
-            localStorage.removeItem(`palluvo_ecommerce_addresses_${toAccountId}`);
-          } catch {}
-        }
-      } catch {
-        addrsWriteSuccess = false;
-      }
-    } else if (!sourceReadSuccess) {
-      addrsWriteSuccess = false;
-    }
+    let foreignAddrsQuarantineSuccess = true;
 
     if (foreignAddrs.length > 0) {
       try {
@@ -1484,15 +1531,15 @@ export function copyCustomerData(
             (typeof addr.ownerEmail === "string" ? addr.ownerEmail : "") ||
             (typeof addr.userEmail === "string" ? addr.userEmail : "")
           ).toLowerCase().trim();
-          const key = fEm && fEm.includes("@") ? fEm : "unknown";
+          const key = fEm && fEm.includes("@") ? fEm : (fromSafe || toSafe);
           if (!addrsByForeignEmail.has(key)) {
             addrsByForeignEmail.set(key, []);
           }
           addrsByForeignEmail.get(key)!.push(addr);
         }
 
-        for (const [fEm, fAs] of addrsByForeignEmail.entries()) {
-          const fSafe = fEm.replace(/[^a-z0-9_]/g, (ch) => `_${ch.charCodeAt(0).toString(16)}_`);
+        for (const [fKey, fAs] of addrsByForeignEmail.entries()) {
+          const fSafe = fKey.replace(/[^a-z0-9_]/g, (ch) => `_${ch.charCodeAt(0).toString(16)}_`);
           const qKey = `palluvo_quarantine_palluvo_ecommerce_addresses_${fSafe}`;
           const existingRaw = localStorage.getItem(qKey);
           let existingList: Record<string, unknown>[] = [];
@@ -1510,35 +1557,102 @@ export function copyCustomerData(
               existingList.push(fa);
             }
           }
-          try {
-            localStorage.setItem(qKey, JSON.stringify(existingList));
-          } catch {}
-        }
-
-        const foreignQKey = `palluvo_quarantine_foreign_palluvo_ecommerce_addresses_${toSafe}`;
-        const existingForeignRaw = localStorage.getItem(foreignQKey);
-        let existingForeignList: Record<string, unknown>[] = [];
-        if (existingForeignRaw) {
-          try {
-            const p = JSON.parse(existingForeignRaw);
-            if (Array.isArray(p)) existingForeignList = p;
-          } catch {}
-        }
-        const foreignSeen = new Set(existingForeignList.map(getAddressDedupKey));
-        for (const fa of foreignAddrs) {
-          const k = getAddressDedupKey(fa);
-          if (!foreignSeen.has(k)) {
-            foreignSeen.add(k);
-            existingForeignList.push(fa);
+          const serialized = JSON.stringify(existingList);
+          localStorage.setItem(qKey, serialized);
+          if (localStorage.getItem(qKey) !== serialized) {
+            foreignAddrsQuarantineSuccess = false;
+            break;
           }
         }
+
+        if (foreignAddrsQuarantineSuccess) {
+          const foreignQKey = `palluvo_quarantine_foreign_palluvo_ecommerce_addresses_${toSafe}`;
+          const existingForeignRaw = localStorage.getItem(foreignQKey);
+          let existingForeignList: Record<string, unknown>[] = [];
+          if (existingForeignRaw) {
+            try {
+              const p = JSON.parse(existingForeignRaw);
+              if (Array.isArray(p)) existingForeignList = p;
+            } catch {}
+          }
+          const foreignSeen = new Set(existingForeignList.map(getAddressDedupKey));
+          for (const fa of foreignAddrs) {
+            const k = getAddressDedupKey(fa);
+            if (!foreignSeen.has(k)) {
+              foreignSeen.add(k);
+              existingForeignList.push(fa);
+            }
+          }
+          const serializedForeign = JSON.stringify(existingForeignList);
+          localStorage.setItem(foreignQKey, serializedForeign);
+          if (localStorage.getItem(foreignQKey) !== serializedForeign) {
+            foreignAddrsQuarantineSuccess = false;
+          }
+        }
+      } catch {
+        foreignAddrsQuarantineSuccess = false;
+      }
+
+      if (!foreignAddrsQuarantineSuccess) {
         try {
-          localStorage.setItem(foreignQKey, JSON.stringify(existingForeignList));
+          const migrationMeta = getMigrationMetadata();
+          migrationMeta.failedQuarantineKeys = migrationMeta.failedQuarantineKeys || {};
+          migrationMeta.failedQuarantineKeys[targetAddrKey] = true;
+          setMigrationMetadata(migrationMeta);
         } catch {}
+      }
+    } else {
+      try {
+        localStorage.removeItem(`palluvo_quarantine_foreign_palluvo_ecommerce_addresses_${toSafe}`);
+        if (toAccountId !== toSafe) {
+          localStorage.removeItem(`palluvo_quarantine_foreign_palluvo_ecommerce_addresses_${toAccountId}`);
+        }
       } catch {}
     }
 
-    return sourceReadSuccess && ordersWriteSuccess && addrsWriteSuccess;
+    let addrsWriteSuccess = true;
+    const shouldWriteAddrs = sourceReadSuccess && foreignAddrsQuarantineSuccess && (
+      mergedAddrs.length > initialAddrCount ||
+      (initialAddrCount === 0 && mergedAddrs.length > 0) ||
+      (isSameAccount && hasFilter)
+    );
+
+    if (shouldWriteAddrs) {
+      try {
+        const serialized = JSON.stringify(mergedAddrs);
+        localStorage.setItem(targetAddrKey, serialized);
+        const verified = localStorage.getItem(targetAddrKey);
+        if (verified !== serialized) {
+          addrsWriteSuccess = false;
+        }
+        if (addrsWriteSuccess) {
+          if (toAccountId !== toSafe && toAccountId !== targetAddrKey) {
+            try {
+              localStorage.removeItem(`palluvo_ecommerce_addresses_${toAccountId}`);
+            } catch {}
+          }
+          try {
+            const migrationMeta = getMigrationMetadata();
+            if (migrationMeta.failedQuarantineKeys?.[targetAddrKey]) {
+              delete migrationMeta.failedQuarantineKeys[targetAddrKey];
+              setMigrationMetadata(migrationMeta);
+            }
+          } catch {}
+        }
+      } catch {
+        addrsWriteSuccess = false;
+      }
+    } else if (!sourceReadSuccess || !foreignAddrsQuarantineSuccess) {
+      addrsWriteSuccess = false;
+    }
+
+    return (
+      sourceReadSuccess &&
+      foreignOrdersQuarantineSuccess &&
+      ordersWriteSuccess &&
+      foreignAddrsQuarantineSuccess &&
+      addrsWriteSuccess
+    );
   } catch {
     return false;
   }
@@ -1566,6 +1680,8 @@ export function clearFalseQuarantine(accountId: string, canonicalId: string, mig
     localStorage.removeItem(`palluvo_quarantine_palluvo_ecommerce_orders_${safeId}`);
     localStorage.removeItem(`palluvo_quarantine_palluvo_ecommerce_addresses_${trimmed}`);
     localStorage.removeItem(`palluvo_quarantine_palluvo_ecommerce_addresses_${safeId}`);
+    localStorage.removeItem("palluvo_quarantine_palluvo_ecommerce_orders_unknown");
+    localStorage.removeItem("palluvo_quarantine_palluvo_ecommerce_addresses_unknown");
 
     const metaToUpdate = migrationMeta || getMigrationMetadata();
     if (metaToUpdate.quarantinedLegacyBuckets) {
@@ -2485,10 +2601,14 @@ export function migrateLegacyAccountAliases(): void {
               `palluvo_ecommerce_orders_${trimmedVal}`,
               `palluvo_quarantine_palluvo_ecommerce_orders_${safeVal}`,
               `palluvo_quarantine_palluvo_ecommerce_orders_${trimmedVal}`,
+              `palluvo_quarantine_foreign_palluvo_ecommerce_orders_${safeVal}`,
+              `palluvo_quarantine_foreign_palluvo_ecommerce_orders_${trimmedVal}`,
               `palluvo_ecommerce_addresses_${safeVal}`,
               `palluvo_ecommerce_addresses_${trimmedVal}`,
               `palluvo_quarantine_palluvo_ecommerce_addresses_${safeVal}`,
               `palluvo_quarantine_palluvo_ecommerce_addresses_${trimmedVal}`,
+              `palluvo_quarantine_foreign_palluvo_ecommerce_addresses_${safeVal}`,
+              `palluvo_quarantine_foreign_palluvo_ecommerce_addresses_${trimmedVal}`,
             ];
             for (const src of sources) {
               const raw = localStorage.getItem(src);
