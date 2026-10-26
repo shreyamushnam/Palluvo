@@ -1048,6 +1048,9 @@ export function copyCustomerData(
         : []
     );
 
+    const meta = getAccountMetadata();
+    const migrationMeta = getMigrationMetadata();
+
     const rawPhones = (
       typeof options === "object" && options && Array.isArray(options.verifiedPhones)
         ? options.verifiedPhones
@@ -1055,16 +1058,24 @@ export function copyCustomerData(
     );
     const verifiedPhoneList = rawPhones
       .map((p) => normalizeExplicitPhoneToken(p))
-      .filter(Boolean) as string[];
+      .filter((p): p is string => {
+        if (!p) return false;
+        if (
+          meta[p]?.status === "unresolved" ||
+          meta[`usr_phone_${p}`]?.status === "unresolved" ||
+          migrationMeta.unresolvedPhoneAliases?.[p] ||
+          migrationMeta.unresolvedPhoneAliases?.[`usr_phone_${p}`]
+        ) {
+          return false;
+        }
+        return true;
+      });
 
     const hasFilter = Boolean(filterEmail || allowedEmailsInput.length > 0 || verifiedPhoneList.length > 0);
     if (isSameAccount && !hasFilter) return true;
 
     const fromSafe = fromAccountId.toLowerCase().trim().replace(/[^a-z0-9_]/g, (ch) => `_${ch.charCodeAt(0).toString(16)}_`);
     const toSafe = toAccountId.toLowerCase().trim().replace(/[^a-z0-9_]/g, (ch) => `_${ch.charCodeAt(0).toString(16)}_`);
-
-    const meta = getAccountMetadata();
-    const migrationMeta = getMigrationMetadata();
     const allowedEmailSet = new Set<string>();
     if (filterEmail) {
       allowedEmailSet.add(filterEmail);
@@ -1116,6 +1127,19 @@ export function copyCustomerData(
       if (!phoneCandidate) return false;
       const norm = normalizeExplicitPhoneToken(phoneCandidate);
       if (!norm) return false;
+      // Reject any unresolved marker unconditionally
+      if (
+        meta[norm]?.status === "unresolved" ||
+        meta[phoneCandidate]?.status === "unresolved" ||
+        meta[`usr_phone_${norm}`]?.status === "unresolved" ||
+        meta[`usr_phone_${phoneCandidate}`]?.status === "unresolved" ||
+        migrationMeta.unresolvedPhoneAliases?.[norm] ||
+        migrationMeta.unresolvedPhoneAliases?.[phoneCandidate] ||
+        migrationMeta.unresolvedPhoneAliases?.[`usr_phone_${norm}`] ||
+        migrationMeta.unresolvedPhoneAliases?.[`usr_phone_${phoneCandidate}`]
+      ) {
+        return false;
+      }
       if (verifiedPhoneList.includes(norm)) {
         const recordedOwner = meta[norm]?.ownerEmail?.toLowerCase().trim();
         if (recordedOwner) {
@@ -1124,16 +1148,10 @@ export function copyCustomerData(
             return false;
           }
         }
-        if (meta[norm]?.status === "unresolved" || migrationMeta.unresolvedPhoneAliases?.[norm]) {
-          const recorded = meta[norm]?.ownerEmail?.toLowerCase().trim();
-          if (recorded && !isEmailVerified(recorded)) {
-            return false;
-          }
-        }
         return true;
       }
       const recordedOwner = meta[norm]?.ownerEmail?.toLowerCase().trim();
-      if (recordedOwner && meta[norm]?.status !== "unresolved" && !migrationMeta.unresolvedPhoneAliases?.[norm]) {
+      if (recordedOwner) {
         const resolvedOwner = getVerifiedRootOwner(recordedOwner, meta);
         if (resolvedOwner && isEmailVerified(resolvedOwner)) {
           return true;
@@ -1293,6 +1311,78 @@ export function copyCustomerData(
       return false;
     };
 
+    const reviewAndRepairUnknownOrder = (ord: Record<string, unknown>): Record<string, unknown> | null => {
+      const { validEmails, malformedClaims } = getOrderEmailClaims(ord);
+      const claimedPhones = getOrderClaimedPhones(ord);
+
+      if (malformedClaims.length === 0) {
+        return null;
+      }
+
+      if (validEmails.length > 0 && !validEmails.every((e) => isEmailVerified(e))) {
+        return null;
+      }
+
+      if (claimedPhones.length > 0 && !claimedPhones.every((p) => isPhoneVerified(p))) {
+        return null;
+      }
+
+      for (const c of malformedClaims) {
+        const recOwner = meta[c]?.ownerEmail?.toLowerCase().trim();
+        if (recOwner) {
+          const resOwner = getVerifiedRootOwner(recOwner, meta);
+          if (resOwner && !isEmailVerified(resOwner)) {
+            return null;
+          }
+        }
+        const recAcc = meta[c]?.accountId;
+        if (recAcc && recAcc !== toAccountId && recAcc !== fromAccountId && recAcc !== toSafe && recAcc !== fromSafe) {
+          return null;
+        }
+      }
+
+      const hasVerifiedEmail = validEmails.length > 0 && validEmails.every((e) => isEmailVerified(e));
+      const hasVerifiedPhone = claimedPhones.length > 0 && claimedPhones.every((p) => isPhoneVerified(p));
+      const hasDirectAccountClaim = malformedClaims.some((c) => {
+        const lowerC = c.toLowerCase().trim();
+        if (lowerC === toAccountId.toLowerCase() || lowerC === fromAccountId.toLowerCase() || lowerC === toSafe || lowerC === fromSafe) {
+          return true;
+        }
+        const recOwner = meta[c]?.ownerEmail?.toLowerCase().trim();
+        if (recOwner && isEmailVerified(recOwner)) {
+          return true;
+        }
+        const recAcc = meta[c]?.accountId;
+        return recAcc === toAccountId || recAcc === fromAccountId;
+      });
+
+      if (!hasVerifiedEmail && !hasVerifiedPhone && !hasDirectAccountClaim) {
+        return null;
+      }
+
+      const repaired: Record<string, unknown> = { ...ord };
+      const canonicalEmail = filterEmail || (validEmails.length > 0 ? validEmails[0] : "");
+      if (canonicalEmail) {
+        if (typeof repaired.ownerEmail === "string" && !repaired.ownerEmail.includes("@")) {
+          repaired.ownerEmail = canonicalEmail;
+        }
+        if (typeof repaired.userEmail === "string" && !repaired.userEmail.includes("@")) {
+          repaired.userEmail = canonicalEmail;
+        }
+        if (typeof repaired.email === "string" && !repaired.email.includes("@")) {
+          repaired.email = canonicalEmail;
+        }
+      } else if (toAccountId) {
+        if (typeof repaired.ownerEmail === "string" && !repaired.ownerEmail.includes("@")) {
+          repaired.ownerEmail = toAccountId;
+        }
+        if (typeof repaired.userEmail === "string" && !repaired.userEmail.includes("@")) {
+          repaired.userEmail = toAccountId;
+        }
+      }
+      return repaired;
+    };
+
     let sourceReadSuccess = true;
 
     // Load existing target orders
@@ -1399,6 +1489,17 @@ export function copyCustomerData(
               if (!seenOrderKeys.has(dedupKey)) {
                 seenOrderKeys.add(dedupKey);
                 mergedOrders.push(ord);
+              }
+            } else if (hasFilter) {
+              const repaired = reviewAndRepairUnknownOrder(ord);
+              if (repaired) {
+                const exactKey = getExactOrderRowKey(ord);
+                claimedUnknownOrderCounts.set(exactKey, (claimedUnknownOrderCounts.get(exactKey) || 0) + 1);
+                const dedupKey = getOrderDedupKey(repaired);
+                if (!seenOrderKeys.has(dedupKey)) {
+                  seenOrderKeys.add(dedupKey);
+                  mergedOrders.push(repaired);
+                }
               }
             }
           }
@@ -1543,7 +1644,7 @@ export function copyCustomerData(
                     const ord = item as Record<string, unknown>;
                     const exactKey = getExactOrderRowKey(ord);
                     const remainingCount = countsToConsume.get(exactKey) || 0;
-                    if (remainingCount > 0 && isOrderVerifiedForOwner(ord, false)) {
+                    if (remainingCount > 0 && (isOrderVerifiedForOwner(ord, false) || Boolean(reviewAndRepairUnknownOrder(ord)))) {
                       countsToConsume.set(exactKey, remainingCount - 1);
                     } else {
                       remaining.push(ord);
@@ -1744,6 +1845,78 @@ export function copyCustomerData(
       return false;
     };
 
+    const reviewAndRepairUnknownAddress = (addr: Record<string, unknown>): Record<string, unknown> | null => {
+      const { validEmails, malformedClaims } = getAddressEmailClaims(addr);
+      const claimedPhones = getAddressClaimedPhones(addr);
+
+      if (malformedClaims.length === 0) {
+        return null;
+      }
+
+      if (validEmails.length > 0 && !validEmails.every((e) => isEmailVerified(e))) {
+        return null;
+      }
+
+      if (claimedPhones.length > 0 && !claimedPhones.every((p) => isPhoneVerified(p))) {
+        return null;
+      }
+
+      for (const c of malformedClaims) {
+        const recOwner = meta[c]?.ownerEmail?.toLowerCase().trim();
+        if (recOwner) {
+          const resOwner = getVerifiedRootOwner(recOwner, meta);
+          if (resOwner && !isEmailVerified(resOwner)) {
+            return null;
+          }
+        }
+        const recAcc = meta[c]?.accountId;
+        if (recAcc && recAcc !== toAccountId && recAcc !== fromAccountId && recAcc !== toSafe && recAcc !== fromSafe) {
+          return null;
+        }
+      }
+
+      const hasVerifiedEmail = validEmails.length > 0 && validEmails.every((e) => isEmailVerified(e));
+      const hasVerifiedPhone = claimedPhones.length > 0 && claimedPhones.every((p) => isPhoneVerified(p));
+      const hasDirectAccountClaim = malformedClaims.some((c) => {
+        const lowerC = c.toLowerCase().trim();
+        if (lowerC === toAccountId.toLowerCase() || lowerC === fromAccountId.toLowerCase() || lowerC === toSafe || lowerC === fromSafe) {
+          return true;
+        }
+        const recOwner = meta[c]?.ownerEmail?.toLowerCase().trim();
+        if (recOwner && isEmailVerified(recOwner)) {
+          return true;
+        }
+        const recAcc = meta[c]?.accountId;
+        return recAcc === toAccountId || recAcc === fromAccountId;
+      });
+
+      if (!hasVerifiedEmail && !hasVerifiedPhone && !hasDirectAccountClaim) {
+        return null;
+      }
+
+      const repaired: Record<string, unknown> = { ...addr };
+      const canonicalEmail = filterEmail || (validEmails.length > 0 ? validEmails[0] : "");
+      if (canonicalEmail) {
+        if (typeof repaired.ownerEmail === "string" && !repaired.ownerEmail.includes("@")) {
+          repaired.ownerEmail = canonicalEmail;
+        }
+        if (typeof repaired.userEmail === "string" && !repaired.userEmail.includes("@")) {
+          repaired.userEmail = canonicalEmail;
+        }
+        if (typeof repaired.email === "string" && !repaired.email.includes("@")) {
+          repaired.email = canonicalEmail;
+        }
+      } else if (toAccountId) {
+        if (typeof repaired.ownerEmail === "string" && !repaired.ownerEmail.includes("@")) {
+          repaired.ownerEmail = toAccountId;
+        }
+        if (typeof repaired.userEmail === "string" && !repaired.userEmail.includes("@")) {
+          repaired.userEmail = toAccountId;
+        }
+      }
+      return repaired;
+    };
+
     const mergedAddrs: Record<string, unknown>[] = [];
     const foreignAddrs: Record<string, unknown>[] = [];
     const seenAddrKeys = new Set<string>();
@@ -1847,6 +2020,17 @@ export function copyCustomerData(
               if (!seenAddrKeys.has(dedupKey)) {
                 seenAddrKeys.add(dedupKey);
                 mergedAddrs.push(addr);
+              }
+            } else if (hasFilter) {
+              const repaired = reviewAndRepairUnknownAddress(addr);
+              if (repaired) {
+                const exactKey = getExactAddressRowKey(addr);
+                claimedUnknownAddrCounts.set(exactKey, (claimedUnknownAddrCounts.get(exactKey) || 0) + 1);
+                const dedupKey = getAddressDedupKey(repaired);
+                if (!seenAddrKeys.has(dedupKey)) {
+                  seenAddrKeys.add(dedupKey);
+                  mergedAddrs.push(repaired);
+                }
               }
             }
           }
@@ -1991,7 +2175,7 @@ export function copyCustomerData(
                     const addr = item as Record<string, unknown>;
                     const exactKey = getExactAddressRowKey(addr);
                     const remainingCount = countsToConsume.get(exactKey) || 0;
-                    if (remainingCount > 0 && isAddressVerifiedForOwner(addr, false)) {
+                    if (remainingCount > 0 && (isAddressVerifiedForOwner(addr, false) || Boolean(reviewAndRepairUnknownAddress(addr)))) {
                       countsToConsume.set(exactKey, remainingCount - 1);
                     } else {
                       remaining.push(addr);
@@ -2040,6 +2224,158 @@ export function copyCustomerData(
   } catch {
     return false;
   }
+}
+
+/**
+ * Explicit review and repair path for records stranded in the shared unknown quarantine.
+ * Resolves ownership safely using verified emails, phones, or account claims and repairs
+ * malformed claim fields before rows are permanently excluded from ordinary recovery.
+ */
+export function reviewAndRepairQuarantinedUnknownRecords(
+  targetAccountId?: string,
+  options?: CopyCustomerDataOptions
+): { repairedOrders: number; repairedAddresses: number } {
+  let repairedOrders = 0;
+  let repairedAddresses = 0;
+
+  if (typeof window === "undefined" || !window.localStorage) {
+    return { repairedOrders: 0, repairedAddresses: 0 };
+  }
+
+  try {
+    const meta = getAccountMetadata();
+    const migrationMeta = getMigrationMetadata();
+    let map: Record<string, string> = {};
+    try {
+      const rawMap = localStorage.getItem(ACCOUNT_MAP_KEY);
+      if (rawMap) map = JSON.parse(rawMap);
+    } catch {}
+
+    if (targetAccountId && options) {
+      const copySuccess = copyCustomerData(targetAccountId, targetAccountId, options);
+      return {
+        repairedOrders: copySuccess ? 1 : 0,
+        repairedAddresses: copySuccess ? 1 : 0,
+      };
+    }
+
+    // 1. Scan unknown orders quarantine
+    const unknownOrdersKey = "palluvo_quarantine_palluvo_ecommerce_orders_unknown";
+    const rawUnknownOrders = localStorage.getItem(unknownOrdersKey);
+    if (rawUnknownOrders && rawUnknownOrders.trim()) {
+      let ordersList: Record<string, unknown>[] = [];
+      try {
+        const parsed = JSON.parse(rawUnknownOrders);
+        if (Array.isArray(parsed)) ordersList = parsed;
+      } catch {}
+
+      if (ordersList.length > 0) {
+        const targetAccounts = new Set<string>();
+        for (const ord of ordersList) {
+          if (!ord || typeof ord !== "object") continue;
+          const cust = ord.customer as Record<string, unknown> | undefined;
+          const raw = [
+            typeof cust?.email === "string" ? cust.email : "",
+            typeof ord.email === "string" ? ord.email : "",
+            typeof ord.ownerEmail === "string" ? ord.ownerEmail : "",
+            typeof ord.userEmail === "string" ? ord.userEmail : "",
+          ].map((e) => e.toLowerCase().trim()).filter(Boolean);
+          const validEmails = raw.filter((e) => e.includes("@"));
+          if (validEmails.length > 0) {
+            const rootOwners = Array.from(new Set(validEmails.map((e) => (resolveRootOwner(e, meta) || e).toLowerCase().trim())));
+            if (rootOwners.length === 1) {
+              const root = rootOwners[0];
+              const accId = map[root] || meta[root]?.accountId;
+              if (accId) targetAccounts.add(root);
+            }
+          }
+          const phones = extractExplicitPhoneTokens(ord);
+          if (phones.length === 1) {
+            const p = phones[0];
+            const isUnresolved = Boolean(
+              meta[p]?.status === "unresolved" ||
+              meta[`usr_phone_${p}`]?.status === "unresolved" ||
+              migrationMeta.unresolvedPhoneAliases?.[p] ||
+              migrationMeta.unresolvedPhoneAliases?.[`usr_phone_${p}`]
+            );
+            if (!isUnresolved && meta[p]?.ownerEmail) {
+              const root = (resolveRootOwner(meta[p].ownerEmail, meta) || meta[p].ownerEmail).toLowerCase().trim();
+              if (map[root] || meta[root]?.accountId) targetAccounts.add(root);
+            }
+          }
+        }
+
+        for (const root of targetAccounts) {
+          const accId = map[root] || meta[root]?.accountId;
+          if (accId) {
+            const success = copyCustomerData(accId, accId, {
+              filterByOwnerEmail: root,
+              allowedEmails: [root],
+            });
+            if (success) repairedOrders++;
+          }
+        }
+      }
+    }
+
+    // 2. Scan unknown addresses quarantine
+    const unknownAddrsKey = "palluvo_quarantine_palluvo_ecommerce_addresses_unknown";
+    const rawUnknownAddrs = localStorage.getItem(unknownAddrsKey);
+    if (rawUnknownAddrs && rawUnknownAddrs.trim()) {
+      let addrsList: Record<string, unknown>[] = [];
+      try {
+        const parsed = JSON.parse(rawUnknownAddrs);
+        if (Array.isArray(parsed)) addrsList = parsed;
+      } catch {}
+
+      if (addrsList.length > 0) {
+        const targetAccounts = new Set<string>();
+        for (const addr of addrsList) {
+          if (!addr || typeof addr !== "object") continue;
+          const raw = [
+            typeof addr.email === "string" ? addr.email : "",
+            typeof addr.ownerEmail === "string" ? addr.ownerEmail : "",
+            typeof addr.userEmail === "string" ? addr.userEmail : "",
+          ].map((e) => e.toLowerCase().trim()).filter(Boolean);
+          const validEmails = raw.filter((e) => e.includes("@"));
+          if (validEmails.length > 0) {
+            const rootOwners = Array.from(new Set(validEmails.map((e) => (resolveRootOwner(e, meta) || e).toLowerCase().trim())));
+            if (rootOwners.length === 1) {
+              const root = rootOwners[0];
+              const accId = map[root] || meta[root]?.accountId;
+              if (accId) targetAccounts.add(root);
+            }
+          }
+          const phone = normalizeExplicitPhoneToken(addr.phone);
+          if (phone) {
+            const isUnresolved = Boolean(
+              meta[phone]?.status === "unresolved" ||
+              meta[`usr_phone_${phone}`]?.status === "unresolved" ||
+              migrationMeta.unresolvedPhoneAliases?.[phone] ||
+              migrationMeta.unresolvedPhoneAliases?.[`usr_phone_${phone}`]
+            );
+            if (!isUnresolved && meta[phone]?.ownerEmail) {
+              const root = (resolveRootOwner(meta[phone].ownerEmail, meta) || meta[phone].ownerEmail).toLowerCase().trim();
+              if (map[root] || meta[root]?.accountId) targetAccounts.add(root);
+            }
+          }
+        }
+
+        for (const root of targetAccounts) {
+          const accId = map[root] || meta[root]?.accountId;
+          if (accId) {
+            const success = copyCustomerData(accId, accId, {
+              filterByOwnerEmail: root,
+              allowedEmails: [root],
+            });
+            if (success) repairedAddresses++;
+          }
+        }
+      }
+    }
+  } catch {}
+
+  return { repairedOrders, repairedAddresses };
 }
 
 /**
@@ -2512,8 +2848,10 @@ export function migrateLegacyAccountAliases(): void {
               const hasUnresolvedExplicitOwner = Boolean(revRecordedOwner && !revResolvedOwner);
               const hasConflictingExplicitOwner = Boolean(revResolvedOwner && revResolvedRoot !== singleEmailRoot);
               const isExplicitlyUnresolved = Boolean(
-                (meta[revPhone]?.status === "unresolved" || migrationMeta.unresolvedPhoneAliases?.[revPhone]) &&
-                revResolvedRoot !== singleEmailRoot
+                meta[revPhone]?.status === "unresolved" ||
+                meta[meta[singleEmail].phone]?.status === "unresolved" ||
+                migrationMeta.unresolvedPhoneAliases?.[revPhone] ||
+                migrationMeta.unresolvedPhoneAliases?.[meta[singleEmail].phone]
               );
               const hasConflictingReverseEmail = Object.entries(meta).some(([em, emMeta]) => {
                 if (!em.includes("@")) return false;
@@ -2542,6 +2880,14 @@ export function migrateLegacyAccountAliases(): void {
           for (const p of nonEmailKeys) {
             const normP = normalizeExplicitPhoneToken(p);
             if (!normP) continue;
+            const isUnresolved = Boolean(
+              meta[p]?.status === "unresolved" ||
+              meta[normP]?.status === "unresolved" ||
+              migrationMeta.unresolvedPhoneAliases?.[p] ||
+              migrationMeta.unresolvedPhoneAliases?.[normP]
+            );
+            if (isUnresolved) continue;
+
             const recordedOwner = meta[p]?.ownerEmail?.toLowerCase().trim();
             const resolvedOwner = getVerifiedRootOwner(recordedOwner, meta);
             const resolvedRoot = resolvedOwner ? (resolveRootOwner(resolvedOwner, meta) || resolvedOwner).toLowerCase().trim() : undefined;
@@ -2888,8 +3234,17 @@ export function migrateLegacyAccountAliases(): void {
         const singleOwnerPhones: string[] = [];
         for (const em of ownerCluster.emails) {
           if (meta[em]?.phone) {
-            const p = normalizeExplicitPhoneToken(meta[em].phone);
+            const rawP = meta[em].phone;
+            const p = normalizeExplicitPhoneToken(rawP);
             if (p && !singleOwnerPhones.includes(p)) {
+              const isUnresolved = Boolean(
+                meta[p]?.status === "unresolved" ||
+                meta[rawP]?.status === "unresolved" ||
+                migrationMeta.unresolvedPhoneAliases?.[p] ||
+                migrationMeta.unresolvedPhoneAliases?.[rawP]
+              );
+              if (isUnresolved) continue;
+
               const recOwner = meta[p]?.ownerEmail?.toLowerCase().trim();
               const resOwner = recOwner ? getVerifiedRootOwner(recOwner, meta) : undefined;
               const hasConflictingReverse = Object.entries(meta).some(([otherEm, otherMeta]) => {
@@ -2908,6 +3263,14 @@ export function migrateLegacyAccountAliases(): void {
         for (const p of nonEmailKeys) {
           const normP = normalizeExplicitPhoneToken(p) || p;
           if (!normP) continue;
+
+          const isUnresolved = Boolean(
+            meta[p]?.status === "unresolved" ||
+            meta[normP]?.status === "unresolved" ||
+            migrationMeta.unresolvedPhoneAliases?.[p] ||
+            migrationMeta.unresolvedPhoneAliases?.[normP]
+          );
+          if (isUnresolved) continue;
 
           const claimingEmails: string[] = [];
           for (const [em, emMeta] of Object.entries(meta)) {
@@ -3437,6 +3800,9 @@ export function migrateLegacyAccountAliases(): void {
       setMigrationMetadata(migrationMeta);
     }
     setAccountMetadata(meta);
+
+    // Review and repair any stranded records in the shared unknown quarantine
+    reviewAndRepairQuarantinedUnknownRecords();
   } catch {}
 }
 
@@ -3765,7 +4131,17 @@ export function lookupAccountId(identifier?: string | null): string | null {
           const copySuccess = copyCustomerData(val, targetId, {
             filterByOwnerEmail: ownerCluster.canonicalEmail,
             allowedEmails: ownerCluster.emails,
-            verifiedPhones: [key].map((p) => normalizeExplicitPhoneToken(p)).filter(Boolean) as string[],
+            verifiedPhones: [key]
+              .map((p) => normalizeExplicitPhoneToken(p))
+              .filter((p): p is string => {
+                if (!p) return false;
+                return !(
+                  meta[p]?.status === "unresolved" ||
+                  meta[`usr_phone_${p}`]?.status === "unresolved" ||
+                  migrationMeta.unresolvedPhoneAliases?.[p] ||
+                  migrationMeta.unresolvedPhoneAliases?.[`usr_phone_${p}`]
+                );
+              }),
           });
           if (!copySuccess) {
             return val;
@@ -3924,10 +4300,32 @@ export function lookupAccountId(identifier?: string | null): string | null {
             }
           }
 
+          const prevMeta = meta[key];
+          const prevUnresolved = migrationMeta.unresolvedPhoneAliases?.[key];
+          meta[key] = {
+            ...meta[key],
+            accountId: resolvedId,
+            ownerEmail: resolvedOwnerEmail || meta[key]?.ownerEmail,
+            phone: key,
+            status: "active",
+            updatedAt: Date.now(),
+          };
+          if (migrationMeta.unresolvedPhoneAliases?.[key]) {
+            delete migrationMeta.unresolvedPhoneAliases[key];
+          }
+
           const copyOptions: CopyCustomerDataOptions = {
             filterByOwnerEmail: resolvedOwnerEmail,
             allowedEmails: Array.from(allowedEmailSet),
-            verifiedPhones: Array.from(new Set([key, meta[key]?.phone].map((p) => normalizeExplicitPhoneToken(p)).filter(Boolean) as string[])),
+            verifiedPhones: Array.from(new Set([key, meta[key]?.phone].map((p) => normalizeExplicitPhoneToken(p)).filter((p): p is string => {
+              if (!p) return false;
+              return !(
+                meta[p]?.status === "unresolved" ||
+                meta[`usr_phone_${p}`]?.status === "unresolved" ||
+                migrationMeta.unresolvedPhoneAliases?.[p] ||
+                migrationMeta.unresolvedPhoneAliases?.[`usr_phone_${p}`]
+              );
+            }))),
           };
 
           let copySuccess = true;
@@ -3939,17 +4337,15 @@ export function lookupAccountId(identifier?: string | null): string | null {
           }
 
           if (!copySuccess) {
+            if (prevMeta) meta[key] = prevMeta;
+            if (prevUnresolved) {
+              migrationMeta.unresolvedPhoneAliases = migrationMeta.unresolvedPhoneAliases || {};
+              migrationMeta.unresolvedPhoneAliases[key] = prevUnresolved;
+            }
             return val;
           }
 
           map[key] = resolvedId;
-          meta[key] = {
-            ...meta[key],
-            accountId: resolvedId,
-            ownerEmail: resolvedOwnerEmail || meta[key]?.ownerEmail,
-            status: "active",
-            updatedAt: Date.now(),
-          };
           if (resolvedOwnerEmail && meta[resolvedOwnerEmail]) {
             meta[resolvedOwnerEmail] = {
               ...meta[resolvedOwnerEmail],
@@ -3957,10 +4353,7 @@ export function lookupAccountId(identifier?: string | null): string | null {
               updatedAt: Date.now(),
             };
           }
-          if (migrationMeta.unresolvedPhoneAliases?.[key]) {
-            delete migrationMeta.unresolvedPhoneAliases[key];
-            setMigrationMetadata(migrationMeta);
-          }
+          setMigrationMetadata(migrationMeta);
           try {
             localStorage.setItem(ACCOUNT_MAP_KEY, JSON.stringify(map));
             setAccountMetadata(meta);
@@ -4090,10 +4483,32 @@ export function registerAccountAlias(
         }
       }
 
+      const prevMeta = meta[key];
+      const prevUnresolved = migrationMeta.unresolvedPhoneAliases?.[key];
+      meta[key] = {
+        ...meta[key],
+        accountId: val,
+        ownerEmail: effectiveOwnerEmail,
+        phone: effectivePhone || key,
+        status: "active",
+        updatedAt: Date.now(),
+      };
+      if (migrationMeta.unresolvedPhoneAliases?.[key]) {
+        delete migrationMeta.unresolvedPhoneAliases[key];
+      }
+
       const copyOptions: CopyCustomerDataOptions = {
         filterByOwnerEmail: resolvedOwnerEmail,
         allowedEmails: Array.from(allowedEmailSet),
-        verifiedPhones: Array.from(new Set([key, effectivePhone, meta[key]?.phone].map((p) => normalizeExplicitPhoneToken(p)).filter(Boolean) as string[])),
+        verifiedPhones: Array.from(new Set([key, effectivePhone, meta[key]?.phone].map((p) => normalizeExplicitPhoneToken(p)).filter((p): p is string => {
+          if (!p) return false;
+          return !(
+            meta[p]?.status === "unresolved" ||
+            meta[`usr_phone_${p}`]?.status === "unresolved" ||
+            migrationMeta.unresolvedPhoneAliases?.[p] ||
+            migrationMeta.unresolvedPhoneAliases?.[`usr_phone_${p}`]
+          );
+        }))),
       };
 
       let copySuccess = true;
@@ -4107,12 +4522,14 @@ export function registerAccountAlias(
       if (!copySuccess) {
         // Do not persist the phone alias when its data copy fails.
         // Retain the unresolved mapping/metadata and return false before persisting the map.
+        if (prevMeta) meta[key] = prevMeta;
+        if (prevUnresolved) {
+          migrationMeta.unresolvedPhoneAliases = migrationMeta.unresolvedPhoneAliases || {};
+          migrationMeta.unresolvedPhoneAliases[key] = prevUnresolved;
+        }
         return false;
       }
-      if (migrationMeta.unresolvedPhoneAliases?.[key]) {
-        delete migrationMeta.unresolvedPhoneAliases[key];
-        setMigrationMetadata(migrationMeta);
-      }
+      setMigrationMetadata(migrationMeta);
     }
 
     map[key] = val;
