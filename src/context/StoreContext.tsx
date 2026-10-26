@@ -1105,6 +1105,14 @@ export function copyCustomerData(
       return false;
     };
 
+    const phoneOrderSourceKeys: string[] = [];
+    for (const p of verifiedPhoneList) {
+      phoneOrderSourceKeys.push(
+        `palluvo_ecommerce_orders_usr_phone_${p}`,
+        `palluvo_quarantine_palluvo_ecommerce_orders_usr_phone_${p}`,
+        `palluvo_quarantine_foreign_palluvo_ecommerce_orders_usr_phone_${p}`
+      );
+    }
     const orderSources = Array.from(new Set([
       `palluvo_ecommerce_orders_${fromSafe}`,
       `palluvo_ecommerce_orders_${fromAccountId}`,
@@ -1114,6 +1122,7 @@ export function copyCustomerData(
       `palluvo_quarantine_foreign_palluvo_ecommerce_orders_${fromAccountId}`,
       `palluvo_quarantine_foreign_palluvo_ecommerce_orders_${toSafe}`,
       `palluvo_quarantine_foreign_palluvo_ecommerce_orders_${toAccountId}`,
+      ...phoneOrderSourceKeys,
     ]));
     const targetOrdersKey = `palluvo_ecommerce_orders_${toSafe}`;
 
@@ -1127,27 +1136,59 @@ export function copyCustomerData(
       return `json:${JSON.stringify(ord)}`;
     };
 
-    const getOrderOwnerDiscriminator = (ord: Record<string, unknown>): string => {
+    const getOrderClaimedEmails = (ord: Record<string, unknown>): string[] => {
       const cust = ord.customer as Record<string, unknown> | undefined;
-      const email = (
-        (typeof cust?.email === "string" ? cust.email : "") ||
-        (typeof ord.email === "string" ? ord.email : "") ||
-        (typeof ord.ownerEmail === "string" ? ord.ownerEmail : "") ||
-        (typeof ord.userEmail === "string" ? ord.userEmail : "")
-      ).toLowerCase().trim();
-      const rawPhone = cust?.phone || ord.phone || ord.mobile || ord.tel;
-      const phone = typeof rawPhone === "string"
-        ? rawPhone.replace(/\D/g, "").slice(-10)
-        : typeof rawPhone === "number" && Number.isFinite(rawPhone)
-        ? String(rawPhone).replace(/\D/g, "").slice(-10)
-        : "";
-      return email ? `em:${email}` : (phone ? `ph:${phone}` : "unknown");
+      const emails = [
+        typeof cust?.email === "string" ? cust.email : "",
+        typeof ord.email === "string" ? ord.email : "",
+        typeof ord.ownerEmail === "string" ? ord.ownerEmail : "",
+        typeof ord.userEmail === "string" ? ord.userEmail : "",
+      ]
+        .map((e) => e.toLowerCase().trim())
+        .filter((e) => e && e.includes("@"));
+      return Array.from(new Set(emails)).sort();
+    };
+
+    const getOrderClaimedPhones = (ord: Record<string, unknown>): string[] => {
+      const tokens = extractExplicitPhoneTokens(ord);
+      return Array.from(new Set(tokens)).sort();
+    };
+
+    const getOrderOwnerDiscriminator = (ord: Record<string, unknown>): string => {
+      const emails = getOrderClaimedEmails(ord);
+      const phones = getOrderClaimedPhones(ord);
+      const parts: string[] = [];
+      if (emails.length > 0) {
+        parts.push(`em:${emails.join(",")}`);
+      }
+      if (phones.length > 0) {
+        parts.push(`ph:${phones.join(",")}`);
+      }
+      return parts.length > 0 ? parts.join(";") : "unknown";
     };
 
     const getForeignOrderDedupKey = (ord: Record<string, unknown>): string => {
       const baseKey = getOrderDedupKey(ord);
       const ownerDisc = getOrderOwnerDiscriminator(ord);
       return `foreign:${ownerDisc}|${baseKey}`;
+    };
+
+    const getForeignOrderQuarantineBucketKey = (ord: Record<string, unknown>): string => {
+      const emails = getOrderClaimedEmails(ord);
+      if (emails.length > 0) {
+        const rootOwners = Array.from(
+          new Set(emails.map((e) => (resolveRootOwner(e, meta) || e).toLowerCase().trim()))
+        );
+        if (rootOwners.length === 1) {
+          return rootOwners[0];
+        }
+        return "unknown";
+      }
+      const phones = getOrderClaimedPhones(ord);
+      if (phones.length === 1) {
+        return `usr_phone_${phones[0]}`;
+      }
+      return "unknown";
     };
 
     const getExactOrderRowKey = (ord: Record<string, unknown>): string => {
@@ -1327,23 +1368,16 @@ export function copyCustomerData(
 
     if (foreignOrders.length > 0) {
       try {
-        const ordersByForeignEmail = new Map<string, Record<string, unknown>[]>();
+        const ordersByForeignBucket = new Map<string, Record<string, unknown>[]>();
         for (const ord of foreignOrders) {
-          const cust = ord.customer as Record<string, unknown> | undefined;
-          const fEm = (
-            (typeof cust?.email === "string" ? cust.email : "") ||
-            (typeof ord.email === "string" ? ord.email : "") ||
-            (typeof ord.ownerEmail === "string" ? ord.ownerEmail : "") ||
-            (typeof ord.userEmail === "string" ? ord.userEmail : "")
-          ).toLowerCase().trim();
-          const key = fEm && fEm.includes("@") ? fEm : (fromSafe || toSafe);
-          if (!ordersByForeignEmail.has(key)) {
-            ordersByForeignEmail.set(key, []);
+          const key = getForeignOrderQuarantineBucketKey(ord);
+          if (!ordersByForeignBucket.has(key)) {
+            ordersByForeignBucket.set(key, []);
           }
-          ordersByForeignEmail.get(key)!.push(ord);
+          ordersByForeignBucket.get(key)!.push(ord);
         }
 
-        for (const [fKey, fOrds] of ordersByForeignEmail.entries()) {
+        for (const [fKey, fOrds] of ordersByForeignBucket.entries()) {
           const fSafe = fKey.replace(/[^a-z0-9_]/g, (ch) => `_${ch.charCodeAt(0).toString(16)}_`);
           const qKey = `palluvo_quarantine_palluvo_ecommerce_orders_${fSafe}`;
           const existingRaw = localStorage.getItem(qKey);
@@ -1354,9 +1388,9 @@ export function copyCustomerData(
               if (Array.isArray(p)) existingList = p;
             } catch {}
           }
-          const seen = new Set(existingList.map(getOrderDedupKey));
+          const seen = new Set(existingList.map(getForeignOrderDedupKey));
           for (const fo of fOrds) {
-            const k = getOrderDedupKey(fo);
+            const k = getForeignOrderDedupKey(fo);
             if (!seen.has(k)) {
               seen.add(k);
               existingList.push(fo);
@@ -1507,6 +1541,14 @@ export function copyCustomerData(
     }
 
     // Addresses merging
+    const phoneAddrSourceKeys: string[] = [];
+    for (const p of verifiedPhoneList) {
+      phoneAddrSourceKeys.push(
+        `palluvo_ecommerce_addresses_usr_phone_${p}`,
+        `palluvo_quarantine_palluvo_ecommerce_addresses_usr_phone_${p}`,
+        `palluvo_quarantine_foreign_palluvo_ecommerce_addresses_usr_phone_${p}`
+      );
+    }
     const addrSources = Array.from(new Set([
       `palluvo_ecommerce_addresses_${fromSafe}`,
       `palluvo_ecommerce_addresses_${fromAccountId}`,
@@ -1516,6 +1558,7 @@ export function copyCustomerData(
       `palluvo_quarantine_foreign_palluvo_ecommerce_addresses_${fromAccountId}`,
       `palluvo_quarantine_foreign_palluvo_ecommerce_addresses_${toSafe}`,
       `palluvo_quarantine_foreign_palluvo_ecommerce_addresses_${toAccountId}`,
+      ...phoneAddrSourceKeys,
     ]));
     const targetAddrKey = `palluvo_ecommerce_addresses_${toSafe}`;
 
@@ -1543,25 +1586,57 @@ export function copyCustomerData(
       return `json:${JSON.stringify(addr)}`;
     };
 
+    const getAddressClaimedEmails = (addr: Record<string, unknown>): string[] => {
+      const emails = [
+        typeof addr.email === "string" ? addr.email : "",
+        typeof addr.ownerEmail === "string" ? addr.ownerEmail : "",
+        typeof addr.userEmail === "string" ? addr.userEmail : "",
+      ]
+        .map((e) => e.toLowerCase().trim())
+        .filter((e) => e && e.includes("@"));
+      return Array.from(new Set(emails)).sort();
+    };
+
+    const getAddressClaimedPhones = (addr: Record<string, unknown>): string[] => {
+      const tokens = extractExplicitPhoneTokens(addr);
+      return Array.from(new Set(tokens)).sort();
+    };
+
     const getAddressOwnerDiscriminator = (addr: Record<string, unknown>): string => {
-      const email = (
-        (typeof addr.email === "string" ? addr.email : "") ||
-        (typeof addr.ownerEmail === "string" ? addr.ownerEmail : "") ||
-        (typeof addr.userEmail === "string" ? addr.userEmail : "")
-      ).toLowerCase().trim();
-      const rawPhone = addr.phone;
-      const phone = typeof rawPhone === "string"
-        ? rawPhone.replace(/\D/g, "").slice(-10)
-        : typeof rawPhone === "number" && Number.isFinite(rawPhone)
-        ? String(rawPhone).replace(/\D/g, "").slice(-10)
-        : "";
-      return email ? `em:${email}` : (phone ? `ph:${phone}` : "unknown");
+      const emails = getAddressClaimedEmails(addr);
+      const phones = getAddressClaimedPhones(addr);
+      const parts: string[] = [];
+      if (emails.length > 0) {
+        parts.push(`em:${emails.join(",")}`);
+      }
+      if (phones.length > 0) {
+        parts.push(`ph:${phones.join(",")}`);
+      }
+      return parts.length > 0 ? parts.join(";") : "unknown";
     };
 
     const getForeignAddressDedupKey = (addr: Record<string, unknown>): string => {
       const baseKey = getAddressDedupKey(addr);
       const ownerDisc = getAddressOwnerDiscriminator(addr);
       return `foreign:${ownerDisc}|${baseKey}`;
+    };
+
+    const getForeignAddressQuarantineBucketKey = (addr: Record<string, unknown>): string => {
+      const emails = getAddressClaimedEmails(addr);
+      if (emails.length > 0) {
+        const rootOwners = Array.from(
+          new Set(emails.map((e) => (resolveRootOwner(e, meta) || e).toLowerCase().trim()))
+        );
+        if (rootOwners.length === 1) {
+          return rootOwners[0];
+        }
+        return "unknown";
+      }
+      const phones = getAddressClaimedPhones(addr);
+      if (phones.length === 1) {
+        return `usr_phone_${phones[0]}`;
+      }
+      return "unknown";
     };
 
     const getExactAddressRowKey = (addr: Record<string, unknown>): string => {
@@ -1733,21 +1808,16 @@ export function copyCustomerData(
 
     if (foreignAddrs.length > 0) {
       try {
-        const addrsByForeignEmail = new Map<string, Record<string, unknown>[]>();
+        const addrsByForeignBucket = new Map<string, Record<string, unknown>[]>();
         for (const addr of foreignAddrs) {
-          const fEm = (
-            (typeof addr.email === "string" ? addr.email : "") ||
-            (typeof addr.ownerEmail === "string" ? addr.ownerEmail : "") ||
-            (typeof addr.userEmail === "string" ? addr.userEmail : "")
-          ).toLowerCase().trim();
-          const key = fEm && fEm.includes("@") ? fEm : (fromSafe || toSafe);
-          if (!addrsByForeignEmail.has(key)) {
-            addrsByForeignEmail.set(key, []);
+          const key = getForeignAddressQuarantineBucketKey(addr);
+          if (!addrsByForeignBucket.has(key)) {
+            addrsByForeignBucket.set(key, []);
           }
-          addrsByForeignEmail.get(key)!.push(addr);
+          addrsByForeignBucket.get(key)!.push(addr);
         }
 
-        for (const [fKey, fAs] of addrsByForeignEmail.entries()) {
+        for (const [fKey, fAs] of addrsByForeignBucket.entries()) {
           const fSafe = fKey.replace(/[^a-z0-9_]/g, (ch) => `_${ch.charCodeAt(0).toString(16)}_`);
           const qKey = `palluvo_quarantine_palluvo_ecommerce_addresses_${fSafe}`;
           const existingRaw = localStorage.getItem(qKey);
@@ -1758,9 +1828,9 @@ export function copyCustomerData(
               if (Array.isArray(p)) existingList = p;
             } catch {}
           }
-          const seen = new Set(existingList.map(getAddressDedupKey));
+          const seen = new Set(existingList.map(getForeignAddressDedupKey));
           for (const fa of fAs) {
-            const k = getAddressDedupKey(fa);
+            const k = getForeignAddressDedupKey(fa);
             if (!seen.has(k)) {
               seen.add(k);
               existingList.push(fa);
