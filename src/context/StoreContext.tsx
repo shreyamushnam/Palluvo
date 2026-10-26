@@ -464,6 +464,31 @@ export function getDirectLegacyEmailId(email: string): string {
 }
 
 /**
+ * Checks whether an account ID is a strictly injective canonical email account ID.
+ * Canonical injective IDs are either the special demo ID 'usr_demo_radhika'
+ * or follow the scheme 'usr_email_' + encodeIdentifierToId(email), where non-alphanumerics
+ * (including '@' as '_40_', '.' as '_2e_', '+' as '_2b_', '_' as '_5f_') are strictly hex-escaped.
+ * Legacy sanitized IDs contain literal dots, hyphens, or unescaped characters, and do NOT contain '_40_'.
+ */
+export function isInjectiveEmailAccountId(id?: string | null): boolean {
+  if (!id || typeof id !== "string") return false;
+  const trimmed = id.trim();
+  if (trimmed === "usr_demo_radhika") return true;
+  if (!trimmed.startsWith("usr_email_")) return false;
+  const token = trimmed.slice("usr_email_".length);
+  return token.includes("_40_") && !token.includes(".") && !token.includes("@") && !token.includes("-");
+}
+
+/**
+ * Returns the strictly injective canonical email account ID for a given email address.
+ */
+export function getInjectiveEmailAccountId(email: string): string {
+  const norm = email.toLowerCase().trim();
+  if (norm === "radhika.sharma@example.com") return "usr_demo_radhika";
+  return `usr_email_${encodeIdentifierToId(norm)}`;
+}
+
+/**
  * Resolves a known real email address registered to an account ID, if any.
  */
 export function lookupEmailByAccountId(accountId?: string | null): string | null {
@@ -2259,10 +2284,86 @@ export function reviewAndRepairQuarantinedUnknownRecords(
       };
     }
 
-    const getInjectiveAccountId = (email: string): string => {
-      const norm = email.toLowerCase().trim();
-      if (norm === "radhika.sharma@example.com") return "usr_demo_radhika";
-      return `usr_email_${encodeIdentifierToId(norm)}`;
+    const resolveSafeInjectiveAccountId = (rootEmail: string): string => {
+      const norm = rootEmail.toLowerCase().trim();
+      const expectedInjectiveId = norm === "radhika.sharma@example.com"
+        ? "usr_demo_radhika"
+        : `usr_email_${encodeIdentifierToId(norm)}`;
+
+      const legacyLossyId = getDirectLegacyEmailId(norm);
+
+      // Check current map and metadata values
+      const mapVal = map[norm];
+      const metaVal = meta[norm]?.accountId;
+
+      // Identify any legacy lossy IDs that were mapped or stored
+      const candidateLegacyIds = new Set<string>();
+      if (legacyLossyId !== expectedInjectiveId) {
+        candidateLegacyIds.add(legacyLossyId);
+      }
+      if (
+        mapVal &&
+        mapVal !== expectedInjectiveId &&
+        (mapVal === legacyLossyId || !isInjectiveEmailAccountId(mapVal) || mapVal.startsWith("usr_email_"))
+      ) {
+        candidateLegacyIds.add(mapVal);
+      }
+      if (
+        metaVal &&
+        metaVal !== expectedInjectiveId &&
+        (metaVal === legacyLossyId || !isInjectiveEmailAccountId(metaVal) || metaVal.startsWith("usr_email_"))
+      ) {
+        candidateLegacyIds.add(metaVal);
+      }
+
+      // Rekey and quarantine any legacy lossy IDs encountered
+      for (const legId of candidateLegacyIds) {
+        if (!isQuarantinedAccountId(legId)) {
+          quarantineLegacyBucket(legId, [norm]);
+        }
+        migrationMeta.rekeyedOwnerIds = migrationMeta.rekeyedOwnerIds || {};
+        migrationMeta.rekeyedOwnerIds[legId] = expectedInjectiveId;
+      }
+
+      // If active auth user was bound to a legacy lossy ID for this email, rekey them
+      try {
+        const authRaw = localStorage.getItem("palluvo_ecommerce_auth");
+        if (authRaw) {
+          const parsed = JSON.parse(authRaw);
+          if (
+            parsed?.user?.email?.toLowerCase().trim() === norm &&
+            parsed?.user?.id &&
+            parsed.user.id !== expectedInjectiveId &&
+            candidateLegacyIds.has(parsed.user.id)
+          ) {
+            parsed.user.id = expectedInjectiveId;
+            localStorage.setItem("palluvo_ecommerce_auth", JSON.stringify(parsed));
+          }
+        }
+      } catch {}
+
+      // If an injective destination ID is already recorded and not quarantined, verify it matches expected
+      const validCanonicalId = (!isQuarantinedAccountId(mapVal) && mapVal === expectedInjectiveId)
+        ? mapVal
+        : ((!isQuarantinedAccountId(metaVal) && metaVal === expectedInjectiveId) ? metaVal : undefined);
+
+      const targetId = validCanonicalId || expectedInjectiveId;
+
+      if (map[norm] !== targetId) {
+        map[norm] = targetId;
+        mapModified = true;
+      }
+      if (!meta[norm] || meta[norm].accountId !== targetId) {
+        meta[norm] = {
+          ...meta[norm],
+          accountId: targetId,
+          type: meta[norm]?.type || "primary",
+          ownerEmail: norm,
+          updatedAt: Date.now(),
+        };
+      }
+
+      return targetId;
     };
 
     let mapModified = false;
@@ -2293,24 +2394,8 @@ export function reviewAndRepairQuarantinedUnknownRecords(
             const rootOwners = Array.from(new Set(validEmails.map((e) => (resolveRootOwner(e, meta) || e).toLowerCase().trim())));
             if (rootOwners.length === 1) {
               const root = rootOwners[0];
-              const resolvedOwnerId = (!isQuarantinedAccountId(map[root]) && map[root])
-                ? map[root]
-                : (meta[root]?.accountId && !isQuarantinedAccountId(meta[root].accountId) ? meta[root].accountId : undefined);
-              const accId = resolvedOwnerId || getInjectiveAccountId(root);
+              const accId = resolveSafeInjectiveAccountId(root);
               if (accId && !isQuarantinedAccountId(accId)) {
-                if (map[root] !== accId) {
-                  map[root] = accId;
-                  mapModified = true;
-                }
-                if (!meta[root] || meta[root].accountId !== accId) {
-                  meta[root] = {
-                    ...meta[root],
-                    accountId: accId,
-                    type: meta[root]?.type || "primary",
-                    ownerEmail: root,
-                    updatedAt: Date.now(),
-                  };
-                }
                 targetAccounts.add(root);
               }
             }
@@ -2326,24 +2411,8 @@ export function reviewAndRepairQuarantinedUnknownRecords(
             );
             if (!isUnresolved && meta[p]?.ownerEmail) {
               const root = (resolveRootOwner(meta[p].ownerEmail, meta) || meta[p].ownerEmail).toLowerCase().trim();
-              const resolvedOwnerId = (!isQuarantinedAccountId(map[root]) && map[root])
-                ? map[root]
-                : (meta[root]?.accountId && !isQuarantinedAccountId(meta[root].accountId) ? meta[root].accountId : undefined);
-              const accId = resolvedOwnerId || getInjectiveAccountId(root);
+              const accId = resolveSafeInjectiveAccountId(root);
               if (accId && !isQuarantinedAccountId(accId)) {
-                if (map[root] !== accId) {
-                  map[root] = accId;
-                  mapModified = true;
-                }
-                if (!meta[root] || meta[root].accountId !== accId) {
-                  meta[root] = {
-                    ...meta[root],
-                    accountId: accId,
-                    type: meta[root]?.type || "primary",
-                    ownerEmail: root,
-                    updatedAt: Date.now(),
-                  };
-                }
                 targetAccounts.add(root);
               }
             }
@@ -2351,14 +2420,20 @@ export function reviewAndRepairQuarantinedUnknownRecords(
         }
 
         for (const root of targetAccounts) {
-          const resolvedOwnerId = (!isQuarantinedAccountId(map[root]) && map[root])
-            ? map[root]
-            : (meta[root]?.accountId && !isQuarantinedAccountId(meta[root].accountId) ? meta[root].accountId : undefined);
-          const accId = resolvedOwnerId || getInjectiveAccountId(root);
+          const accId = resolveSafeInjectiveAccountId(root);
           if (accId && !isQuarantinedAccountId(accId)) {
+            const candidateLegacyIds = new Set<string>();
             const legacyBucketId = getDirectLegacyEmailId(root);
-            if (legacyBucketId !== accId && !isQuarantinedAccountId(legacyBucketId)) {
-              copyCustomerData(legacyBucketId, accId, {
+            if (legacyBucketId !== accId) candidateLegacyIds.add(legacyBucketId);
+            if (migrationMeta.rekeyedOwnerIds) {
+              for (const [oldId, newId] of Object.entries(migrationMeta.rekeyedOwnerIds)) {
+                if (newId === accId && oldId !== accId) {
+                  candidateLegacyIds.add(oldId);
+                }
+              }
+            }
+            for (const legSrc of candidateLegacyIds) {
+              copyCustomerData(legSrc, accId, {
                 filterByOwnerEmail: root,
                 allowedEmails: [root],
               });
@@ -2397,24 +2472,8 @@ export function reviewAndRepairQuarantinedUnknownRecords(
             const rootOwners = Array.from(new Set(validEmails.map((e) => (resolveRootOwner(e, meta) || e).toLowerCase().trim())));
             if (rootOwners.length === 1) {
               const root = rootOwners[0];
-              const resolvedOwnerId = (!isQuarantinedAccountId(map[root]) && map[root])
-                ? map[root]
-                : (meta[root]?.accountId && !isQuarantinedAccountId(meta[root].accountId) ? meta[root].accountId : undefined);
-              const accId = resolvedOwnerId || getInjectiveAccountId(root);
+              const accId = resolveSafeInjectiveAccountId(root);
               if (accId && !isQuarantinedAccountId(accId)) {
-                if (map[root] !== accId) {
-                  map[root] = accId;
-                  mapModified = true;
-                }
-                if (!meta[root] || meta[root].accountId !== accId) {
-                  meta[root] = {
-                    ...meta[root],
-                    accountId: accId,
-                    type: meta[root]?.type || "primary",
-                    ownerEmail: root,
-                    updatedAt: Date.now(),
-                  };
-                }
                 targetAccounts.add(root);
               }
             }
@@ -2429,24 +2488,8 @@ export function reviewAndRepairQuarantinedUnknownRecords(
             );
             if (!isUnresolved && meta[phone]?.ownerEmail) {
               const root = (resolveRootOwner(meta[phone].ownerEmail, meta) || meta[phone].ownerEmail).toLowerCase().trim();
-              const resolvedOwnerId = (!isQuarantinedAccountId(map[root]) && map[root])
-                ? map[root]
-                : (meta[root]?.accountId && !isQuarantinedAccountId(meta[root].accountId) ? meta[root].accountId : undefined);
-              const accId = resolvedOwnerId || getInjectiveAccountId(root);
+              const accId = resolveSafeInjectiveAccountId(root);
               if (accId && !isQuarantinedAccountId(accId)) {
-                if (map[root] !== accId) {
-                  map[root] = accId;
-                  mapModified = true;
-                }
-                if (!meta[root] || meta[root].accountId !== accId) {
-                  meta[root] = {
-                    ...meta[root],
-                    accountId: accId,
-                    type: meta[root]?.type || "primary",
-                    ownerEmail: root,
-                    updatedAt: Date.now(),
-                  };
-                }
                 targetAccounts.add(root);
               }
             }
@@ -2454,14 +2497,20 @@ export function reviewAndRepairQuarantinedUnknownRecords(
         }
 
         for (const root of targetAccounts) {
-          const resolvedOwnerId = (!isQuarantinedAccountId(map[root]) && map[root])
-            ? map[root]
-            : (meta[root]?.accountId && !isQuarantinedAccountId(meta[root].accountId) ? meta[root].accountId : undefined);
-          const accId = resolvedOwnerId || getInjectiveAccountId(root);
+          const accId = resolveSafeInjectiveAccountId(root);
           if (accId && !isQuarantinedAccountId(accId)) {
+            const candidateLegacyIds = new Set<string>();
             const legacyBucketId = getDirectLegacyEmailId(root);
-            if (legacyBucketId !== accId && !isQuarantinedAccountId(legacyBucketId)) {
-              copyCustomerData(legacyBucketId, accId, {
+            if (legacyBucketId !== accId) candidateLegacyIds.add(legacyBucketId);
+            if (migrationMeta.rekeyedOwnerIds) {
+              for (const [oldId, newId] of Object.entries(migrationMeta.rekeyedOwnerIds)) {
+                if (newId === accId && oldId !== accId) {
+                  candidateLegacyIds.add(oldId);
+                }
+              }
+            }
+            for (const legSrc of candidateLegacyIds) {
+              copyCustomerData(legSrc, accId, {
                 filterByOwnerEmail: root,
                 allowedEmails: [root],
               });
@@ -2498,6 +2547,7 @@ export function reviewAndRepairQuarantinedUnknownRecords(
         const verifiedRaw = localStorage.getItem(ACCOUNT_MAP_KEY);
         if (verifiedRaw === serialized) {
           setAccountMetadata(meta);
+          setMigrationMetadata(migrationMeta);
         }
       } catch {}
     }
@@ -2972,7 +3022,16 @@ export function migrateLegacyAccountAliases(): void {
         const allCandidateEmails = Array.from(new Set([...historicalEmails, singleEmail]));
         const hasCollisionHistory = historicalEmails.some((e) => e !== singleEmail);
 
-        if (isQuarantinedAccountId(trimmedVal)) {
+        const isLegacyLossy = trimmedVal !== expectedInjectiveId && (
+          trimmedVal.startsWith("usr_email_") ||
+          trimmedVal === getDirectLegacyEmailId(singleEmail) ||
+          !isInjectiveEmailAccountId(trimmedVal)
+        );
+
+        if (isQuarantinedAccountId(trimmedVal) || isLegacyLossy) {
+          if (!isQuarantinedAccountId(trimmedVal)) {
+            quarantineLegacyBucket(trimmedVal, [singleEmail]);
+          }
           // Both collision-history and no-collision-history branches must filter by verified owner:
           // do NOT copy wholesale into expectedInjectiveId, as shared legacy buckets may contain foreign records.
           const verifiedPhones: string[] = [];
@@ -3103,7 +3162,7 @@ export function migrateLegacyAccountAliases(): void {
           }
         }
 
-        const targetAccountIdForSingleEmail = isQuarantinedAccountId(trimmedVal)
+        const targetAccountIdForSingleEmail = (isQuarantinedAccountId(trimmedVal) || isLegacyLossy)
           ? expectedInjectiveId
           : (map[singleEmail] || trimmedVal);
 
@@ -4264,9 +4323,16 @@ export function lookupAccountId(identifier?: string | null): string | null {
         const partition = partitionEmailsByAccountOwner(collisionEmails, meta, activeUserEmail);
         if (partition.isSingleOwner) {
           const ownerCluster = partition.clusters[0];
-          const targetId = (val.startsWith("usr_email_") || val === "usr_demo_radhika")
+          const targetId = (isInjectiveEmailAccountId(val) && val === ownerCluster.canonicalId)
             ? val
             : ownerCluster.canonicalId;
+          if (val !== targetId) {
+            if (!isQuarantinedAccountId(val)) {
+              quarantineLegacyBucket(val, collisionEmails);
+            }
+            migrationMeta.rekeyedOwnerIds = migrationMeta.rekeyedOwnerIds || {};
+            migrationMeta.rekeyedOwnerIds[val] = targetId;
+          }
           const copySuccess = copyCustomerData(val, targetId, {
             filterByOwnerEmail: ownerCluster.canonicalEmail,
             allowedEmails: ownerCluster.emails,
@@ -4296,6 +4362,7 @@ export function lookupAccountId(identifier?: string | null): string | null {
           try {
             localStorage.setItem(ACCOUNT_MAP_KEY, JSON.stringify(map));
             setAccountMetadata(meta);
+            setMigrationMetadata(migrationMeta);
           } catch {}
           return targetId;
         }
@@ -4328,6 +4395,42 @@ export function lookupAccountId(identifier?: string | null): string | null {
           setMigrationMetadata(migrationMeta);
         } catch {}
         return targetId;
+      }
+
+      if (val !== expectedInjectiveId) {
+        if (!isQuarantinedAccountId(val)) {
+          quarantineLegacyBucket(val, [key]);
+        }
+        migrationMeta.rekeyedOwnerIds = migrationMeta.rekeyedOwnerIds || {};
+        migrationMeta.rekeyedOwnerIds[val] = expectedInjectiveId;
+        const legacyBucketId = getDirectLegacyEmailId(key);
+        if (legacyBucketId !== expectedInjectiveId && !isQuarantinedAccountId(legacyBucketId)) {
+          quarantineLegacyBucket(legacyBucketId, [key]);
+          migrationMeta.rekeyedOwnerIds[legacyBucketId] = expectedInjectiveId;
+        }
+        copyCustomerData(val, expectedInjectiveId, {
+          filterByOwnerEmail: key,
+          allowedEmails: [key],
+        });
+        if (legacyBucketId !== val && legacyBucketId !== expectedInjectiveId) {
+          copyCustomerData(legacyBucketId, expectedInjectiveId, {
+            filterByOwnerEmail: key,
+            allowedEmails: [key],
+          });
+        }
+        map[key] = expectedInjectiveId;
+        meta[key] = {
+          ...meta[key],
+          accountId: expectedInjectiveId,
+          type: meta[key]?.type || "primary",
+          updatedAt: Date.now(),
+        };
+        try {
+          localStorage.setItem(ACCOUNT_MAP_KEY, JSON.stringify(map));
+          setAccountMetadata(meta);
+          setMigrationMetadata(migrationMeta);
+        } catch {}
+        return expectedInjectiveId;
       }
 
       return val;
