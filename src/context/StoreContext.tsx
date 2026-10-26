@@ -672,8 +672,10 @@ export function findOwnerEmailForPhoneInRecords(
         const cust = ordObj.customer as Record<string, unknown> | undefined;
         const custEmail = typeof cust?.email === "string" ? cust.email.toLowerCase().trim() : "";
         const ordEmail = typeof ordObj.email === "string" ? ordObj.email.toLowerCase().trim() : "";
+        const ownerEmail = typeof ordObj.ownerEmail === "string" ? ordObj.ownerEmail.toLowerCase().trim() : "";
+        const userEmail = typeof ordObj.userEmail === "string" ? ordObj.userEmail.toLowerCase().trim() : "";
 
-        for (const em of [custEmail, ordEmail]) {
+        for (const em of [custEmail, ordEmail, ownerEmail, userEmail]) {
           if (em && em.includes("@")) {
             const norm = em.toLowerCase().trim();
             const m = meta[norm];
@@ -690,6 +692,8 @@ export function findOwnerEmailForPhoneInRecords(
               const canonical = getVerifiedRootOwner(norm, meta) || norm;
               matchedCanonicalOwners.add(canonical);
             }
+          } else if (em) {
+            hasAmbiguousOwner = true;
           }
         }
       }
@@ -741,6 +745,8 @@ export function findOwnerEmailForPhoneInRecords(
               const canonical = getVerifiedRootOwner(norm, meta) || norm;
               matchedCanonicalOwners.add(canonical);
             }
+          } else if (em) {
+            hasAmbiguousOwner = true;
           }
         }
       }
@@ -1058,6 +1064,7 @@ export function copyCustomerData(
     const toSafe = toAccountId.toLowerCase().trim().replace(/[^a-z0-9_]/g, (ch) => `_${ch.charCodeAt(0).toString(16)}_`);
 
     const meta = getAccountMetadata();
+    const migrationMeta = getMigrationMetadata();
     const allowedEmailSet = new Set<string>();
     if (filterEmail) {
       allowedEmailSet.add(filterEmail);
@@ -1105,6 +1112,36 @@ export function copyCustomerData(
       return false;
     };
 
+    const isPhoneVerified = (phoneCandidate?: string | null): boolean => {
+      if (!phoneCandidate) return false;
+      const norm = normalizeExplicitPhoneToken(phoneCandidate);
+      if (!norm) return false;
+      if (verifiedPhoneList.includes(norm)) {
+        const recordedOwner = meta[norm]?.ownerEmail?.toLowerCase().trim();
+        if (recordedOwner) {
+          const resolvedOwner = getVerifiedRootOwner(recordedOwner, meta);
+          if (resolvedOwner && !isEmailVerified(resolvedOwner)) {
+            return false;
+          }
+        }
+        if (meta[norm]?.status === "unresolved" || migrationMeta.unresolvedPhoneAliases?.[norm]) {
+          const recorded = meta[norm]?.ownerEmail?.toLowerCase().trim();
+          if (recorded && !isEmailVerified(recorded)) {
+            return false;
+          }
+        }
+        return true;
+      }
+      const recordedOwner = meta[norm]?.ownerEmail?.toLowerCase().trim();
+      if (recordedOwner && meta[norm]?.status !== "unresolved" && !migrationMeta.unresolvedPhoneAliases?.[norm]) {
+        const resolvedOwner = getVerifiedRootOwner(recordedOwner, meta);
+        if (resolvedOwner && isEmailVerified(resolvedOwner)) {
+          return true;
+        }
+      }
+      return false;
+    };
+
     const phoneOrderSourceKeys: string[] = [];
     for (const p of verifiedPhoneList) {
       phoneOrderSourceKeys.push(
@@ -1136,17 +1173,20 @@ export function copyCustomerData(
       return `json:${JSON.stringify(ord)}`;
     };
 
-    const getOrderClaimedEmails = (ord: Record<string, unknown>): string[] => {
+    const getOrderEmailClaims = (ord: Record<string, unknown>) => {
       const cust = ord.customer as Record<string, unknown> | undefined;
-      const emails = [
+      const raw = [
         typeof cust?.email === "string" ? cust.email : "",
         typeof ord.email === "string" ? ord.email : "",
         typeof ord.ownerEmail === "string" ? ord.ownerEmail : "",
         typeof ord.userEmail === "string" ? ord.userEmail : "",
       ]
         .map((e) => e.toLowerCase().trim())
-        .filter((e) => e && e.includes("@"));
-      return Array.from(new Set(emails)).sort();
+        .filter(Boolean);
+      const uniqueRaw = Array.from(new Set(raw)).sort();
+      const validEmails = uniqueRaw.filter((e) => e.includes("@"));
+      const malformedClaims = uniqueRaw.filter((e) => !e.includes("@"));
+      return { validEmails, malformedClaims, allRaw: uniqueRaw };
     };
 
     const getOrderClaimedPhones = (ord: Record<string, unknown>): string[] => {
@@ -1155,11 +1195,14 @@ export function copyCustomerData(
     };
 
     const getOrderOwnerDiscriminator = (ord: Record<string, unknown>): string => {
-      const emails = getOrderClaimedEmails(ord);
+      const { validEmails, malformedClaims } = getOrderEmailClaims(ord);
       const phones = getOrderClaimedPhones(ord);
       const parts: string[] = [];
-      if (emails.length > 0) {
-        parts.push(`em:${emails.join(",")}`);
+      if (validEmails.length > 0) {
+        parts.push(`em:${validEmails.join(",")}`);
+      }
+      if (malformedClaims.length > 0) {
+        parts.push(`raw_em:${malformedClaims.join(",")}`);
       }
       if (phones.length > 0) {
         parts.push(`ph:${phones.join(",")}`);
@@ -1174,10 +1217,13 @@ export function copyCustomerData(
     };
 
     const getForeignOrderQuarantineBucketKey = (ord: Record<string, unknown>): string => {
-      const emails = getOrderClaimedEmails(ord);
-      if (emails.length > 0) {
+      const { validEmails, malformedClaims } = getOrderEmailClaims(ord);
+      if (malformedClaims.length > 0) {
+        return "unknown";
+      }
+      if (validEmails.length > 0) {
         const rootOwners = Array.from(
-          new Set(emails.map((e) => (resolveRootOwner(e, meta) || e).toLowerCase().trim()))
+          new Set(validEmails.map((e) => (resolveRootOwner(e, meta) || e).toLowerCase().trim()))
         );
         if (rootOwners.length === 1) {
           return rootOwners[0];
@@ -1204,18 +1250,15 @@ export function copyCustomerData(
     };
 
     const isOrderVerifiedForOwner = (ord: Record<string, unknown>, isSameBucket = false): boolean => {
-      const cust = ord.customer as Record<string, unknown> | undefined;
-      const custEmail = typeof cust?.email === "string" ? cust.email.toLowerCase().trim() : "";
-      const ordEmail = typeof ord.email === "string" ? ord.email.toLowerCase().trim() : "";
-      const ownerEmail = typeof ord.ownerEmail === "string" ? ord.ownerEmail.toLowerCase().trim() : "";
-      const userEmail = typeof ord.userEmail === "string" ? ord.userEmail.toLowerCase().trim() : "";
+      const { validEmails, malformedClaims } = getOrderEmailClaims(ord);
+      const claimedPhones = getOrderClaimedPhones(ord);
 
       if (!filterEmail && allowedEmailSet.size === 0 && verifiedPhoneList.length === 0) {
-        const nonNulls = [custEmail, ordEmail, ownerEmail, userEmail].filter(Boolean);
-        if (nonNulls.length > 1) {
-          const root1 = (resolveRootOwner(nonNulls[0], meta) || nonNulls[0]).toLowerCase().trim();
-          for (let i = 1; i < nonNulls.length; i++) {
-            const root2 = (resolveRootOwner(nonNulls[i], meta) || nonNulls[i]).toLowerCase().trim();
+        if (malformedClaims.length > 0) return false;
+        if (validEmails.length > 1) {
+          const root1 = (resolveRootOwner(validEmails[0], meta) || validEmails[0]).toLowerCase().trim();
+          for (let i = 1; i < validEmails.length; i++) {
+            const root2 = (resolveRootOwner(validEmails[i], meta) || validEmails[i]).toLowerCase().trim();
             if (root1 !== root2) {
               return false;
             }
@@ -1224,30 +1267,29 @@ export function copyCustomerData(
         return true;
       }
 
-      const orderEmails = [custEmail, ordEmail, ownerEmail, userEmail].filter(Boolean);
-      if (orderEmails.length > 0) {
+      if (malformedClaims.length > 0) {
+        return false;
+      }
+
+      if (validEmails.length > 0) {
         // Require every non-empty owner email to resolve to this account,
         // and fail closed on a conflict.
-        return orderEmails.every((e) => isEmailVerified(e));
+        return validEmails.every((e) => isEmailVerified(e));
       }
 
       // If no email was attached to the order:
+      // When phone claims exist, require all phone claims to resolve unambiguously to this same owner.
+      if (claimedPhones.length > 0) {
+        return claimedPhones.every((p) => isPhoneVerified(p));
+      }
+
+      // If no email and no phone was attached to the order:
       // Records that already sit in the canonical / same-key bucket have no positive evidence
       // of another owner, so they must stay.
       if (isSameBucket) {
         return true;
       }
 
-      // When migrating from an external source bucket with no email,
-      // require affirmative proof that it belongs to this owner via verified phone.
-      if (verifiedPhoneList.length > 0) {
-        const explicitTokens = extractExplicitPhoneTokens(ord);
-        for (const token of explicitTokens) {
-          if (verifiedPhoneList.includes(token)) {
-            return true;
-          }
-        }
-      }
       return false;
     };
 
@@ -1586,15 +1628,18 @@ export function copyCustomerData(
       return `json:${JSON.stringify(addr)}`;
     };
 
-    const getAddressClaimedEmails = (addr: Record<string, unknown>): string[] => {
-      const emails = [
+    const getAddressEmailClaims = (addr: Record<string, unknown>) => {
+      const raw = [
         typeof addr.email === "string" ? addr.email : "",
         typeof addr.ownerEmail === "string" ? addr.ownerEmail : "",
         typeof addr.userEmail === "string" ? addr.userEmail : "",
       ]
         .map((e) => e.toLowerCase().trim())
-        .filter((e) => e && e.includes("@"));
-      return Array.from(new Set(emails)).sort();
+        .filter(Boolean);
+      const uniqueRaw = Array.from(new Set(raw)).sort();
+      const validEmails = uniqueRaw.filter((e) => e.includes("@"));
+      const malformedClaims = uniqueRaw.filter((e) => !e.includes("@"));
+      return { validEmails, malformedClaims, allRaw: uniqueRaw };
     };
 
     const getAddressClaimedPhones = (addr: Record<string, unknown>): string[] => {
@@ -1603,11 +1648,14 @@ export function copyCustomerData(
     };
 
     const getAddressOwnerDiscriminator = (addr: Record<string, unknown>): string => {
-      const emails = getAddressClaimedEmails(addr);
+      const { validEmails, malformedClaims } = getAddressEmailClaims(addr);
       const phones = getAddressClaimedPhones(addr);
       const parts: string[] = [];
-      if (emails.length > 0) {
-        parts.push(`em:${emails.join(",")}`);
+      if (validEmails.length > 0) {
+        parts.push(`em:${validEmails.join(",")}`);
+      }
+      if (malformedClaims.length > 0) {
+        parts.push(`raw_em:${malformedClaims.join(",")}`);
       }
       if (phones.length > 0) {
         parts.push(`ph:${phones.join(",")}`);
@@ -1622,10 +1670,13 @@ export function copyCustomerData(
     };
 
     const getForeignAddressQuarantineBucketKey = (addr: Record<string, unknown>): string => {
-      const emails = getAddressClaimedEmails(addr);
-      if (emails.length > 0) {
+      const { validEmails, malformedClaims } = getAddressEmailClaims(addr);
+      if (malformedClaims.length > 0) {
+        return "unknown";
+      }
+      if (validEmails.length > 0) {
         const rootOwners = Array.from(
-          new Set(emails.map((e) => (resolveRootOwner(e, meta) || e).toLowerCase().trim()))
+          new Set(validEmails.map((e) => (resolveRootOwner(e, meta) || e).toLowerCase().trim()))
         );
         if (rootOwners.length === 1) {
           return rootOwners[0];
@@ -1652,45 +1703,44 @@ export function copyCustomerData(
     };
 
     const isAddressVerifiedForOwner = (addr: Record<string, unknown>, isSameBucket = false): boolean => {
-      const addrEmail = typeof addr.email === "string" ? addr.email.toLowerCase().trim() : "";
-      const ownerEmail = typeof addr.ownerEmail === "string" ? addr.ownerEmail.toLowerCase().trim() : "";
-      const userEmail = typeof addr.userEmail === "string" ? addr.userEmail.toLowerCase().trim() : "";
+      const { validEmails, malformedClaims } = getAddressEmailClaims(addr);
+      const claimedPhones = getAddressClaimedPhones(addr);
 
       if (!filterEmail && allowedEmailSet.size === 0 && verifiedPhoneList.length === 0) {
-        const nonNulls = [addrEmail, ownerEmail, userEmail].filter(Boolean);
-        if (nonNulls.length > 1) {
-          const firstRoot = (resolveRootOwner(nonNulls[0], meta) || nonNulls[0]).toLowerCase().trim();
-          for (let i = 1; i < nonNulls.length; i++) {
-            const r = (resolveRootOwner(nonNulls[i], meta) || nonNulls[i]).toLowerCase().trim();
+        if (malformedClaims.length > 0) return false;
+        if (validEmails.length > 1) {
+          const firstRoot = (resolveRootOwner(validEmails[0], meta) || validEmails[0]).toLowerCase().trim();
+          for (let i = 1; i < validEmails.length; i++) {
+            const r = (resolveRootOwner(validEmails[i], meta) || validEmails[i]).toLowerCase().trim();
             if (r !== firstRoot) return false;
           }
         }
         return true;
       }
 
-      const addrEmails = [addrEmail, ownerEmail, userEmail].filter(Boolean);
-      if (addrEmails.length > 0) {
+      if (malformedClaims.length > 0) {
+        return false;
+      }
+
+      if (validEmails.length > 0) {
         // Require every non-empty owner email to resolve to this account,
         // and fail closed on a conflict.
-        return addrEmails.every((e) => isEmailVerified(e));
+        return validEmails.every((e) => isEmailVerified(e));
       }
 
       // If no email was attached to the address:
+      // When phone claims exist, require all phone claims to resolve unambiguously to this same owner.
+      if (claimedPhones.length > 0) {
+        return claimedPhones.every((p) => isPhoneVerified(p));
+      }
+
+      // If no email and no phone was attached to the address:
       // Records that already sit in the canonical / same-key bucket have no positive evidence
       // of another owner, so they must stay.
       if (isSameBucket) {
         return true;
       }
 
-      // If no email was attached to the address, check verified phone
-      if (verifiedPhoneList.length > 0) {
-        const explicitTokens = extractExplicitPhoneTokens(addr);
-        for (const token of explicitTokens) {
-          if (verifiedPhoneList.includes(token)) {
-            return true;
-          }
-        }
-      }
       return false;
     };
 
