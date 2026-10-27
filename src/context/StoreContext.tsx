@@ -140,9 +140,9 @@ export function validateAndNormalizeCart(raw: unknown): CartItem[] {
   return normalized;
 }
 
-const ACCOUNT_MAP_KEY = "palluvo_account_identity_map";
-const ACCOUNT_META_KEY = "palluvo_account_identity_metadata";
-const MIGRATION_META_KEY = "palluvo_account_migration_meta";
+export const ACCOUNT_MAP_KEY = "palluvo_account_identity_map";
+export const ACCOUNT_META_KEY = "palluvo_account_identity_metadata";
+export const MIGRATION_META_KEY = "palluvo_account_migration_meta";
 
 export interface AccountAliasMeta {
   accountId: string;
@@ -232,6 +232,106 @@ export function setMigrationMetadata(meta: MigrationMeta): void {
   try {
     localStorage.setItem(MIGRATION_META_KEY, JSON.stringify(meta));
   } catch {}
+}
+
+/**
+ * Merges a local migration metadata snapshot with current on-disk migration metadata,
+ * ensuring that newly discovered or persisted failure markers (failedQuarantineKeys)
+ * are retained until verified, and preserving quarantine buckets and tombstone markers.
+ */
+export function mergeMigrationMetadata(
+  currentDiskMeta: MigrationMeta,
+  snapshotMeta: MigrationMeta
+): MigrationMeta {
+  const mergedFailedKeys: Record<string, boolean> = {
+    ...(currentDiskMeta.failedQuarantineKeys || {}),
+  };
+
+  if (snapshotMeta.failedQuarantineKeys) {
+    for (const [key, isFailed] of Object.entries(snapshotMeta.failedQuarantineKeys)) {
+      if (isFailed) {
+        if (key.startsWith("retry_migration_")) {
+          const targetId = key.slice("retry_migration_".length);
+          const isResolved = Boolean(
+            currentDiskMeta.rekeyedOwnerIds?.[targetId] &&
+            !currentDiskMeta.failedQuarantineKeys?.[key]
+          );
+          if (!isResolved) {
+            mergedFailedKeys[key] = true;
+          }
+        } else {
+          // Retain failure markers until the backup is verified
+          try {
+            if (typeof window !== "undefined" && window.localStorage) {
+              const val = localStorage.getItem(key);
+              const qVal = localStorage.getItem(`palluvo_quarantine_${key}`);
+              const isBackupVerified = (val === null && qVal !== null) || (val !== null && qVal === val);
+              if (!isBackupVerified) {
+                mergedFailedKeys[key] = true;
+              }
+            } else {
+              mergedFailedKeys[key] = true;
+            }
+          } catch {
+            mergedFailedKeys[key] = true;
+          }
+        }
+      }
+    }
+  }
+
+  const mergedLegacyBuckets: Record<string, { quarantinedAt: number; emails: string[] }> = {
+    ...(currentDiskMeta.quarantinedLegacyBuckets || {}),
+  };
+  if (snapshotMeta.quarantinedLegacyBuckets) {
+    for (const [k, v] of Object.entries(snapshotMeta.quarantinedLegacyBuckets)) {
+      if (!mergedLegacyBuckets[k]) {
+        mergedLegacyBuckets[k] = v;
+      } else {
+        mergedLegacyBuckets[k] = {
+          quarantinedAt: Math.min(mergedLegacyBuckets[k].quarantinedAt || Date.now(), v.quarantinedAt || Date.now()),
+          emails: Array.from(new Set([...(mergedLegacyBuckets[k].emails || []), ...(v.emails || [])])),
+        };
+      }
+    }
+  }
+
+  const mergedCollisionIds: Record<string, string[]> = {
+    ...(currentDiskMeta.quarantinedCollisionIds || {}),
+  };
+  if (snapshotMeta.quarantinedCollisionIds) {
+    for (const [k, v] of Object.entries(snapshotMeta.quarantinedCollisionIds)) {
+      mergedCollisionIds[k] = Array.from(new Set([...(mergedCollisionIds[k] || []), ...(v || [])]));
+    }
+  }
+
+  const mergedMigratedCollisionIds: Record<string, string[]> = {
+    ...(currentDiskMeta.migratedCollisionIds || {}),
+  };
+  if (snapshotMeta.migratedCollisionIds) {
+    for (const [k, v] of Object.entries(snapshotMeta.migratedCollisionIds)) {
+      mergedMigratedCollisionIds[k] = Array.from(new Set([...(mergedMigratedCollisionIds[k] || []), ...(v || [])]));
+    }
+  }
+
+  return {
+    migratedCollisionIds: mergedMigratedCollisionIds,
+    quarantinedCollisionIds: mergedCollisionIds,
+    quarantinedLegacyBuckets: mergedLegacyBuckets,
+    tombstonedKeys: {
+      ...(currentDiskMeta.tombstonedKeys || {}),
+      ...(snapshotMeta.tombstonedKeys || {}),
+    },
+    failedQuarantineKeys: mergedFailedKeys,
+    rekeyedOwnerIds: {
+      ...(currentDiskMeta.rekeyedOwnerIds || {}),
+      ...(snapshotMeta.rekeyedOwnerIds || {}),
+    },
+    unresolvedPhoneAliases: {
+      ...(currentDiskMeta.unresolvedPhoneAliases || {}),
+      ...(snapshotMeta.unresolvedPhoneAliases || {}),
+    },
+  };
 }
 
 /**
@@ -2547,7 +2647,20 @@ export function reviewAndRepairQuarantinedUnknownRecords(
         const verifiedRaw = localStorage.getItem(ACCOUNT_MAP_KEY);
         if (verifiedRaw === serialized) {
           setAccountMetadata(meta);
-          setMigrationMetadata(migrationMeta);
+          const currentMeta = getMigrationMetadata();
+          const mergedMeta = mergeMigrationMetadata(currentMeta, migrationMeta);
+          setMigrationMetadata(mergedMeta);
+        }
+      } catch {}
+    } else {
+      try {
+        const currentMeta = getMigrationMetadata();
+        const mergedMeta = mergeMigrationMetadata(currentMeta, migrationMeta);
+        if (
+          JSON.stringify(mergedMeta.rekeyedOwnerIds || {}) !== JSON.stringify(currentMeta.rekeyedOwnerIds || {}) ||
+          JSON.stringify(mergedMeta.failedQuarantineKeys || {}) !== JSON.stringify(currentMeta.failedQuarantineKeys || {})
+        ) {
+          setMigrationMetadata(mergedMeta);
         }
       } catch {}
     }
@@ -3995,7 +4108,9 @@ export function migrateLegacyAccountAliases(): void {
 
     if (modified) {
       localStorage.setItem(ACCOUNT_MAP_KEY, JSON.stringify(map));
-      setMigrationMetadata(migrationMeta);
+      const currentMeta = getMigrationMetadata();
+      const mergedMeta = mergeMigrationMetadata(currentMeta, migrationMeta);
+      setMigrationMetadata(mergedMeta);
     }
     setAccountMetadata(meta);
 
@@ -4023,6 +4138,80 @@ export function lookupAccountId(identifier?: string | null): string | null {
     const val = map[key].trim();
     const meta = getAccountMetadata();
     const migrationMeta = getMigrationMetadata();
+
+    const recoverAndCommitInjectiveEmail = (
+      emailKey: string,
+      sourceId: string,
+      targetInjectiveId: string
+    ): string => {
+      const legacyBucketId = getDirectLegacyEmailId(emailKey);
+      if (legacyBucketId !== targetInjectiveId && !isQuarantinedAccountId(legacyBucketId)) {
+        quarantineLegacyBucket(legacyBucketId, [emailKey]);
+      }
+
+      const copy1Success = copyCustomerData(sourceId, targetInjectiveId, {
+        filterByOwnerEmail: emailKey,
+        allowedEmails: [emailKey],
+      });
+      let copy2Success = true;
+      if (legacyBucketId !== sourceId && legacyBucketId !== targetInjectiveId) {
+        copy2Success = copyCustomerData(legacyBucketId, targetInjectiveId, {
+          filterByOwnerEmail: emailKey,
+          allowedEmails: [emailKey],
+        });
+      }
+
+      if (!copy1Success || !copy2Success) {
+        // Keep the old mapping until both recovery copies succeed.
+        // Preserve a retryable source/migration marker on failure.
+        const currentMeta = getMigrationMetadata();
+        const failureSnapshot: MigrationMeta = {
+          ...migrationMeta,
+          failedQuarantineKeys: {
+            ...(migrationMeta.failedQuarantineKeys || {}),
+            [`retry_migration_${sourceId}`]: true,
+            ...(legacyBucketId !== sourceId && legacyBucketId !== targetInjectiveId
+              ? { [`retry_migration_${legacyBucketId}`]: true }
+              : {}),
+          },
+        };
+        const mergedMeta = mergeMigrationMetadata(currentMeta, failureSnapshot);
+        try {
+          setMigrationMetadata(mergedMeta);
+        } catch {}
+        return sourceId;
+      }
+
+      // Both recovery copies succeeded: commit the rekey
+      const currentMeta = getMigrationMetadata();
+      const successSnapshot: MigrationMeta = {
+        ...migrationMeta,
+        rekeyedOwnerIds: {
+          ...(migrationMeta.rekeyedOwnerIds || {}),
+          [sourceId]: targetInjectiveId,
+          ...(legacyBucketId !== targetInjectiveId ? { [legacyBucketId]: targetInjectiveId } : {}),
+        },
+      };
+      const mergedMeta = mergeMigrationMetadata(currentMeta, successSnapshot);
+      if (mergedMeta.failedQuarantineKeys) {
+        delete mergedMeta.failedQuarantineKeys[`retry_migration_${sourceId}`];
+        delete mergedMeta.failedQuarantineKeys[`retry_migration_${legacyBucketId}`];
+      }
+
+      map[emailKey] = targetInjectiveId;
+      meta[emailKey] = {
+        ...meta[emailKey],
+        accountId: targetInjectiveId,
+        type: meta[emailKey]?.type || "primary",
+        updatedAt: Date.now(),
+      };
+      try {
+        localStorage.setItem(ACCOUNT_MAP_KEY, JSON.stringify(map));
+        setAccountMetadata(meta);
+        setMigrationMetadata(mergedMeta);
+      } catch {}
+      return targetInjectiveId;
+    };
 
     // 1. Check whether val represents a quarantined/tombstoned ID for ANY identifier type
     if (isQuarantinedAccountId(val)) {
@@ -4206,22 +4395,12 @@ export function lookupAccountId(identifier?: string | null): string | null {
         return redirectedId;
       }
 
-      // If key is an email, rekey to injective ID
+      // If key is an email, recover from quarantined legacy source to injective ID
       if (key.includes("@")) {
         const expectedInjectiveId = key === "radhika.sharma@example.com"
           ? "usr_demo_radhika"
           : `usr_email_${encodeIdentifierToId(key)}`;
-        map[key] = expectedInjectiveId;
-        meta[key] = {
-          accountId: expectedInjectiveId,
-          type: meta[key]?.type || "primary",
-          updatedAt: Date.now(),
-        };
-        try {
-          localStorage.setItem(ACCOUNT_MAP_KEY, JSON.stringify(map));
-          setAccountMetadata(meta);
-        } catch {}
-        return expectedInjectiveId;
+        return recoverAndCommitInjectiveEmail(key, val, expectedInjectiveId);
       }
 
       // For non-email identifier (e.g. phone) without a valid owner redirect:
@@ -4362,7 +4541,9 @@ export function lookupAccountId(identifier?: string | null): string | null {
           try {
             localStorage.setItem(ACCOUNT_MAP_KEY, JSON.stringify(map));
             setAccountMetadata(meta);
-            setMigrationMetadata(migrationMeta);
+            const currentMeta = getMigrationMetadata();
+            const mergedMeta = mergeMigrationMetadata(currentMeta, migrationMeta);
+            setMigrationMetadata(mergedMeta);
           } catch {}
           return targetId;
         }
@@ -4389,10 +4570,12 @@ export function lookupAccountId(identifier?: string | null): string | null {
         try {
           localStorage.setItem(ACCOUNT_MAP_KEY, JSON.stringify(map));
           setAccountMetadata(meta);
+          const currentMeta = getMigrationMetadata();
           migrationMeta.migratedCollisionIds[val] = Array.from(
             new Set([...(migrationMeta.migratedCollisionIds[val] || []), key])
           );
-          setMigrationMetadata(migrationMeta);
+          const mergedMeta = mergeMigrationMetadata(currentMeta, migrationMeta);
+          setMigrationMetadata(mergedMeta);
         } catch {}
         return targetId;
       }
@@ -4401,36 +4584,7 @@ export function lookupAccountId(identifier?: string | null): string | null {
         if (!isQuarantinedAccountId(val)) {
           quarantineLegacyBucket(val, [key]);
         }
-        migrationMeta.rekeyedOwnerIds = migrationMeta.rekeyedOwnerIds || {};
-        migrationMeta.rekeyedOwnerIds[val] = expectedInjectiveId;
-        const legacyBucketId = getDirectLegacyEmailId(key);
-        if (legacyBucketId !== expectedInjectiveId && !isQuarantinedAccountId(legacyBucketId)) {
-          quarantineLegacyBucket(legacyBucketId, [key]);
-          migrationMeta.rekeyedOwnerIds[legacyBucketId] = expectedInjectiveId;
-        }
-        copyCustomerData(val, expectedInjectiveId, {
-          filterByOwnerEmail: key,
-          allowedEmails: [key],
-        });
-        if (legacyBucketId !== val && legacyBucketId !== expectedInjectiveId) {
-          copyCustomerData(legacyBucketId, expectedInjectiveId, {
-            filterByOwnerEmail: key,
-            allowedEmails: [key],
-          });
-        }
-        map[key] = expectedInjectiveId;
-        meta[key] = {
-          ...meta[key],
-          accountId: expectedInjectiveId,
-          type: meta[key]?.type || "primary",
-          updatedAt: Date.now(),
-        };
-        try {
-          localStorage.setItem(ACCOUNT_MAP_KEY, JSON.stringify(map));
-          setAccountMetadata(meta);
-          setMigrationMetadata(migrationMeta);
-        } catch {}
-        return expectedInjectiveId;
+        return recoverAndCommitInjectiveEmail(key, val, expectedInjectiveId);
       }
 
       return val;
