@@ -182,13 +182,19 @@ export interface MigrationMeta {
   tombstonedKeys?: Record<string, boolean>;
   failedQuarantineKeys?: Record<string, boolean>;
   rekeyedOwnerIds?: Record<string, string>;
-  clearedQuarantineKeys?: Record<string, boolean>;
+  clearedQuarantineKeys?: Record<string, number | boolean>;
   unresolvedPhoneAliases?: Record<string, {
     legacyId: string;
     candidateAccountIds: string[];
     candidateEmails: string[];
     quarantinedAt: number;
   }>;
+}
+
+export function getClearedAtTimestamp(val: number | boolean | undefined): number {
+  if (typeof val === "number") return val;
+  if (val === true) return 1;
+  return 0;
 }
 
 export function getMigrationMetadata(): MigrationMeta {
@@ -248,38 +254,44 @@ export function mergeMigrationMetadata(
   currentDiskMeta: MigrationMeta,
   snapshotMeta: MigrationMeta
 ): MigrationMeta {
-  const mergedClearedKeys: Record<string, boolean> = {
-    ...(currentDiskMeta.clearedQuarantineKeys || {}),
-    ...(snapshotMeta.clearedQuarantineKeys || {}),
-  };
-
-  const mergedFailedKeys: Record<string, boolean> = {};
-  for (const [key, isFailed] of Object.entries(currentDiskMeta.failedQuarantineKeys || {})) {
-    if (isFailed && !mergedClearedKeys[key]) {
-      mergedFailedKeys[key] = true;
+  // 1. Union cleared keys, taking the latest timestamp for each key
+  const mergedClearedKeys: Record<string, number | boolean> = {};
+  for (const [k, v] of Object.entries(currentDiskMeta.clearedQuarantineKeys || {})) {
+    mergedClearedKeys[k] = v;
+  }
+  for (const [k, v] of Object.entries(snapshotMeta.clearedQuarantineKeys || {})) {
+    const existingTime = getClearedAtTimestamp(mergedClearedKeys[k]);
+    const incomingTime = getClearedAtTimestamp(v);
+    if (incomingTime >= existingTime) {
+      mergedClearedKeys[k] = v;
     }
   }
 
+  // 2. Fresh failed retries & backup failures in snapshotMeta take precedence over earlier clears
+  const mergedFailedKeys: Record<string, boolean> = {};
   if (snapshotMeta.failedQuarantineKeys) {
     for (const [key, isFailed] of Object.entries(snapshotMeta.failedQuarantineKeys)) {
-      if (isFailed && !mergedClearedKeys[key]) {
+      if (isFailed) {
         if (key.startsWith("retry_migration_")) {
-          // Keep failure markers on failed copy retries until copy succeeds or explicitly cleared
+          // Fresh retry failure: current attempt failed and overrides earlier clear
+          delete mergedClearedKeys[key];
           mergedFailedKeys[key] = true;
         } else {
-          // Retain failure markers until the backup is verified
           try {
             if (typeof window !== "undefined" && window.localStorage) {
               const val = localStorage.getItem(key);
               const qVal = localStorage.getItem(`palluvo_quarantine_${key}`);
               const isBackupVerified = (val === null && qVal !== null) || (val !== null && qVal === val);
               if (!isBackupVerified) {
+                delete mergedClearedKeys[key];
                 mergedFailedKeys[key] = true;
               }
             } else {
+              delete mergedClearedKeys[key];
               mergedFailedKeys[key] = true;
             }
           } catch {
+            delete mergedClearedKeys[key];
             mergedFailedKeys[key] = true;
           }
         }
@@ -287,24 +299,66 @@ export function mergeMigrationMetadata(
     }
   }
 
-  const mergedLegacyBuckets: Record<string, { quarantinedAt: number; emails: string[] }> = {};
-  for (const [k, v] of Object.entries(currentDiskMeta.quarantinedLegacyBuckets || {})) {
-    if (!mergedClearedKeys[k]) {
-      mergedLegacyBuckets[k] = v;
+  // Also include failed keys from currentDiskMeta if not explicitly cleared by a newer clear
+  for (const [key, isFailed] of Object.entries(currentDiskMeta.failedQuarantineKeys || {})) {
+    if (isFailed && !mergedClearedKeys[key]) {
+      mergedFailedKeys[key] = true;
     }
   }
-  if (snapshotMeta.quarantinedLegacyBuckets) {
-    for (const [k, v] of Object.entries(snapshotMeta.quarantinedLegacyBuckets)) {
-      if (!mergedClearedKeys[k]) {
-        if (!mergedLegacyBuckets[k]) {
-          mergedLegacyBuckets[k] = v;
-        } else {
-          mergedLegacyBuckets[k] = {
-            quarantinedAt: Math.min(mergedLegacyBuckets[k].quarantinedAt || Date.now(), v.quarantinedAt || Date.now()),
-            emails: Array.from(new Set([...(mergedLegacyBuckets[k].emails || []), ...(v.emails || [])])),
-          };
-        }
+
+  // 3. Resolve clear-vs-quarantine by operation generation:
+  // If quarantine is newer than or equal to clear marker, newer quarantine supersedes old clear!
+  const allQuarantinedBuckets = new Map<string, { quarantinedAt: number; emails: string[] }>();
+  for (const [k, v] of Object.entries(currentDiskMeta.quarantinedLegacyBuckets || {})) {
+    allQuarantinedBuckets.set(k, v);
+  }
+  for (const [k, v] of Object.entries(snapshotMeta.quarantinedLegacyBuckets || {})) {
+    const existing = allQuarantinedBuckets.get(k);
+    if (!existing || ((v.quarantinedAt || 0) >= (existing.quarantinedAt || 0))) {
+      allQuarantinedBuckets.set(k, {
+        quarantinedAt: Math.max(existing?.quarantinedAt || 0, v.quarantinedAt || 0),
+        emails: Array.from(new Set([...(existing?.emails || []), ...(v.emails || [])])),
+      });
+    }
+  }
+
+  for (const [bucketId, bucketInfo] of allQuarantinedBuckets.entries()) {
+    const qAt = bucketInfo.quarantinedAt || 0;
+    const clAt = getClearedAtTimestamp(mergedClearedKeys[bucketId]);
+    const safeId = bucketId.toLowerCase().replace(/[^a-z0-9_]/g, (ch) => `_${ch.charCodeAt(0).toString(16)}_`);
+    const clSafeAt = getClearedAtTimestamp(mergedClearedKeys[safeId]);
+
+    if (qAt > 0 && (qAt >= clAt || qAt >= clSafeAt)) {
+      // Newer quarantine supersedes stale clear markers!
+      delete mergedClearedKeys[bucketId];
+      delete mergedClearedKeys[safeId];
+      delete mergedClearedKeys[`palluvo_ecommerce_orders_${bucketId}`];
+      delete mergedClearedKeys[`palluvo_ecommerce_orders_${safeId}`];
+      delete mergedClearedKeys[`palluvo_ecommerce_addresses_${bucketId}`];
+      delete mergedClearedKeys[`palluvo_ecommerce_addresses_${safeId}`];
+      delete mergedClearedKeys[`retry_migration_${bucketId}`];
+      delete mergedClearedKeys[`retry_migration_${safeId}`];
+      for (const em of bucketInfo.emails || []) {
+        const lowerEm = em.toLowerCase().trim();
+        const sanitized = lowerEm.replace(/[^a-z0-9_.-]/g, "_");
+        delete mergedClearedKeys[`palluvo_ecommerce_orders_${lowerEm}`];
+        delete mergedClearedKeys[`palluvo_ecommerce_addresses_${lowerEm}`];
+        delete mergedClearedKeys[`palluvo_ecommerce_orders_${sanitized}`];
+        delete mergedClearedKeys[`palluvo_ecommerce_addresses_${sanitized}`];
+        delete mergedClearedKeys[`palluvo_ecommerce_orders_usr_email_${sanitized}`];
+        delete mergedClearedKeys[`palluvo_ecommerce_addresses_usr_email_${sanitized}`];
+        delete mergedClearedKeys[`retry_migration_${lowerEm}`];
+        delete mergedClearedKeys[`retry_migration_${sanitized}`];
+        delete mergedClearedKeys[`retry_migration_usr_email_${sanitized}`];
       }
+    }
+  }
+
+  const mergedLegacyBuckets: Record<string, { quarantinedAt: number; emails: string[] }> = {};
+  for (const [k, v] of allQuarantinedBuckets.entries()) {
+    const clAt = getClearedAtTimestamp(mergedClearedKeys[k]);
+    if (clAt === 0 || (v.quarantinedAt || 0) >= clAt) {
+      mergedLegacyBuckets[k] = v;
     }
   }
 
@@ -375,12 +429,25 @@ export function isQuarantinedAccountId(accountId?: string | null): boolean {
   try {
     const safeId = trimmed.toLowerCase().replace(/[^a-z0-9_]/g, (ch) => `_${ch.charCodeAt(0).toString(16)}_`);
     const meta = getMigrationMetadata();
-    if (
-      meta.clearedQuarantineKeys?.[trimmed] ||
-      meta.clearedQuarantineKeys?.[safeId]
-    ) {
+
+    const clAt = Math.max(
+      getClearedAtTimestamp(meta.clearedQuarantineKeys?.[trimmed]),
+      getClearedAtTimestamp(meta.clearedQuarantineKeys?.[safeId])
+    );
+
+    const bucketInfo = meta.quarantinedLegacyBuckets?.[trimmed] || meta.quarantinedLegacyBuckets?.[safeId];
+    const qAt = bucketInfo?.quarantinedAt || 0;
+
+    // A newer quarantine supersedes an older clear marker
+    if (bucketInfo && (clAt === 0 || qAt >= clAt)) {
+      return true;
+    }
+
+    // Only mask quarantine/tombstone if explicitly cleared after quarantine
+    if (clAt > 0 && clAt > qAt) {
       return false;
     }
+
     if (
       localStorage.getItem(`palluvo_tombstone_${safeId}`) === "1" ||
       localStorage.getItem(`palluvo_tombstone_${trimmed}`) === "1"
@@ -395,7 +462,9 @@ export function isQuarantinedAccountId(accountId?: string | null): boolean {
     }
     if (
       meta.tombstonedKeys?.[`palluvo_ecommerce_orders_${safeId}`] ||
-      meta.tombstonedKeys?.[`palluvo_ecommerce_orders_${trimmed}`]
+      meta.tombstonedKeys?.[`palluvo_ecommerce_orders_${trimmed}`] ||
+      meta.failedQuarantineKeys?.[`palluvo_ecommerce_orders_${safeId}`] ||
+      meta.failedQuarantineKeys?.[`palluvo_ecommerce_orders_${trimmed}`]
     ) {
       return true;
     }
@@ -411,34 +480,72 @@ export function isQuarantinedStorageKey(key?: string | null): boolean {
   if (typeof window === "undefined" || !window.localStorage) return false;
   try {
     const meta = getMigrationMetadata();
-    if (meta.clearedQuarantineKeys?.[key]) {
+
+    // 1. Never mask failed quarantine backups: unverified/failed backup source keys must remain quarantined!
+    if (meta.failedQuarantineKeys?.[key]) {
+      return true;
+    }
+
+    const match = key.match(/^palluvo_ecommerce_(?:orders|addresses)_(.+)$/);
+    const suffix = match ? match[1] : undefined;
+    const safeSuffix = suffix ? suffix.toLowerCase().replace(/[^a-z0-9_]/g, (ch) => `_${ch.charCodeAt(0).toString(16)}_`) : undefined;
+
+    // Check failed quarantine keys on suffix variants
+    if (suffix && (meta.failedQuarantineKeys?.[`palluvo_ecommerce_orders_${suffix}`] || meta.failedQuarantineKeys?.[`palluvo_ecommerce_addresses_${suffix}`])) {
+      if (key.includes(suffix)) return true;
+    }
+    if (safeSuffix && (meta.failedQuarantineKeys?.[`palluvo_ecommerce_orders_${safeSuffix}`] || meta.failedQuarantineKeys?.[`palluvo_ecommerce_addresses_${safeSuffix}`])) {
+      if (key.includes(safeSuffix)) return true;
+    }
+
+    // 2. Check operation generation: compare quarantine timestamp against clear timestamp
+    const bucketInfo = suffix
+      ? (meta.quarantinedLegacyBuckets?.[suffix] ||
+         meta.quarantinedLegacyBuckets?.[suffix.toLowerCase()] ||
+         (safeSuffix ? meta.quarantinedLegacyBuckets?.[safeSuffix] : undefined))
+      : undefined;
+    const qAt = bucketInfo?.quarantinedAt || 0;
+
+    const clKeyAt = getClearedAtTimestamp(meta.clearedQuarantineKeys?.[key]);
+    const clSuffixAt = suffix
+      ? Math.max(
+          getClearedAtTimestamp(meta.clearedQuarantineKeys?.[suffix]),
+          getClearedAtTimestamp(meta.clearedQuarantineKeys?.[suffix.toLowerCase()]),
+          safeSuffix ? getClearedAtTimestamp(meta.clearedQuarantineKeys?.[safeSuffix]) : 0
+        )
+      : 0;
+    const clAt = Math.max(clKeyAt, clSuffixAt);
+
+    // If quarantine is newer than or equal to clear: QUARANTINE WINS!
+    if (bucketInfo && (clAt === 0 || qAt >= clAt)) {
+      return true;
+    }
+
+    // Only mask if explicitly cleared after quarantine
+    if (clAt > 0 && clAt > qAt) {
       return false;
     }
-    const match = key.match(/^palluvo_ecommerce_(?:orders|addresses)_(.+)$/);
-    if (match) {
-      const suffix = match[1];
-      if (
-        meta.clearedQuarantineKeys?.[suffix] ||
-        meta.clearedQuarantineKeys?.[suffix.toLowerCase()]
-      ) {
-        return false;
-      }
-    }
+
     if (localStorage.getItem(`palluvo_tombstone_${key}`) === "1") {
       return true;
     }
     if (localStorage.getItem(`palluvo_quarantine_${key}`) !== null) {
       return true;
     }
-    if (meta.tombstonedKeys?.[key] || meta.failedQuarantineKeys?.[key]) {
+    if (meta.tombstonedKeys?.[key]) {
       return true;
     }
-    if (match) {
-      const suffix = match[1];
+    if (suffix) {
       if (
         meta.quarantinedLegacyBuckets?.[suffix] ||
+        meta.quarantinedLegacyBuckets?.[suffix.toLowerCase()] ||
+        (safeSuffix && meta.quarantinedLegacyBuckets?.[safeSuffix]) ||
         meta.quarantinedCollisionIds?.[suffix] ||
-        localStorage.getItem(`palluvo_tombstone_${suffix}`) === "1"
+        meta.quarantinedCollisionIds?.[suffix.toLowerCase()] ||
+        (safeSuffix && meta.quarantinedCollisionIds?.[safeSuffix]) ||
+        localStorage.getItem(`palluvo_tombstone_${suffix}`) === "1" ||
+        localStorage.getItem(`palluvo_tombstone_${suffix.toLowerCase()}`) === "1" ||
+        (safeSuffix && localStorage.getItem(`palluvo_tombstone_${safeSuffix}`) === "1")
       ) {
         return true;
       }
@@ -470,7 +577,7 @@ export function isFailedQuarantineKey(key?: string | null): boolean {
  * Verifies each quarantine backup before removing the active source key. If backup fails (e.g. QuotaExceededError),
  * the source bucket is preserved in place and tracked to prevent hydration until it can be safely backed up.
  */
-export function quarantineLegacyBucket(accountId: string, relatedEmails?: string[]): void {
+export function quarantineLegacyBucket(accountId: string, relatedEmails?: string[], callerMeta?: MigrationMeta): void {
   if (typeof window === "undefined" || !window.localStorage) return;
   try {
     const trimmedId = accountId.trim();
@@ -483,17 +590,27 @@ export function quarantineLegacyBucket(accountId: string, relatedEmails?: string
       `palluvo_ecommerce_addresses_${trimmedId}`,
     ]);
 
+    const retryKeysToClear = new Set<string>([
+      `retry_migration_${trimmedId}`,
+      `retry_migration_${safeId}`,
+    ]);
+
     if (relatedEmails) {
       for (const email of relatedEmails) {
         if (!email) continue;
         const lowerEmail = email.toLowerCase().trim();
         const legacySanitized = lowerEmail.replace(/[^a-z0-9_.-]/g, "_");
+        const legacyBucketId = getDirectLegacyEmailId(lowerEmail);
         keysToQuarantine.add(`palluvo_ecommerce_orders_${legacySanitized}`);
         keysToQuarantine.add(`palluvo_ecommerce_orders_usr_email_${legacySanitized}`);
         keysToQuarantine.add(`palluvo_ecommerce_addresses_${legacySanitized}`);
         keysToQuarantine.add(`palluvo_ecommerce_addresses_usr_email_${legacySanitized}`);
         keysToQuarantine.add(`palluvo_ecommerce_orders_${lowerEmail}`);
         keysToQuarantine.add(`palluvo_ecommerce_addresses_${lowerEmail}`);
+
+        retryKeysToClear.add(`retry_migration_${lowerEmail}`);
+        retryKeysToClear.add(`retry_migration_${legacySanitized}`);
+        retryKeysToClear.add(`retry_migration_${legacyBucketId}`);
       }
     }
 
@@ -507,6 +624,36 @@ export function quarantineLegacyBucket(accountId: string, relatedEmails?: string
       delete migrationMeta.clearedQuarantineKeys[safeId];
       for (const key of keysToQuarantine) {
         delete migrationMeta.clearedQuarantineKeys[key];
+      }
+      for (const rKey of retryKeysToClear) {
+        delete migrationMeta.clearedQuarantineKeys[rKey];
+      }
+    }
+
+    for (const rKey of retryKeysToClear) {
+      try {
+        localStorage.removeItem(`palluvo_tombstone_${rKey}`);
+      } catch {}
+    }
+
+    // If caller snapshot was passed, also prune clear markers from the caller snapshot
+    if (callerMeta) {
+      callerMeta.quarantinedLegacyBuckets = callerMeta.quarantinedLegacyBuckets || {};
+      callerMeta.quarantinedCollisionIds = callerMeta.quarantinedCollisionIds || {};
+      callerMeta.tombstonedKeys = callerMeta.tombstonedKeys || {};
+      callerMeta.failedQuarantineKeys = callerMeta.failedQuarantineKeys || {};
+      if (callerMeta.clearedQuarantineKeys) {
+        delete callerMeta.clearedQuarantineKeys[trimmedId];
+        delete callerMeta.clearedQuarantineKeys[safeId];
+        for (const key of keysToQuarantine) {
+          delete callerMeta.clearedQuarantineKeys[key];
+        }
+        for (const rKey of retryKeysToClear) {
+          delete callerMeta.clearedQuarantineKeys[rKey];
+        }
+      }
+      for (const key of keysToQuarantine) {
+        callerMeta.tombstonedKeys[key] = true;
       }
     }
 
@@ -545,10 +692,17 @@ export function quarantineLegacyBucket(accountId: string, relatedEmails?: string
             if (migrationMeta.failedQuarantineKeys?.[key]) {
               delete migrationMeta.failedQuarantineKeys[key];
             }
+            if (callerMeta?.failedQuarantineKeys?.[key]) {
+              delete callerMeta.failedQuarantineKeys[key];
+            }
           } else {
             // Backup failed (e.g. QuotaExceededError).
             // Preserve the source bucket and keep it from hydration until safely handled.
             migrationMeta.failedQuarantineKeys[key] = true;
+            if (callerMeta) {
+              callerMeta.failedQuarantineKeys = callerMeta.failedQuarantineKeys || {};
+              callerMeta.failedQuarantineKeys[key] = true;
+            }
           }
         }
       } catch {}
@@ -568,27 +722,50 @@ export function quarantineLegacyBucket(accountId: string, relatedEmails?: string
                   localStorage.removeItem(failedKey);
                 } catch {}
                 delete migrationMeta.failedQuarantineKeys[failedKey];
+                if (callerMeta?.failedQuarantineKeys?.[failedKey]) {
+                  delete callerMeta.failedQuarantineKeys[failedKey];
+                }
               }
             } else {
               delete migrationMeta.failedQuarantineKeys[failedKey];
+              if (callerMeta?.failedQuarantineKeys?.[failedKey]) {
+                delete callerMeta.failedQuarantineKeys[failedKey];
+              }
             }
           } catch {}
         }
       }
     }
 
-    if (!migrationMeta.quarantinedLegacyBuckets[trimmedId]) {
-      migrationMeta.quarantinedLegacyBuckets[trimmedId] = {
-        quarantinedAt: Date.now(),
-        emails: relatedEmails ? Array.from(new Set(relatedEmails.map((e) => e.toLowerCase().trim()))) : [],
-      };
-    }
-    if (relatedEmails && relatedEmails.length > 0) {
+    const quarantineTimestamp = Date.now();
+    const existingEmails = migrationMeta.quarantinedLegacyBuckets[trimmedId]?.emails || [];
+    const normalizedRelated = relatedEmails ? relatedEmails.map((e) => e.toLowerCase().trim()) : [];
+    const allEmails = Array.from(new Set([...existingEmails, ...normalizedRelated]));
+
+    migrationMeta.quarantinedLegacyBuckets[trimmedId] = {
+      quarantinedAt: quarantineTimestamp,
+      emails: allEmails,
+    };
+    if (allEmails.length > 0) {
       const existing = migrationMeta.quarantinedCollisionIds[trimmedId] || [];
       migrationMeta.quarantinedCollisionIds[trimmedId] = Array.from(
-        new Set([...existing, ...relatedEmails.map((e) => e.toLowerCase().trim())])
+        new Set([...existing, ...allEmails])
       );
     }
+
+    if (callerMeta) {
+      callerMeta.quarantinedLegacyBuckets[trimmedId] = {
+        quarantinedAt: quarantineTimestamp,
+        emails: allEmails,
+      };
+      if (allEmails.length > 0) {
+        const existingCaller = callerMeta.quarantinedCollisionIds[trimmedId] || [];
+        callerMeta.quarantinedCollisionIds[trimmedId] = Array.from(
+          new Set([...existingCaller, ...allEmails])
+        );
+      }
+    }
+
     setMigrationMetadata(migrationMeta);
   } catch {}
 }
@@ -2752,7 +2929,10 @@ export function clearFalseQuarantine(accountId: string, canonicalId: string, mig
         `palluvo_ecommerce_orders_${sanitized}`,
         `palluvo_ecommerce_addresses_${sanitized}`,
         `palluvo_ecommerce_orders_usr_email_${sanitized}`,
-        `palluvo_ecommerce_addresses_usr_email_${sanitized}`
+        `palluvo_ecommerce_addresses_usr_email_${sanitized}`,
+        `retry_migration_${lower}`,
+        `retry_migration_${sanitized}`,
+        `retry_migration_usr_email_${sanitized}`
       );
     }
 
@@ -2763,10 +2943,11 @@ export function clearFalseQuarantine(accountId: string, canonicalId: string, mig
       localStorage.removeItem(`palluvo_quarantine_${k}`);
     }
 
+    const clearTimestamp = Date.now();
     const applyClearToMeta = (metaToUpdate: MigrationMeta) => {
       metaToUpdate.clearedQuarantineKeys = metaToUpdate.clearedQuarantineKeys || {};
       for (const k of keysToClear) {
-        metaToUpdate.clearedQuarantineKeys[k] = true;
+        metaToUpdate.clearedQuarantineKeys[k] = clearTimestamp;
       }
       if (metaToUpdate.quarantinedLegacyBuckets) {
         delete metaToUpdate.quarantinedLegacyBuckets[trimmed];
@@ -3224,7 +3405,7 @@ export function migrateLegacyAccountAliases(): void {
 
         if (isQuarantinedAccountId(trimmedVal) || isLegacyLossy) {
           if (!isQuarantinedAccountId(trimmedVal)) {
-            quarantineLegacyBucket(trimmedVal, [singleEmail]);
+            quarantineLegacyBucket(trimmedVal, [singleEmail], migrationMeta);
           }
           // Both collision-history and no-collision-history branches must filter by verified owner:
           // do NOT copy wholesale into expectedInjectiveId, as shared legacy buckets may contain foreign records.
@@ -3316,6 +3497,14 @@ export function migrateLegacyAccountAliases(): void {
             // Do NOT commit the rekey! Leave the mapping unchanged and mark the migration retryable.
             migrationMeta.failedQuarantineKeys = migrationMeta.failedQuarantineKeys || {};
             migrationMeta.failedQuarantineKeys[`retry_migration_${trimmedVal}`] = true;
+            if (migrationMeta.clearedQuarantineKeys) {
+              delete migrationMeta.clearedQuarantineKeys[`retry_migration_${trimmedVal}`];
+              const safeVal = trimmedVal.toLowerCase().replace(/[^a-z0-9_]/g, (ch) => `_${ch.charCodeAt(0).toString(16)}_`);
+              delete migrationMeta.clearedQuarantineKeys[`retry_migration_${safeVal}`];
+            }
+            try {
+              localStorage.removeItem(`palluvo_tombstone_retry_migration_${trimmedVal}`);
+            } catch {}
             setMigrationMetadata(migrationMeta);
             continue;
           }
@@ -3721,6 +3910,14 @@ export function migrateLegacyAccountAliases(): void {
         if (!copySuccess) {
           migrationMeta.failedQuarantineKeys = migrationMeta.failedQuarantineKeys || {};
           migrationMeta.failedQuarantineKeys[`retry_migration_${trimmedVal}`] = true;
+          if (migrationMeta.clearedQuarantineKeys) {
+            delete migrationMeta.clearedQuarantineKeys[`retry_migration_${trimmedVal}`];
+            const safeVal = trimmedVal.toLowerCase().replace(/[^a-z0-9_]/g, (ch) => `_${ch.charCodeAt(0).toString(16)}_`);
+            delete migrationMeta.clearedQuarantineKeys[`retry_migration_${safeVal}`];
+          }
+          try {
+            localStorage.removeItem(`palluvo_tombstone_retry_migration_${trimmedVal}`);
+          } catch {}
           setMigrationMetadata(migrationMeta);
           continue;
         }
@@ -3783,14 +3980,7 @@ export function migrateLegacyAccountAliases(): void {
           } else {
             // Shared legacy bucket still contains records from another explicit owner:
             // Keep the legacy bucket quarantined so records with a different owner remain isolated!
-            quarantineLegacyBucket(trimmedVal);
-            migrationMeta.quarantinedLegacyBuckets = migrationMeta.quarantinedLegacyBuckets || {};
-            migrationMeta.quarantinedLegacyBuckets[trimmedVal] = {
-              quarantinedAt: Date.now(),
-              emails: ownerCluster.emails,
-            };
-            migrationMeta.quarantinedCollisionIds = migrationMeta.quarantinedCollisionIds || {};
-            migrationMeta.quarantinedCollisionIds[trimmedVal] = ownerCluster.emails;
+            quarantineLegacyBucket(trimmedVal, ownerCluster.emails, migrationMeta);
             clearFalseQuarantine(canonicalId, canonicalId, migrationMeta);
           }
         } else {
@@ -3947,12 +4137,7 @@ export function migrateLegacyAccountAliases(): void {
       } else {
         // Multi-owner collision: multiple distinct account owners mapped to same ID
         if (!migrationMeta.quarantinedLegacyBuckets?.[trimmedVal]) {
-          quarantineLegacyBucket(trimmedVal, emailKeys);
-          migrationMeta.quarantinedLegacyBuckets[trimmedVal] = {
-            quarantinedAt: Date.now(),
-            emails: emailKeys,
-          };
-          migrationMeta.quarantinedCollisionIds[trimmedVal] = emailKeys;
+          quarantineLegacyBucket(trimmedVal, emailKeys, migrationMeta);
           modified = true;
         }
 
@@ -4231,9 +4416,44 @@ export function lookupAccountId(identifier?: string | null): string | null {
       sourceId: string,
       targetInjectiveId: string
     ): string => {
+      const safeSourceId = sourceId.toLowerCase().replace(/[^a-z0-9_]/g, (ch) => `_${ch.charCodeAt(0).toString(16)}_`);
       const legacyBucketId = getDirectLegacyEmailId(emailKey);
+      const safeLegacyBucketId = legacyBucketId.toLowerCase().replace(/[^a-z0-9_]/g, (ch) => `_${ch.charCodeAt(0).toString(16)}_`);
+
+      // Clear earlier retry markers and any stale retry clear markers when starting a new recovery attempt
+      const retryKeysToClear = [
+        `retry_migration_${sourceId}`,
+        `retry_migration_${safeSourceId}`,
+        `retry_migration_${legacyBucketId}`,
+        `retry_migration_${safeLegacyBucketId}`,
+        `retry_migration_${targetInjectiveId}`,
+      ];
+      for (const rk of retryKeysToClear) {
+        if (migrationMeta.clearedQuarantineKeys) {
+          delete migrationMeta.clearedQuarantineKeys[rk];
+        }
+        if (migrationMeta.failedQuarantineKeys) {
+          delete migrationMeta.failedQuarantineKeys[rk];
+        }
+        try {
+          localStorage.removeItem(`palluvo_tombstone_${rk}`);
+        } catch {}
+      }
+      try {
+        const diskMeta = getMigrationMetadata();
+        for (const rk of retryKeysToClear) {
+          if (diskMeta.clearedQuarantineKeys) {
+            delete diskMeta.clearedQuarantineKeys[rk];
+          }
+          if (diskMeta.failedQuarantineKeys) {
+            delete diskMeta.failedQuarantineKeys[rk];
+          }
+        }
+        setMigrationMetadata(diskMeta);
+      } catch {}
+
       if (legacyBucketId !== targetInjectiveId && !isQuarantinedAccountId(legacyBucketId)) {
-        quarantineLegacyBucket(legacyBucketId, [emailKey]);
+        quarantineLegacyBucket(legacyBucketId, [emailKey], migrationMeta);
       }
 
       const copy1Success = copyCustomerData(sourceId, targetInjectiveId, {
@@ -4266,8 +4486,10 @@ export function lookupAccountId(identifier?: string | null): string | null {
         // Do not keep an old or premature redirect that would bypass retrying this failed copy
         if (mergedMeta.rekeyedOwnerIds) {
           delete mergedMeta.rekeyedOwnerIds[sourceId];
+          delete mergedMeta.rekeyedOwnerIds[safeSourceId];
           if (legacyBucketId !== targetInjectiveId) {
             delete mergedMeta.rekeyedOwnerIds[legacyBucketId];
+            delete mergedMeta.rekeyedOwnerIds[safeLegacyBucketId];
           }
         }
         try {
@@ -4289,7 +4511,9 @@ export function lookupAccountId(identifier?: string | null): string | null {
       const mergedMeta = mergeMigrationMetadata(currentMeta, successSnapshot);
       if (mergedMeta.failedQuarantineKeys) {
         delete mergedMeta.failedQuarantineKeys[`retry_migration_${sourceId}`];
+        delete mergedMeta.failedQuarantineKeys[`retry_migration_${safeSourceId}`];
         delete mergedMeta.failedQuarantineKeys[`retry_migration_${legacyBucketId}`];
+        delete mergedMeta.failedQuarantineKeys[`retry_migration_${safeLegacyBucketId}`];
       }
 
       map[emailKey] = targetInjectiveId;
@@ -4608,7 +4832,7 @@ export function lookupAccountId(identifier?: string | null): string | null {
             : ownerCluster.canonicalId;
           if (val !== targetId) {
             if (!isQuarantinedAccountId(val)) {
-              quarantineLegacyBucket(val, collisionEmails);
+              quarantineLegacyBucket(val, collisionEmails, migrationMeta);
             }
             migrationMeta.rekeyedOwnerIds = migrationMeta.rekeyedOwnerIds || {};
             migrationMeta.rekeyedOwnerIds[val] = targetId;
@@ -4651,12 +4875,7 @@ export function lookupAccountId(identifier?: string | null): string | null {
 
         // True collision between distinct owners
         if (!migrationMeta.quarantinedLegacyBuckets?.[val]) {
-          quarantineLegacyBucket(val, collisionEmails);
-          migrationMeta.quarantinedLegacyBuckets[val] = {
-            quarantinedAt: Date.now(),
-            emails: collisionEmails,
-          };
-          migrationMeta.quarantinedCollisionIds[val] = collisionEmails;
+          quarantineLegacyBucket(val, collisionEmails, migrationMeta);
         }
 
         const myCluster = partition.clusters.find((c) => c.emails.includes(key));
@@ -4683,7 +4902,7 @@ export function lookupAccountId(identifier?: string | null): string | null {
 
       if (val !== expectedInjectiveId) {
         if (!isQuarantinedAccountId(val)) {
-          quarantineLegacyBucket(val, [key]);
+          quarantineLegacyBucket(val, [key], migrationMeta);
         }
         return recoverAndCommitInjectiveEmail(key, val, expectedInjectiveId);
       }
