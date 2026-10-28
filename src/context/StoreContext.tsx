@@ -209,7 +209,29 @@ export const MIGRATION_LOCK_KEY = "palluvo_migration_meta_lock";
 export const MIGRATION_SEQ_KEY = "palluvo_migration_reserved_op_seq";
 
 let lastMigrationOpSeq = 0;
+let currentTabStringId = "";
 let currentTabNumericId = 0;
+
+function getTabUniqueStringId(): string {
+  if (currentTabStringId) return currentTabStringId;
+  let id = "";
+  if (typeof window !== "undefined") {
+    try {
+      if (window.sessionStorage) {
+        id = sessionStorage.getItem("palluvo_tab_str_id") || "";
+        if (!id) {
+          id = `tab_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
+          sessionStorage.setItem("palluvo_tab_str_id", id);
+        }
+      }
+    } catch {}
+  }
+  if (!id) {
+    id = `tab_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
+  }
+  currentTabStringId = id;
+  return id;
+}
 
 function getTabNumericId(): number {
   if (currentTabNumericId > 0) return currentTabNumericId;
@@ -235,54 +257,172 @@ function getTabNumericId(): number {
   return id;
 }
 
+function getAllLocalStorageKeys(): string[] {
+  if (typeof window === "undefined" || !window.localStorage) return [];
+  try {
+    const keys: string[] = [];
+    if (typeof localStorage.length === "number" && typeof localStorage.key === "function") {
+      for (let i = 0; i < localStorage.length; i++) {
+        const k = localStorage.key(i);
+        if (k) keys.push(k);
+      }
+      return keys;
+    }
+    const storageWithStore = localStorage as unknown as { store?: Record<string, unknown> };
+    if (storageWithStore.store && typeof storageWithStore.store === "object") {
+      return Object.keys(storageWithStore.store);
+    }
+    return Object.keys(localStorage);
+  } catch {
+    try {
+      return Object.keys(localStorage);
+    } catch {
+      return [];
+    }
+  }
+}
+
 /**
- * Executes an operation with a synchronous cross-tab lock in localStorage to serialize
- * multi-tab read-modify-write operations and sequence allocations.
+ * Two-phase mutual exclusion lock acquisition in localStorage with intent registration,
+ * verification delay, and deterministic tie-breaking.
  */
-function withCrossTabLock<T>(lockKey: string, fn: () => T): T {
+export function tryAcquireCrossTabLock(lockKey: string, tabId: string, ttlMs = 500): boolean {
+  if (typeof window === "undefined" || !window.localStorage) return true;
+  const now = Date.now();
+
+  try {
+    const rawExisting = localStorage.getItem(lockKey);
+    if (rawExisting) {
+      const existing = JSON.parse(rawExisting);
+      if (existing && typeof existing.expiresAt === "number" && existing.expiresAt > now) {
+        if (existing.owner !== tabId) {
+          return false;
+        }
+      }
+    }
+  } catch {}
+
+  const intentKey = `${lockKey}_intent_${tabId}`;
+  try {
+    localStorage.setItem(intentKey, String(now));
+  } catch {
+    return false;
+  }
+
+  // Small pause to let concurrent intent writes in other tabs register in storage
+  const pauseStart = Date.now();
+  while (Date.now() - pauseStart < 2) {}
+
+  try {
+    const intentPrefix = `${lockKey}_intent_`;
+    const allKeys = getAllLocalStorageKeys();
+    for (const k of allKeys) {
+      if (k.startsWith(intentPrefix) && k !== intentKey) {
+        const otherTimeStr = localStorage.getItem(k);
+        const otherTime = otherTimeStr ? Number(otherTimeStr) : 0;
+        // Clean up stale intents older than 3 seconds
+        if (otherTime > 0 && now - otherTime >= 3000) {
+          try { localStorage.removeItem(k); } catch {}
+          continue;
+        }
+        if (otherTime > 0 && (now - otherTime < 3000)) {
+          const otherTabId = k.slice(intentPrefix.length);
+          if (otherTime < now || (otherTime === now && otherTabId < tabId)) {
+            localStorage.removeItem(intentKey);
+            return false;
+          }
+        }
+      }
+    }
+  } catch {
+    try { localStorage.removeItem(intentKey); } catch {}
+    return false;
+  }
+
+  // Double check existing lock hasn't been acquired while intent was evaluated
+  try {
+    const rawExisting2 = localStorage.getItem(lockKey);
+    if (rawExisting2) {
+      const existing2 = JSON.parse(rawExisting2);
+      if (existing2 && typeof existing2.expiresAt === "number" && existing2.expiresAt > now) {
+        if (existing2.owner !== tabId) {
+          localStorage.removeItem(intentKey);
+          return false;
+        }
+      }
+    }
+  } catch {}
+
+  const lockData = JSON.stringify({
+    owner: tabId,
+    acquiredAt: now,
+    expiresAt: now + ttlMs,
+  });
+
+  try {
+    localStorage.setItem(lockKey, lockData);
+    localStorage.removeItem(intentKey);
+    const verify = localStorage.getItem(lockKey);
+    if (verify) {
+      const parsedVerify = JSON.parse(verify);
+      if (parsedVerify && parsedVerify.owner === tabId) {
+        return true;
+      }
+    }
+  } catch {}
+
+  try { localStorage.removeItem(intentKey); } catch {}
+  return false;
+}
+
+export function releaseCrossTabLock(lockKey: string, tabId: string): void {
+  if (typeof window === "undefined" || !window.localStorage) return;
+  try {
+    const raw = localStorage.getItem(lockKey);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (parsed && parsed.owner === tabId) {
+        localStorage.removeItem(lockKey);
+      }
+    }
+  } catch {}
+  try {
+    localStorage.removeItem(`${lockKey}_intent_${tabId}`);
+  } catch {}
+}
+
+/**
+ * Executes a callback with exclusive cross-tab mutual exclusion in localStorage.
+ * If the lock cannot be acquired within the timeout, the callback is NOT executed
+ * (preventing un-serialized read/modify/write races) and returns null.
+ */
+export function withCrossTabLock<T>(lockKey: string, fn: () => T, maxWaitMs = 600): T | null {
   if (typeof window === "undefined" || !window.localStorage) {
     return fn();
   }
-  const tabId = getTabNumericId();
-  const maxAttempts = 15;
+  const tabId = getTabUniqueStringId();
+  const startTime = Date.now();
   let acquired = false;
-  const token = `${tabId}_${Date.now()}_${Math.random()}`;
 
-  for (let i = 0; i < maxAttempts; i++) {
-    try {
-      const existing = localStorage.getItem(lockKey);
-      const now = Date.now();
-      if (existing) {
-        const parsed = JSON.parse(existing);
-        if (parsed && typeof parsed.expiresAt === "number" && parsed.expiresAt > now) {
-          // Lock held by another tab; short spin wait
-          const pauseStart = Date.now();
-          while (Date.now() - pauseStart < 1) {}
-          continue;
-        }
-      }
-      localStorage.setItem(lockKey, JSON.stringify({ token, expiresAt: now + 500 }));
-      const verify = localStorage.getItem(lockKey);
-      if (verify && verify.includes(token)) {
-        acquired = true;
-        break;
-      }
-    } catch {}
+  while (Date.now() - startTime < maxWaitMs) {
+    if (tryAcquireCrossTabLock(lockKey, tabId, 500)) {
+      acquired = true;
+      break;
+    }
+    const jitter = Math.floor(Math.random() * 5) + 2;
     const pauseStart = Date.now();
-    while (Date.now() - pauseStart < 1) {}
+    while (Date.now() - pauseStart < jitter) {}
+  }
+
+  if (!acquired) {
+    // Critical section must NOT be run without exclusive ownership!
+    return null;
   }
 
   try {
     return fn();
   } finally {
-    if (acquired) {
-      try {
-        const current = localStorage.getItem(lockKey);
-        if (current && current.includes(token)) {
-          localStorage.removeItem(lockKey);
-        }
-      } catch {}
-    }
+    releaseCrossTabLock(lockKey, tabId);
   }
 }
 
@@ -300,7 +440,10 @@ function extractQuarantinedAt(b: unknown): number {
  * locking and shared sequence reservation in localStorage.
  */
 export function getNextMigrationOpSeq(meta?: MigrationMeta): number {
-  return withCrossTabLock(MIGRATION_LOCK_KEY, () => {
+  const tabNumericId = getTabNumericId();
+
+  // Try to allocate under exclusive cross-tab lock
+  const lockedResult = withCrossTabLock(MIGRATION_LOCK_KEY, () => {
     const now = typeof Date !== "undefined" && Date.now ? Date.now() : 1;
     let maxSeq = Math.max(now, lastMigrationOpSeq + 1);
 
@@ -363,6 +506,33 @@ export function getNextMigrationOpSeq(meta?: MigrationMeta): number {
 
     return maxSeq;
   });
+
+  if (typeof lockedResult === "number") {
+    return lockedResult;
+  }
+
+  // Fallback when lock cannot be acquired:
+  // Allocate a conflict-safe unique operation identifier using tabNumericId and local monotonicity,
+  // ensuring two contended tabs NEVER allocate the same sequence!
+  const now = typeof Date !== "undefined" && Date.now ? Date.now() : 1;
+  let base = Math.max(now, Math.floor(lastMigrationOpSeq) + 1);
+  try {
+    if (typeof window !== "undefined" && window.localStorage) {
+      const reservedRaw = localStorage.getItem(MIGRATION_SEQ_KEY);
+      if (reservedRaw) {
+        const reservedSeq = Number(reservedRaw);
+        if (!isNaN(reservedSeq) && reservedSeq > 0) {
+          base = Math.max(base, Math.floor(reservedSeq) + 1);
+        }
+      }
+    }
+  } catch {}
+  const fallbackSeq = base + (tabNumericId / 100000);
+  lastMigrationOpSeq = fallbackSeq;
+  if (meta) {
+    meta.operationSeq = fallbackSeq;
+  }
+  return fallbackSeq;
 }
 
 export function getMigrationMetadata(): MigrationMeta {
@@ -379,6 +549,7 @@ export function getMigrationMetadata(): MigrationMeta {
       operationSeq: 0,
     };
   }
+
   try {
     const raw = localStorage.getItem(MIGRATION_META_KEY);
     const parsed = raw ? JSON.parse(raw) : {};
@@ -436,6 +607,8 @@ export function getMigrationMetadata(): MigrationMeta {
           return mergedUpgrade;
         }
       } catch {}
+      // If cross-tab lock could not be acquired, DO NOT write to disk without exclusive ownership!
+      // Defer persistence to the normal merged write path while returning result with in-memory upgraded clears.
     }
 
     return result;
@@ -467,6 +640,7 @@ export function setMigrationMetadata(meta: MigrationMeta): void {
           }
         } catch {}
       }
+      return true;
     });
   } catch {}
 }
@@ -657,6 +831,19 @@ export function mergeMigrationMetadata(
     }
   }
 
+  const mergedRekeyed: Record<string, string> = {
+    ...(currentDiskMeta.rekeyedOwnerIds || {}),
+    ...(snapshotMeta.rekeyedOwnerIds || {}),
+  };
+  for (const failedKey of Object.keys(mergedFailedKeys)) {
+    if (failedKey.startsWith("retry_migration_")) {
+      const sourceId = failedKey.slice("retry_migration_".length);
+      delete mergedRekeyed[sourceId];
+      const safeId = sourceId.toLowerCase().replace(/[^a-z0-9_]/g, (ch) => `_${ch.charCodeAt(0).toString(16)}_`);
+      delete mergedRekeyed[safeId];
+    }
+  }
+
   return {
     migratedCollisionIds: mergedMigratedCollisionIds,
     quarantinedCollisionIds: mergedCollisionIds,
@@ -664,10 +851,7 @@ export function mergeMigrationMetadata(
     tombstonedKeys: mergedTombstonedKeys,
     failedQuarantineKeys: mergedFailedKeys,
     clearedQuarantineKeys: mergedClearedKeys,
-    rekeyedOwnerIds: {
-      ...(currentDiskMeta.rekeyedOwnerIds || {}),
-      ...(snapshotMeta.rekeyedOwnerIds || {}),
-    },
+    rekeyedOwnerIds: mergedRekeyed,
     unresolvedPhoneAliases: {
       ...(currentDiskMeta.unresolvedPhoneAliases || {}),
       ...(snapshotMeta.unresolvedPhoneAliases || {}),
