@@ -182,6 +182,7 @@ export interface MigrationMeta {
   tombstonedKeys?: Record<string, boolean>;
   failedQuarantineKeys?: Record<string, boolean>;
   rekeyedOwnerIds?: Record<string, string>;
+  clearedQuarantineKeys?: Record<string, boolean>;
   unresolvedPhoneAliases?: Record<string, {
     legacyId: string;
     candidateAccountIds: string[];
@@ -199,6 +200,7 @@ export function getMigrationMetadata(): MigrationMeta {
       tombstonedKeys: {},
       failedQuarantineKeys: {},
       rekeyedOwnerIds: {},
+      clearedQuarantineKeys: {},
       unresolvedPhoneAliases: {},
     };
   }
@@ -212,6 +214,7 @@ export function getMigrationMetadata(): MigrationMeta {
       tombstonedKeys: parsed.tombstonedKeys || {},
       failedQuarantineKeys: parsed.failedQuarantineKeys || {},
       rekeyedOwnerIds: parsed.rekeyedOwnerIds || {},
+      clearedQuarantineKeys: parsed.clearedQuarantineKeys || {},
       unresolvedPhoneAliases: parsed.unresolvedPhoneAliases || {},
     };
   } catch {
@@ -222,6 +225,7 @@ export function getMigrationMetadata(): MigrationMeta {
       tombstonedKeys: {},
       failedQuarantineKeys: {},
       rekeyedOwnerIds: {},
+      clearedQuarantineKeys: {},
       unresolvedPhoneAliases: {},
     };
   }
@@ -237,28 +241,31 @@ export function setMigrationMetadata(meta: MigrationMeta): void {
 /**
  * Merges a local migration metadata snapshot with current on-disk migration metadata,
  * ensuring that newly discovered or persisted failure markers (failedQuarantineKeys)
- * are retained until verified, and preserving quarantine buckets and tombstone markers.
+ * are retained until verified/succeeded, preserving quarantine buckets and tombstone markers,
+ * while honoring explicitly cleared quarantine state.
  */
 export function mergeMigrationMetadata(
   currentDiskMeta: MigrationMeta,
   snapshotMeta: MigrationMeta
 ): MigrationMeta {
-  const mergedFailedKeys: Record<string, boolean> = {
-    ...(currentDiskMeta.failedQuarantineKeys || {}),
+  const mergedClearedKeys: Record<string, boolean> = {
+    ...(currentDiskMeta.clearedQuarantineKeys || {}),
+    ...(snapshotMeta.clearedQuarantineKeys || {}),
   };
+
+  const mergedFailedKeys: Record<string, boolean> = {};
+  for (const [key, isFailed] of Object.entries(currentDiskMeta.failedQuarantineKeys || {})) {
+    if (isFailed && !mergedClearedKeys[key]) {
+      mergedFailedKeys[key] = true;
+    }
+  }
 
   if (snapshotMeta.failedQuarantineKeys) {
     for (const [key, isFailed] of Object.entries(snapshotMeta.failedQuarantineKeys)) {
-      if (isFailed) {
+      if (isFailed && !mergedClearedKeys[key]) {
         if (key.startsWith("retry_migration_")) {
-          const targetId = key.slice("retry_migration_".length);
-          const isResolved = Boolean(
-            currentDiskMeta.rekeyedOwnerIds?.[targetId] &&
-            !currentDiskMeta.failedQuarantineKeys?.[key]
-          );
-          if (!isResolved) {
-            mergedFailedKeys[key] = true;
-          }
+          // Keep failure markers on failed copy retries until copy succeeds or explicitly cleared
+          mergedFailedKeys[key] = true;
         } else {
           // Retain failure markers until the backup is verified
           try {
@@ -280,28 +287,38 @@ export function mergeMigrationMetadata(
     }
   }
 
-  const mergedLegacyBuckets: Record<string, { quarantinedAt: number; emails: string[] }> = {
-    ...(currentDiskMeta.quarantinedLegacyBuckets || {}),
-  };
+  const mergedLegacyBuckets: Record<string, { quarantinedAt: number; emails: string[] }> = {};
+  for (const [k, v] of Object.entries(currentDiskMeta.quarantinedLegacyBuckets || {})) {
+    if (!mergedClearedKeys[k]) {
+      mergedLegacyBuckets[k] = v;
+    }
+  }
   if (snapshotMeta.quarantinedLegacyBuckets) {
     for (const [k, v] of Object.entries(snapshotMeta.quarantinedLegacyBuckets)) {
-      if (!mergedLegacyBuckets[k]) {
-        mergedLegacyBuckets[k] = v;
-      } else {
-        mergedLegacyBuckets[k] = {
-          quarantinedAt: Math.min(mergedLegacyBuckets[k].quarantinedAt || Date.now(), v.quarantinedAt || Date.now()),
-          emails: Array.from(new Set([...(mergedLegacyBuckets[k].emails || []), ...(v.emails || [])])),
-        };
+      if (!mergedClearedKeys[k]) {
+        if (!mergedLegacyBuckets[k]) {
+          mergedLegacyBuckets[k] = v;
+        } else {
+          mergedLegacyBuckets[k] = {
+            quarantinedAt: Math.min(mergedLegacyBuckets[k].quarantinedAt || Date.now(), v.quarantinedAt || Date.now()),
+            emails: Array.from(new Set([...(mergedLegacyBuckets[k].emails || []), ...(v.emails || [])])),
+          };
+        }
       }
     }
   }
 
-  const mergedCollisionIds: Record<string, string[]> = {
-    ...(currentDiskMeta.quarantinedCollisionIds || {}),
-  };
+  const mergedCollisionIds: Record<string, string[]> = {};
+  for (const [k, v] of Object.entries(currentDiskMeta.quarantinedCollisionIds || {})) {
+    if (!mergedClearedKeys[k]) {
+      mergedCollisionIds[k] = [...(v || [])];
+    }
+  }
   if (snapshotMeta.quarantinedCollisionIds) {
     for (const [k, v] of Object.entries(snapshotMeta.quarantinedCollisionIds)) {
-      mergedCollisionIds[k] = Array.from(new Set([...(mergedCollisionIds[k] || []), ...(v || [])]));
+      if (!mergedClearedKeys[k]) {
+        mergedCollisionIds[k] = Array.from(new Set([...(mergedCollisionIds[k] || []), ...(v || [])]));
+      }
     }
   }
 
@@ -314,15 +331,27 @@ export function mergeMigrationMetadata(
     }
   }
 
+  const mergedTombstonedKeys: Record<string, boolean> = {};
+  for (const [k, v] of Object.entries(currentDiskMeta.tombstonedKeys || {})) {
+    if (v && !mergedClearedKeys[k]) {
+      mergedTombstonedKeys[k] = true;
+    }
+  }
+  if (snapshotMeta.tombstonedKeys) {
+    for (const [k, v] of Object.entries(snapshotMeta.tombstonedKeys)) {
+      if (v && !mergedClearedKeys[k]) {
+        mergedTombstonedKeys[k] = true;
+      }
+    }
+  }
+
   return {
     migratedCollisionIds: mergedMigratedCollisionIds,
     quarantinedCollisionIds: mergedCollisionIds,
     quarantinedLegacyBuckets: mergedLegacyBuckets,
-    tombstonedKeys: {
-      ...(currentDiskMeta.tombstonedKeys || {}),
-      ...(snapshotMeta.tombstonedKeys || {}),
-    },
+    tombstonedKeys: mergedTombstonedKeys,
     failedQuarantineKeys: mergedFailedKeys,
+    clearedQuarantineKeys: mergedClearedKeys,
     rekeyedOwnerIds: {
       ...(currentDiskMeta.rekeyedOwnerIds || {}),
       ...(snapshotMeta.rekeyedOwnerIds || {}),
@@ -345,13 +374,19 @@ export function isQuarantinedAccountId(accountId?: string | null): boolean {
   if (typeof window === "undefined" || !window.localStorage) return false;
   try {
     const safeId = trimmed.toLowerCase().replace(/[^a-z0-9_]/g, (ch) => `_${ch.charCodeAt(0).toString(16)}_`);
+    const meta = getMigrationMetadata();
+    if (
+      meta.clearedQuarantineKeys?.[trimmed] ||
+      meta.clearedQuarantineKeys?.[safeId]
+    ) {
+      return false;
+    }
     if (
       localStorage.getItem(`palluvo_tombstone_${safeId}`) === "1" ||
       localStorage.getItem(`palluvo_tombstone_${trimmed}`) === "1"
     ) {
       return true;
     }
-    const meta = getMigrationMetadata();
     if (meta.quarantinedLegacyBuckets?.[trimmed] || meta.quarantinedCollisionIds?.[trimmed]) {
       return true;
     }
@@ -375,17 +410,29 @@ export function isQuarantinedStorageKey(key?: string | null): boolean {
   if (!key || typeof key !== "string") return false;
   if (typeof window === "undefined" || !window.localStorage) return false;
   try {
+    const meta = getMigrationMetadata();
+    if (meta.clearedQuarantineKeys?.[key]) {
+      return false;
+    }
+    const match = key.match(/^palluvo_ecommerce_(?:orders|addresses)_(.+)$/);
+    if (match) {
+      const suffix = match[1];
+      if (
+        meta.clearedQuarantineKeys?.[suffix] ||
+        meta.clearedQuarantineKeys?.[suffix.toLowerCase()]
+      ) {
+        return false;
+      }
+    }
     if (localStorage.getItem(`palluvo_tombstone_${key}`) === "1") {
       return true;
     }
     if (localStorage.getItem(`palluvo_quarantine_${key}`) !== null) {
       return true;
     }
-    const meta = getMigrationMetadata();
     if (meta.tombstonedKeys?.[key] || meta.failedQuarantineKeys?.[key]) {
       return true;
     }
-    const match = key.match(/^palluvo_ecommerce_(?:orders|addresses)_(.+)$/);
     if (match) {
       const suffix = match[1];
       if (
@@ -455,6 +502,13 @@ export function quarantineLegacyBucket(accountId: string, relatedEmails?: string
     migrationMeta.quarantinedCollisionIds = migrationMeta.quarantinedCollisionIds || {};
     migrationMeta.tombstonedKeys = migrationMeta.tombstonedKeys || {};
     migrationMeta.failedQuarantineKeys = migrationMeta.failedQuarantineKeys || {};
+    if (migrationMeta.clearedQuarantineKeys) {
+      delete migrationMeta.clearedQuarantineKeys[trimmedId];
+      delete migrationMeta.clearedQuarantineKeys[safeId];
+      for (const key of keysToQuarantine) {
+        delete migrationMeta.clearedQuarantineKeys[key];
+      }
+    }
 
     // Register persistent tombstones on all candidate keys and IDs
     for (const key of keysToQuarantine) {
@@ -2656,10 +2710,7 @@ export function reviewAndRepairQuarantinedUnknownRecords(
       try {
         const currentMeta = getMigrationMetadata();
         const mergedMeta = mergeMigrationMetadata(currentMeta, migrationMeta);
-        if (
-          JSON.stringify(mergedMeta.rekeyedOwnerIds || {}) !== JSON.stringify(currentMeta.rekeyedOwnerIds || {}) ||
-          JSON.stringify(mergedMeta.failedQuarantineKeys || {}) !== JSON.stringify(currentMeta.failedQuarantineKeys || {})
-        ) {
+        if (JSON.stringify(mergedMeta) !== JSON.stringify(currentMeta)) {
           setMigrationMetadata(mergedMeta);
         }
       } catch {}
@@ -2671,7 +2722,8 @@ export function reviewAndRepairQuarantinedUnknownRecords(
 
 /**
  * Removes quarantine and tombstone markers that were mistakenly applied to a single account owner
- * who merely had changed-email aliases.
+ * who merely had changed-email aliases. Persists the clear to disk immediately and records
+ * cleared quarantine keys to prevent subsequent metadata merges from resurrecting cleared state.
  */
 export function clearFalseQuarantine(accountId: string, canonicalId: string, migrationMeta?: MigrationMeta): void {
   if (typeof window === "undefined" || !window.localStorage) return;
@@ -2680,47 +2732,73 @@ export function clearFalseQuarantine(accountId: string, canonicalId: string, mig
     const trimmed = accountId.trim();
     const safeId = trimmed.toLowerCase().replace(/[^a-z0-9_]/g, (ch) => `_${ch.charCodeAt(0).toString(16)}_`);
 
+    const keysToClear = [
+      trimmed,
+      safeId,
+      `palluvo_ecommerce_orders_${trimmed}`,
+      `palluvo_ecommerce_orders_${safeId}`,
+      `palluvo_ecommerce_addresses_${trimmed}`,
+      `palluvo_ecommerce_addresses_${safeId}`,
+      `retry_migration_${trimmed}`,
+      `retry_migration_${safeId}`,
+    ];
+
+    if (trimmed.includes("@")) {
+      const lower = trimmed.toLowerCase();
+      const sanitized = lower.replace(/[^a-z0-9_.-]/g, "_");
+      keysToClear.push(
+        `palluvo_ecommerce_orders_${lower}`,
+        `palluvo_ecommerce_addresses_${lower}`,
+        `palluvo_ecommerce_orders_${sanitized}`,
+        `palluvo_ecommerce_addresses_${sanitized}`,
+        `palluvo_ecommerce_orders_usr_email_${sanitized}`,
+        `palluvo_ecommerce_addresses_usr_email_${sanitized}`
+      );
+    }
+
     localStorage.removeItem(`palluvo_tombstone_${trimmed}`);
     localStorage.removeItem(`palluvo_tombstone_${safeId}`);
-    localStorage.removeItem(`palluvo_tombstone_palluvo_ecommerce_orders_${trimmed}`);
-    localStorage.removeItem(`palluvo_tombstone_palluvo_ecommerce_orders_${safeId}`);
-    localStorage.removeItem(`palluvo_tombstone_palluvo_ecommerce_addresses_${trimmed}`);
-    localStorage.removeItem(`palluvo_tombstone_palluvo_ecommerce_addresses_${safeId}`);
+    for (const k of keysToClear) {
+      localStorage.removeItem(`palluvo_tombstone_${k}`);
+      localStorage.removeItem(`palluvo_quarantine_${k}`);
+    }
 
-    localStorage.removeItem(`palluvo_quarantine_palluvo_ecommerce_orders_${trimmed}`);
-    localStorage.removeItem(`palluvo_quarantine_palluvo_ecommerce_orders_${safeId}`);
-    localStorage.removeItem(`palluvo_quarantine_palluvo_ecommerce_addresses_${trimmed}`);
-    localStorage.removeItem(`palluvo_quarantine_palluvo_ecommerce_addresses_${safeId}`);
+    const applyClearToMeta = (metaToUpdate: MigrationMeta) => {
+      metaToUpdate.clearedQuarantineKeys = metaToUpdate.clearedQuarantineKeys || {};
+      for (const k of keysToClear) {
+        metaToUpdate.clearedQuarantineKeys[k] = true;
+      }
+      if (metaToUpdate.quarantinedLegacyBuckets) {
+        delete metaToUpdate.quarantinedLegacyBuckets[trimmed];
+        delete metaToUpdate.quarantinedLegacyBuckets[safeId];
+      }
+      if (metaToUpdate.quarantinedCollisionIds) {
+        delete metaToUpdate.quarantinedCollisionIds[trimmed];
+        delete metaToUpdate.quarantinedCollisionIds[safeId];
+      }
+      if (metaToUpdate.tombstonedKeys) {
+        for (const k of keysToClear) {
+          delete metaToUpdate.tombstonedKeys[k];
+        }
+      }
+      if (metaToUpdate.failedQuarantineKeys) {
+        for (const k of keysToClear) {
+          delete metaToUpdate.failedQuarantineKeys[k];
+        }
+      }
+      metaToUpdate.rekeyedOwnerIds = metaToUpdate.rekeyedOwnerIds || {};
+      metaToUpdate.rekeyedOwnerIds[trimmed] = canonicalId;
+      metaToUpdate.rekeyedOwnerIds[safeId] = canonicalId;
+    };
 
-    const metaToUpdate = migrationMeta || getMigrationMetadata();
-    if (metaToUpdate.quarantinedLegacyBuckets) {
-      delete metaToUpdate.quarantinedLegacyBuckets[trimmed];
-      delete metaToUpdate.quarantinedLegacyBuckets[safeId];
+    if (migrationMeta) {
+      applyClearToMeta(migrationMeta);
     }
-    if (metaToUpdate.quarantinedCollisionIds) {
-      delete metaToUpdate.quarantinedCollisionIds[trimmed];
-      delete metaToUpdate.quarantinedCollisionIds[safeId];
-    }
-    if (metaToUpdate.tombstonedKeys) {
-      delete metaToUpdate.tombstonedKeys[`palluvo_ecommerce_orders_${trimmed}`];
-      delete metaToUpdate.tombstonedKeys[`palluvo_ecommerce_orders_${safeId}`];
-      delete metaToUpdate.tombstonedKeys[`palluvo_ecommerce_addresses_${trimmed}`];
-      delete metaToUpdate.tombstonedKeys[`palluvo_ecommerce_addresses_${safeId}`];
-    }
-    if (metaToUpdate.failedQuarantineKeys) {
-      delete metaToUpdate.failedQuarantineKeys[`palluvo_ecommerce_orders_${trimmed}`];
-      delete metaToUpdate.failedQuarantineKeys[`palluvo_ecommerce_orders_${safeId}`];
-      delete metaToUpdate.failedQuarantineKeys[`palluvo_ecommerce_addresses_${trimmed}`];
-      delete metaToUpdate.failedQuarantineKeys[`palluvo_ecommerce_addresses_${safeId}`];
-      delete metaToUpdate.failedQuarantineKeys[`retry_migration_${trimmed}`];
-      delete metaToUpdate.failedQuarantineKeys[`retry_migration_${safeId}`];
-    }
-    metaToUpdate.rekeyedOwnerIds = metaToUpdate.rekeyedOwnerIds || {};
-    metaToUpdate.rekeyedOwnerIds[trimmed] = canonicalId;
-    metaToUpdate.rekeyedOwnerIds[safeId] = canonicalId;
-    if (!migrationMeta) {
-      setMigrationMetadata(metaToUpdate);
-    }
+
+    // Always persist the clear immediately to on-disk metadata as well
+    const diskMeta = getMigrationMetadata();
+    applyClearToMeta(diskMeta);
+    setMigrationMetadata(diskMeta);
   } catch {}
 }
 
@@ -2839,10 +2917,13 @@ export function migrateLegacyAccountAliases(): void {
         // Group contains only non-email keys (e.g. phone numbers)
         if (isQuarantinedAccountId(trimmedVal)) {
           const redirectedId = migrationMeta.rekeyedOwnerIds?.[trimmedVal];
+          const hasFailedMigration = Boolean(
+            migrationMeta.failedQuarantineKeys?.[`retry_migration_${trimmedVal}`]
+          );
           const quarantinedEmails = migrationMeta.quarantinedLegacyBuckets?.[trimmedVal]?.emails ||
             migrationMeta.quarantinedCollisionIds?.[trimmedVal] || [];
 
-          if (redirectedId && !isQuarantinedAccountId(redirectedId)) {
+          if (redirectedId && !isQuarantinedAccountId(redirectedId) && !hasFailedMigration) {
             const redirectOwnerEmail = lookupEmailByAccountId(redirectedId)?.toLowerCase().trim();
 
             for (const p of nonEmailKeys) {
@@ -4111,6 +4192,12 @@ export function migrateLegacyAccountAliases(): void {
       const currentMeta = getMigrationMetadata();
       const mergedMeta = mergeMigrationMetadata(currentMeta, migrationMeta);
       setMigrationMetadata(mergedMeta);
+    } else {
+      const currentMeta = getMigrationMetadata();
+      const mergedMeta = mergeMigrationMetadata(currentMeta, migrationMeta);
+      if (JSON.stringify(mergedMeta) !== JSON.stringify(currentMeta)) {
+        setMigrationMetadata(mergedMeta);
+      }
     }
     setAccountMetadata(meta);
 
@@ -4176,6 +4263,13 @@ export function lookupAccountId(identifier?: string | null): string | null {
           },
         };
         const mergedMeta = mergeMigrationMetadata(currentMeta, failureSnapshot);
+        // Do not keep an old or premature redirect that would bypass retrying this failed copy
+        if (mergedMeta.rekeyedOwnerIds) {
+          delete mergedMeta.rekeyedOwnerIds[sourceId];
+          if (legacyBucketId !== targetInjectiveId) {
+            delete mergedMeta.rekeyedOwnerIds[legacyBucketId];
+          }
+        }
         try {
           setMigrationMetadata(mergedMeta);
         } catch {}
@@ -4218,8 +4312,15 @@ export function lookupAccountId(identifier?: string | null): string | null {
       const redirectedId = migrationMeta.rekeyedOwnerIds?.[val];
       const quarantinedEmails = migrationMeta.quarantinedLegacyBuckets?.[val]?.emails ||
         migrationMeta.quarantinedCollisionIds?.[val] || [];
+      const safeVal = val.toLowerCase().replace(/[^a-z0-9_]/g, (ch) => `_${ch.charCodeAt(0).toString(16)}_`);
+      const legacyBucketId = key.includes("@") ? getDirectLegacyEmailId(key) : null;
+      const hasFailedMigration = Boolean(
+        migrationMeta.failedQuarantineKeys?.[`retry_migration_${val}`] ||
+        migrationMeta.failedQuarantineKeys?.[`retry_migration_${safeVal}`] ||
+        (legacyBucketId && migrationMeta.failedQuarantineKeys?.[`retry_migration_${legacyBucketId}`])
+      );
 
-      if (redirectedId && !isQuarantinedAccountId(redirectedId)) {
+      if (redirectedId && !isQuarantinedAccountId(redirectedId) && !hasFailedMigration) {
         if (!key.includes("@")) {
           const recordedOwner = meta[key]?.ownerEmail?.toLowerCase().trim();
           const resolvedOwner = getVerifiedRootOwner(recordedOwner, meta);
@@ -4789,7 +4890,10 @@ export function registerAccountAlias(
     const migrationMeta = getMigrationMetadata();
     if (isQuarantinedAccountId(val)) {
       const redirectedId = migrationMeta.rekeyedOwnerIds?.[val];
-      if (redirectedId && !isQuarantinedAccountId(redirectedId)) {
+      const hasFailedMigration = Boolean(
+        migrationMeta.failedQuarantineKeys?.[`retry_migration_${val}`]
+      );
+      if (redirectedId && !isQuarantinedAccountId(redirectedId) && !hasFailedMigration) {
         val = redirectedId;
       } else {
         return false;
@@ -4806,7 +4910,10 @@ export function registerAccountAlias(
 
     if (map[key] && map[key] !== val && !isQuarantinedAccountId(map[key]) && !isUnresolvedAlias) {
       const existingRedirect = migrationMeta.rekeyedOwnerIds?.[map[key]];
-      if (existingRedirect !== val) {
+      const hasFailedExisting = Boolean(
+        migrationMeta.failedQuarantineKeys?.[`retry_migration_${map[key]}`]
+      );
+      if (existingRedirect !== val || hasFailedExisting) {
         return false;
       }
     }
@@ -5349,7 +5456,10 @@ export function getUserStorageKey(user: UserProfile | null, prefix: string): str
   if (isQuarantinedAccountId(accountId)) {
     const migrationMeta = getMigrationMetadata();
     const redirectedId = migrationMeta.rekeyedOwnerIds?.[accountId];
-    if (redirectedId && !isQuarantinedAccountId(redirectedId)) {
+    const hasFailedMigration = Boolean(
+      migrationMeta.failedQuarantineKeys?.[`retry_migration_${accountId}`]
+    );
+    if (redirectedId && !isQuarantinedAccountId(redirectedId) && !hasFailedMigration) {
       accountId = redirectedId;
     } else if (user.email && !user.email.startsWith("connoisseur.")) {
       const lowerEmail = user.email.toLowerCase().trim();
@@ -5462,7 +5572,10 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       if (user && user.id && isQuarantinedAccountId(user.id)) {
         const migrationMeta = getMigrationMetadata();
         const redirectedId = migrationMeta.rekeyedOwnerIds?.[user.id];
-        if (redirectedId && !isQuarantinedAccountId(redirectedId)) {
+        const hasFailedMigration = Boolean(
+          migrationMeta.failedQuarantineKeys?.[`retry_migration_${user.id}`]
+        );
+        if (redirectedId && !isQuarantinedAccountId(redirectedId) && !hasFailedMigration) {
           safeUser = { ...user, id: redirectedId };
         } else if (user.email && !user.email.startsWith("connoisseur.")) {
           const lowerEmail = user.email.toLowerCase().trim();
@@ -5521,7 +5634,10 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       if (isQuarantinedAccountId(user.id)) {
         const migrationMeta = getMigrationMetadata();
         const redirectedId = migrationMeta.rekeyedOwnerIds?.[user.id];
-        const targetId = redirectedId && !isQuarantinedAccountId(redirectedId)
+        const hasFailedMigration = Boolean(
+          migrationMeta.failedQuarantineKeys?.[`retry_migration_${user.id}`]
+        );
+        const targetId = redirectedId && !isQuarantinedAccountId(redirectedId) && !hasFailedMigration
           ? redirectedId
           : (user.email && !user.email.startsWith("connoisseur.") ? expectedInjectiveId : user.id);
         quarantineLegacyBucket(user.id, [lowerEmail]);
@@ -5652,7 +5768,10 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         if (isQuarantinedAccountId(id)) {
           const migrationMeta = getMigrationMetadata();
           const redirectedId = migrationMeta.rekeyedOwnerIds?.[id];
-          if (redirectedId && !isQuarantinedAccountId(redirectedId)) {
+          const hasFailedMigration = Boolean(
+            migrationMeta.failedQuarantineKeys?.[`retry_migration_${id}`]
+          );
+          if (redirectedId && !isQuarantinedAccountId(redirectedId) && !hasFailedMigration) {
             id = redirectedId;
           } else if (userData.email && !userData.email.startsWith("connoisseur.")) {
             const lowerEmail = userData.email.toLowerCase().trim();
