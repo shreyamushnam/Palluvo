@@ -327,8 +327,11 @@ export function mergeMigrationMetadata(
     const clAt = getClearedAtTimestamp(mergedClearedKeys[bucketId]);
     const safeId = bucketId.toLowerCase().replace(/[^a-z0-9_]/g, (ch) => `_${ch.charCodeAt(0).toString(16)}_`);
     const clSafeAt = getClearedAtTimestamp(mergedClearedKeys[safeId]);
+    const maxClAt = Math.max(clAt, clSafeAt);
 
-    if (qAt > 0 && (qAt >= clAt || qAt >= clSafeAt)) {
+    // Only supersede clear markers if quarantine is newer than or equal to both clear markers
+    // (i.e. if either normalized ID marker is newer than the quarantine, the clear wins!)
+    if (qAt > 0 && (maxClAt === 0 || qAt >= maxClAt)) {
       // Newer quarantine supersedes stale clear markers!
       delete mergedClearedKeys[bucketId];
       delete mergedClearedKeys[safeId];
@@ -356,21 +359,35 @@ export function mergeMigrationMetadata(
 
   const mergedLegacyBuckets: Record<string, { quarantinedAt: number; emails: string[] }> = {};
   for (const [k, v] of allQuarantinedBuckets.entries()) {
-    const clAt = getClearedAtTimestamp(mergedClearedKeys[k]);
-    if (clAt === 0 || (v.quarantinedAt || 0) >= clAt) {
+    const safeK = k.toLowerCase().replace(/[^a-z0-9_]/g, (ch) => `_${ch.charCodeAt(0).toString(16)}_`);
+    const maxClAt = Math.max(
+      getClearedAtTimestamp(mergedClearedKeys[k]),
+      getClearedAtTimestamp(mergedClearedKeys[safeK])
+    );
+    if (maxClAt === 0 || (v.quarantinedAt || 0) >= maxClAt) {
       mergedLegacyBuckets[k] = v;
     }
   }
 
   const mergedCollisionIds: Record<string, string[]> = {};
   for (const [k, v] of Object.entries(currentDiskMeta.quarantinedCollisionIds || {})) {
-    if (!mergedClearedKeys[k]) {
+    const safeK = k.toLowerCase().replace(/[^a-z0-9_]/g, (ch) => `_${ch.charCodeAt(0).toString(16)}_`);
+    const maxClAt = Math.max(
+      getClearedAtTimestamp(mergedClearedKeys[k]),
+      getClearedAtTimestamp(mergedClearedKeys[safeK])
+    );
+    if (maxClAt === 0) {
       mergedCollisionIds[k] = [...(v || [])];
     }
   }
   if (snapshotMeta.quarantinedCollisionIds) {
     for (const [k, v] of Object.entries(snapshotMeta.quarantinedCollisionIds)) {
-      if (!mergedClearedKeys[k]) {
+      const safeK = k.toLowerCase().replace(/[^a-z0-9_]/g, (ch) => `_${ch.charCodeAt(0).toString(16)}_`);
+      const maxClAt = Math.max(
+        getClearedAtTimestamp(mergedClearedKeys[k]),
+        getClearedAtTimestamp(mergedClearedKeys[safeK])
+      );
+      if (maxClAt === 0) {
         mergedCollisionIds[k] = Array.from(new Set([...(mergedCollisionIds[k] || []), ...(v || [])]));
       }
     }
@@ -712,6 +729,11 @@ export function quarantineLegacyBucket(accountId: string, relatedEmails?: string
     if (migrationMeta.failedQuarantineKeys) {
       for (const failedKey of Object.keys(migrationMeta.failedQuarantineKeys)) {
         if (!keysToQuarantine.has(failedKey)) {
+          // Skip retry_migration_* sentinels: these are metadata sentinels for copy retry guards,
+          // not localStorage storage keys. They must only be cleared when their corresponding migration attempt succeeds.
+          if (failedKey.startsWith("retry_migration_")) {
+            continue;
+          }
           try {
             const val = localStorage.getItem(failedKey);
             if (val !== null) {
