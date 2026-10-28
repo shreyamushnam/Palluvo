@@ -450,13 +450,28 @@ function extractQuarantinedAt(b: unknown): number {
   return 0;
 }
 
+function isLocalStorageAvailable(): boolean {
+  if (typeof window === "undefined" || !window.localStorage) return false;
+  try {
+    const testKey = "__palluvo_storage_test__";
+    localStorage.setItem(testKey, "1");
+    localStorage.removeItem(testKey);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 /**
  * Reserves a monotonic operation sequence timestamp strictly greater than any previously
  * observed sequence or quarantine/clear timestamp across all browsing contexts, serialized via
  * cross-tab locking and shared sequence reservation in localStorage.
+ *
+ * Keeps retrying until the cross-tab lock is acquired so that sequence reservations are
+ * always strictly serialized under exclusive ownership and never return unreserved sequences.
  */
 export function getNextMigrationOpSeq(meta?: MigrationMeta): number {
-  if (typeof window === "undefined" || !window.localStorage) {
+  if (!isLocalStorageAvailable()) {
     const now = typeof Date !== "undefined" && Date.now ? Date.now() : 1;
     const seq = Math.max(now, lastMigrationOpSeq + 1);
     lastMigrationOpSeq = seq;
@@ -464,14 +479,10 @@ export function getNextMigrationOpSeq(meta?: MigrationMeta): number {
     return seq;
   }
 
-  // Defer until an exclusive cross-tab lock is acquired to reserve a new shared counter value
-  const maxWaitMs = 1500;
-  const startTime = Date.now();
-  let reservedSeq: number | null = null;
-
-  while (Date.now() - startTime < maxWaitMs) {
-    const remainingTime = Math.max(50, maxWaitMs - (Date.now() - startTime));
-    const result = withCrossTabLock(MIGRATION_LOCK_KEY, () => {
+  // Keep retrying until exclusive cross-tab lock is acquired.
+  // Sequence reservations must NEVER be performed without exclusive ownership.
+  while (true) {
+    const reservedSeq = withCrossTabLock(MIGRATION_LOCK_KEY, () => {
       const now = typeof Date !== "undefined" && Date.now ? Date.now() : 1;
       let maxSeq = Math.max(now, lastMigrationOpSeq + 1);
 
@@ -529,43 +540,16 @@ export function getNextMigrationOpSeq(meta?: MigrationMeta): number {
       } catch {}
 
       return maxSeq;
-    }, Math.min(300, remainingTime));
+    }, 200);
 
-    if (typeof result === "number") {
-      reservedSeq = result;
-      break;
+    if (typeof reservedSeq === "number") {
+      return reservedSeq;
     }
 
     const jitter = Math.floor(Math.random() * 5) + 2;
     const pauseStart = Date.now();
     while (Date.now() - pauseStart < jitter) {}
   }
-
-  if (typeof reservedSeq === "number") {
-    return reservedSeq;
-  }
-
-  // Fallback if lock could not be acquired within the timeout:
-  // Directly reserve the new shared counter value in localStorage so that subsequent calls
-  // across all browsing contexts advance monotonically and never duplicate.
-  const now = typeof Date !== "undefined" && Date.now ? Date.now() : 1;
-  let fallbackSeq = Math.max(now, lastMigrationOpSeq + 1);
-  try {
-    const reservedRaw = localStorage.getItem(MIGRATION_SEQ_KEY);
-    if (reservedRaw) {
-      const storedSeq = Number(reservedRaw);
-      if (!isNaN(storedSeq) && storedSeq > 0) {
-        fallbackSeq = Math.max(fallbackSeq, storedSeq + 1);
-      }
-    }
-    localStorage.setItem(MIGRATION_SEQ_KEY, String(fallbackSeq));
-  } catch {}
-
-  lastMigrationOpSeq = fallbackSeq;
-  if (meta) {
-    meta.operationSeq = fallbackSeq;
-  }
-  return fallbackSeq;
 }
 
 export function getMigrationMetadata(): MigrationMeta {
