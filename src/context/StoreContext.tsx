@@ -189,12 +189,81 @@ export interface MigrationMeta {
     candidateEmails: string[];
     quarantinedAt: number;
   }>;
+  operationSeq?: number;
 }
 
-export function getClearedAtTimestamp(val: number | boolean | undefined): number {
+export function getClearedAtTimestamp(val: number | boolean | undefined, referenceQuarantineTime = 0): number {
   if (typeof val === "number") return val;
-  if (val === true) return 1;
+  if (val === true) {
+    // Preserve legacy boolean clears with explicit ordering semantics:
+    // A legacy boolean clear represents an explicit clear operation that occurred
+    // after the quarantine was established, not a timestamp at epoch (1ms).
+    const base = referenceQuarantineTime > 0 ? referenceQuarantineTime + 1 : 0;
+    const now = typeof Date !== "undefined" && Date.now ? Date.now() : 1;
+    return Math.max(base, now);
+  }
   return 0;
+}
+
+let lastMigrationOpSeq = 0;
+
+function extractQuarantinedAt(b: unknown): number {
+  if (typeof b === "object" && b !== null && "quarantinedAt" in b) {
+    const qAt = (b as { quarantinedAt: unknown }).quarantinedAt;
+    if (typeof qAt === "number") return qAt;
+  }
+  return 0;
+}
+
+/**
+ * Returns a monotonic operation sequence timestamp strictly greater than any previously
+ * observed sequence or quarantine/clear timestamp, resolving concurrent same-millisecond
+ * operations deterministically.
+ */
+export function getNextMigrationOpSeq(meta?: MigrationMeta): number {
+  const now = typeof Date !== "undefined" && Date.now ? Date.now() : 1;
+  let maxSeq = Math.max(now, lastMigrationOpSeq + 1);
+  try {
+    if (typeof window !== "undefined" && window.localStorage) {
+      const raw = localStorage.getItem(MIGRATION_META_KEY);
+      if (raw) {
+        const disk = JSON.parse(raw);
+        if (typeof disk.operationSeq === "number") {
+          maxSeq = Math.max(maxSeq, disk.operationSeq + 1);
+        }
+        if (disk.clearedQuarantineKeys) {
+          for (const v of Object.values(disk.clearedQuarantineKeys)) {
+            if (typeof v === "number") maxSeq = Math.max(maxSeq, v + 1);
+          }
+        }
+        if (disk.quarantinedLegacyBuckets) {
+          for (const b of Object.values(disk.quarantinedLegacyBuckets)) {
+            const qAt = extractQuarantinedAt(b);
+            if (qAt > 0) maxSeq = Math.max(maxSeq, qAt + 1);
+          }
+        }
+      }
+    }
+  } catch {}
+  if (meta) {
+    if (typeof meta.operationSeq === "number") {
+      maxSeq = Math.max(maxSeq, meta.operationSeq + 1);
+    }
+    if (meta.clearedQuarantineKeys) {
+      for (const v of Object.values(meta.clearedQuarantineKeys)) {
+        if (typeof v === "number") maxSeq = Math.max(maxSeq, v + 1);
+      }
+    }
+    if (meta.quarantinedLegacyBuckets) {
+      for (const b of Object.values(meta.quarantinedLegacyBuckets)) {
+        const qAt = extractQuarantinedAt(b);
+        if (qAt > 0) maxSeq = Math.max(maxSeq, qAt + 1);
+      }
+    }
+    meta.operationSeq = maxSeq;
+  }
+  lastMigrationOpSeq = maxSeq;
+  return maxSeq;
 }
 
 export function getMigrationMetadata(): MigrationMeta {
@@ -208,21 +277,59 @@ export function getMigrationMetadata(): MigrationMeta {
       rekeyedOwnerIds: {},
       clearedQuarantineKeys: {},
       unresolvedPhoneAliases: {},
+      operationSeq: 0,
     };
   }
   try {
     const raw = localStorage.getItem(MIGRATION_META_KEY);
     const parsed = raw ? JSON.parse(raw) : {};
-    return {
+
+    // Scan for historical quarantine timestamps to explicitly order legacy boolean clears
+    let maxHistoricalQ = 0;
+    if (parsed.quarantinedLegacyBuckets) {
+      for (const b of Object.values(parsed.quarantinedLegacyBuckets)) {
+        maxHistoricalQ = Math.max(maxHistoricalQ, extractQuarantinedAt(b));
+      }
+    }
+    if (parsed.unresolvedPhoneAliases) {
+      for (const b of Object.values(parsed.unresolvedPhoneAliases)) {
+        maxHistoricalQ = Math.max(maxHistoricalQ, extractQuarantinedAt(b));
+      }
+    }
+
+    let hasLegacyBooleanClears = false;
+    const rawCleared: Record<string, number | boolean> = parsed.clearedQuarantineKeys || {};
+    const upgradedCleared: Record<string, number | boolean> = {};
+    const upgradeBaseTime = Math.max(Date.now(), maxHistoricalQ + 1);
+
+    for (const [k, v] of Object.entries(rawCleared)) {
+      if (typeof v === "number") {
+        upgradedCleared[k] = v;
+      } else if (v === true) {
+        hasLegacyBooleanClears = true;
+        upgradedCleared[k] = upgradeBaseTime;
+      }
+    }
+
+    const result: MigrationMeta = {
       migratedCollisionIds: parsed.migratedCollisionIds || {},
       quarantinedCollisionIds: parsed.quarantinedCollisionIds || {},
       quarantinedLegacyBuckets: parsed.quarantinedLegacyBuckets || {},
       tombstonedKeys: parsed.tombstonedKeys || {},
       failedQuarantineKeys: parsed.failedQuarantineKeys || {},
       rekeyedOwnerIds: parsed.rekeyedOwnerIds || {},
-      clearedQuarantineKeys: parsed.clearedQuarantineKeys || {},
+      clearedQuarantineKeys: upgradedCleared,
       unresolvedPhoneAliases: parsed.unresolvedPhoneAliases || {},
+      operationSeq: Math.max(parsed.operationSeq || 0, hasLegacyBooleanClears ? upgradeBaseTime : 0),
     };
+
+    if (hasLegacyBooleanClears) {
+      try {
+        localStorage.setItem(MIGRATION_META_KEY, JSON.stringify(result));
+      } catch {}
+    }
+
+    return result;
   } catch {
     return {
       migratedCollisionIds: {},
@@ -233,6 +340,7 @@ export function getMigrationMetadata(): MigrationMeta {
       rekeyedOwnerIds: {},
       clearedQuarantineKeys: {},
       unresolvedPhoneAliases: {},
+      operationSeq: 0,
     };
   }
 }
@@ -254,16 +362,28 @@ export function mergeMigrationMetadata(
   currentDiskMeta: MigrationMeta,
   snapshotMeta: MigrationMeta
 ): MigrationMeta {
+  // Find max historical quarantine timestamp to ensure legacy boolean clears are upgraded with proper ordering semantics
+  let maxHistoricalQ = 0;
+  for (const meta of [currentDiskMeta, snapshotMeta]) {
+    if (meta?.quarantinedLegacyBuckets) {
+      for (const b of Object.values(meta.quarantinedLegacyBuckets)) {
+        maxHistoricalQ = Math.max(maxHistoricalQ, extractQuarantinedAt(b));
+      }
+    }
+  }
+  const upgradeBaseTime = Math.max(Date.now(), maxHistoricalQ + 1);
+
   // 1. Union cleared keys, taking the latest timestamp for each key
   const mergedClearedKeys: Record<string, number | boolean> = {};
   for (const [k, v] of Object.entries(currentDiskMeta.clearedQuarantineKeys || {})) {
-    mergedClearedKeys[k] = v;
+    mergedClearedKeys[k] = v === true ? upgradeBaseTime : v;
   }
   for (const [k, v] of Object.entries(snapshotMeta.clearedQuarantineKeys || {})) {
-    const existingTime = getClearedAtTimestamp(mergedClearedKeys[k]);
-    const incomingTime = getClearedAtTimestamp(v);
+    const existingTime = getClearedAtTimestamp(mergedClearedKeys[k], maxHistoricalQ);
+    const incomingVal = v === true ? upgradeBaseTime : v;
+    const incomingTime = getClearedAtTimestamp(incomingVal, maxHistoricalQ);
     if (incomingTime >= existingTime) {
-      mergedClearedKeys[k] = v;
+      mergedClearedKeys[k] = incomingVal;
     }
   }
 
@@ -324,15 +444,15 @@ export function mergeMigrationMetadata(
 
   for (const [bucketId, bucketInfo] of allQuarantinedBuckets.entries()) {
     const qAt = bucketInfo.quarantinedAt || 0;
-    const clAt = getClearedAtTimestamp(mergedClearedKeys[bucketId]);
+    const clAt = getClearedAtTimestamp(mergedClearedKeys[bucketId], qAt);
     const safeId = bucketId.toLowerCase().replace(/[^a-z0-9_]/g, (ch) => `_${ch.charCodeAt(0).toString(16)}_`);
-    const clSafeAt = getClearedAtTimestamp(mergedClearedKeys[safeId]);
+    const clSafeAt = getClearedAtTimestamp(mergedClearedKeys[safeId], qAt);
     const maxClAt = Math.max(clAt, clSafeAt);
 
-    // Only supersede clear markers if quarantine is newer than or equal to both clear markers
-    // (i.e. if either normalized ID marker is newer than the quarantine, the clear wins!)
-    if (qAt > 0 && (maxClAt === 0 || qAt >= maxClAt)) {
-      // Newer quarantine supersedes stale clear markers!
+    // Only supersede clear markers if quarantine is strictly newer than both clear markers.
+    // When operations occur in the same millisecond or tie, explicit clear deterministically wins!
+    if (qAt > 0 && (maxClAt === 0 || qAt > maxClAt)) {
+      // Strictly newer quarantine supersedes stale clear markers!
       delete mergedClearedKeys[bucketId];
       delete mergedClearedKeys[safeId];
       delete mergedClearedKeys[`palluvo_ecommerce_orders_${bucketId}`];
@@ -360,11 +480,13 @@ export function mergeMigrationMetadata(
   const mergedLegacyBuckets: Record<string, { quarantinedAt: number; emails: string[] }> = {};
   for (const [k, v] of allQuarantinedBuckets.entries()) {
     const safeK = k.toLowerCase().replace(/[^a-z0-9_]/g, (ch) => `_${ch.charCodeAt(0).toString(16)}_`);
+    const qAt = v.quarantinedAt || 0;
     const maxClAt = Math.max(
-      getClearedAtTimestamp(mergedClearedKeys[k]),
-      getClearedAtTimestamp(mergedClearedKeys[safeK])
+      getClearedAtTimestamp(mergedClearedKeys[k], qAt),
+      getClearedAtTimestamp(mergedClearedKeys[safeK], qAt)
     );
-    if (maxClAt === 0 || (v.quarantinedAt || 0) >= maxClAt) {
+    // Explicit clear wins ties (qAt === maxClAt); only quarantine if strictly newer
+    if (maxClAt === 0 || qAt > maxClAt) {
       mergedLegacyBuckets[k] = v;
     }
   }
@@ -431,6 +553,11 @@ export function mergeMigrationMetadata(
       ...(currentDiskMeta.unresolvedPhoneAliases || {}),
       ...(snapshotMeta.unresolvedPhoneAliases || {}),
     },
+    operationSeq: Math.max(
+      currentDiskMeta.operationSeq || 0,
+      snapshotMeta.operationSeq || 0,
+      Date.now()
+    ),
   };
 }
 
@@ -447,21 +574,21 @@ export function isQuarantinedAccountId(accountId?: string | null): boolean {
     const safeId = trimmed.toLowerCase().replace(/[^a-z0-9_]/g, (ch) => `_${ch.charCodeAt(0).toString(16)}_`);
     const meta = getMigrationMetadata();
 
-    const clAt = Math.max(
-      getClearedAtTimestamp(meta.clearedQuarantineKeys?.[trimmed]),
-      getClearedAtTimestamp(meta.clearedQuarantineKeys?.[safeId])
-    );
-
     const bucketInfo = meta.quarantinedLegacyBuckets?.[trimmed] || meta.quarantinedLegacyBuckets?.[safeId];
     const qAt = bucketInfo?.quarantinedAt || 0;
 
-    // A newer quarantine supersedes an older clear marker
-    if (bucketInfo && (clAt === 0 || qAt >= clAt)) {
+    const clAt = Math.max(
+      getClearedAtTimestamp(meta.clearedQuarantineKeys?.[trimmed], qAt),
+      getClearedAtTimestamp(meta.clearedQuarantineKeys?.[safeId], qAt)
+    );
+
+    // A strictly newer quarantine supersedes an older clear marker
+    if (bucketInfo && (clAt === 0 || qAt > clAt)) {
       return true;
     }
 
-    // Only mask quarantine/tombstone if explicitly cleared after quarantine
-    if (clAt > 0 && clAt > qAt) {
+    // Explicit clear wins ties or newer
+    if (clAt > 0 && clAt >= qAt) {
       return false;
     }
 
@@ -523,23 +650,23 @@ export function isQuarantinedStorageKey(key?: string | null): boolean {
       : undefined;
     const qAt = bucketInfo?.quarantinedAt || 0;
 
-    const clKeyAt = getClearedAtTimestamp(meta.clearedQuarantineKeys?.[key]);
+    const clKeyAt = getClearedAtTimestamp(meta.clearedQuarantineKeys?.[key], qAt);
     const clSuffixAt = suffix
       ? Math.max(
-          getClearedAtTimestamp(meta.clearedQuarantineKeys?.[suffix]),
-          getClearedAtTimestamp(meta.clearedQuarantineKeys?.[suffix.toLowerCase()]),
-          safeSuffix ? getClearedAtTimestamp(meta.clearedQuarantineKeys?.[safeSuffix]) : 0
+          getClearedAtTimestamp(meta.clearedQuarantineKeys?.[suffix], qAt),
+          getClearedAtTimestamp(meta.clearedQuarantineKeys?.[suffix.toLowerCase()], qAt),
+          safeSuffix ? getClearedAtTimestamp(meta.clearedQuarantineKeys?.[safeSuffix], qAt) : 0
         )
       : 0;
     const clAt = Math.max(clKeyAt, clSuffixAt);
 
-    // If quarantine is newer than or equal to clear: QUARANTINE WINS!
-    if (bucketInfo && (clAt === 0 || qAt >= clAt)) {
+    // If quarantine is strictly newer than clear: QUARANTINE WINS!
+    if (bucketInfo && (clAt === 0 || qAt > clAt)) {
       return true;
     }
 
-    // Only mask if explicitly cleared after quarantine
-    if (clAt > 0 && clAt > qAt) {
+    // Explicit clear wins ties or newer
+    if (clAt > 0 && clAt >= qAt) {
       return false;
     }
 
@@ -759,7 +886,7 @@ export function quarantineLegacyBucket(accountId: string, relatedEmails?: string
       }
     }
 
-    const quarantineTimestamp = Date.now();
+    const quarantineTimestamp = getNextMigrationOpSeq(migrationMeta);
     const existingEmails = migrationMeta.quarantinedLegacyBuckets[trimmedId]?.emails || [];
     const normalizedRelated = relatedEmails ? relatedEmails.map((e) => e.toLowerCase().trim()) : [];
     const allEmails = Array.from(new Set([...existingEmails, ...normalizedRelated]));
@@ -768,6 +895,7 @@ export function quarantineLegacyBucket(accountId: string, relatedEmails?: string
       quarantinedAt: quarantineTimestamp,
       emails: allEmails,
     };
+    migrationMeta.operationSeq = Math.max(migrationMeta.operationSeq || 0, quarantineTimestamp);
     if (allEmails.length > 0) {
       const existing = migrationMeta.quarantinedCollisionIds[trimmedId] || [];
       migrationMeta.quarantinedCollisionIds[trimmedId] = Array.from(
@@ -780,6 +908,7 @@ export function quarantineLegacyBucket(accountId: string, relatedEmails?: string
         quarantinedAt: quarantineTimestamp,
         emails: allEmails,
       };
+      callerMeta.operationSeq = Math.max(callerMeta.operationSeq || 0, quarantineTimestamp);
       if (allEmails.length > 0) {
         const existingCaller = callerMeta.quarantinedCollisionIds[trimmedId] || [];
         callerMeta.quarantinedCollisionIds[trimmedId] = Array.from(
@@ -2965,12 +3094,13 @@ export function clearFalseQuarantine(accountId: string, canonicalId: string, mig
       localStorage.removeItem(`palluvo_quarantine_${k}`);
     }
 
-    const clearTimestamp = Date.now();
+    const clearTimestamp = getNextMigrationOpSeq(migrationMeta);
     const applyClearToMeta = (metaToUpdate: MigrationMeta) => {
       metaToUpdate.clearedQuarantineKeys = metaToUpdate.clearedQuarantineKeys || {};
       for (const k of keysToClear) {
         metaToUpdate.clearedQuarantineKeys[k] = clearTimestamp;
       }
+      metaToUpdate.operationSeq = Math.max(metaToUpdate.operationSeq || 0, clearTimestamp);
       if (metaToUpdate.quarantinedLegacyBuckets) {
         delete metaToUpdate.quarantinedLegacyBuckets[trimmed];
         delete metaToUpdate.quarantinedLegacyBuckets[safeId];
