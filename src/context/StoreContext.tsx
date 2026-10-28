@@ -205,7 +205,86 @@ export function getClearedAtTimestamp(val: number | boolean | undefined, referen
   return 0;
 }
 
+export const MIGRATION_LOCK_KEY = "palluvo_migration_meta_lock";
+export const MIGRATION_SEQ_KEY = "palluvo_migration_reserved_op_seq";
+
 let lastMigrationOpSeq = 0;
+let currentTabNumericId = 0;
+
+function getTabNumericId(): number {
+  if (currentTabNumericId > 0) return currentTabNumericId;
+  let id = 0;
+  if (typeof window !== "undefined") {
+    try {
+      if (window.sessionStorage) {
+        const stored = sessionStorage.getItem("palluvo_tab_id");
+        if (stored) {
+          id = parseInt(stored, 10);
+        }
+        if (!id || isNaN(id) || id <= 0 || id > 9999) {
+          id = Math.floor(Math.random() * 9000) + 1000;
+          sessionStorage.setItem("palluvo_tab_id", String(id));
+        }
+      }
+    } catch {}
+  }
+  if (!id) {
+    id = Math.floor(Math.random() * 9000) + 1000;
+  }
+  currentTabNumericId = id;
+  return id;
+}
+
+/**
+ * Executes an operation with a synchronous cross-tab lock in localStorage to serialize
+ * multi-tab read-modify-write operations and sequence allocations.
+ */
+function withCrossTabLock<T>(lockKey: string, fn: () => T): T {
+  if (typeof window === "undefined" || !window.localStorage) {
+    return fn();
+  }
+  const tabId = getTabNumericId();
+  const maxAttempts = 15;
+  let acquired = false;
+  const token = `${tabId}_${Date.now()}_${Math.random()}`;
+
+  for (let i = 0; i < maxAttempts; i++) {
+    try {
+      const existing = localStorage.getItem(lockKey);
+      const now = Date.now();
+      if (existing) {
+        const parsed = JSON.parse(existing);
+        if (parsed && typeof parsed.expiresAt === "number" && parsed.expiresAt > now) {
+          // Lock held by another tab; short spin wait
+          const pauseStart = Date.now();
+          while (Date.now() - pauseStart < 1) {}
+          continue;
+        }
+      }
+      localStorage.setItem(lockKey, JSON.stringify({ token, expiresAt: now + 500 }));
+      const verify = localStorage.getItem(lockKey);
+      if (verify && verify.includes(token)) {
+        acquired = true;
+        break;
+      }
+    } catch {}
+    const pauseStart = Date.now();
+    while (Date.now() - pauseStart < 1) {}
+  }
+
+  try {
+    return fn();
+  } finally {
+    if (acquired) {
+      try {
+        const current = localStorage.getItem(lockKey);
+        if (current && current.includes(token)) {
+          localStorage.removeItem(lockKey);
+        }
+      } catch {}
+    }
+  }
+}
 
 function extractQuarantinedAt(b: unknown): number {
   if (typeof b === "object" && b !== null && "quarantinedAt" in b) {
@@ -216,54 +295,74 @@ function extractQuarantinedAt(b: unknown): number {
 }
 
 /**
- * Returns a monotonic operation sequence timestamp strictly greater than any previously
- * observed sequence or quarantine/clear timestamp, resolving concurrent same-millisecond
- * operations deterministically.
+ * Reserves a monotonic operation sequence timestamp strictly greater than any previously
+ * observed sequence or quarantine/clear timestamp across all tabs, serialized via cross-tab
+ * locking and shared sequence reservation in localStorage.
  */
 export function getNextMigrationOpSeq(meta?: MigrationMeta): number {
-  const now = typeof Date !== "undefined" && Date.now ? Date.now() : 1;
-  let maxSeq = Math.max(now, lastMigrationOpSeq + 1);
-  try {
-    if (typeof window !== "undefined" && window.localStorage) {
-      const raw = localStorage.getItem(MIGRATION_META_KEY);
-      if (raw) {
-        const disk = JSON.parse(raw);
-        if (typeof disk.operationSeq === "number") {
-          maxSeq = Math.max(maxSeq, disk.operationSeq + 1);
-        }
-        if (disk.clearedQuarantineKeys) {
-          for (const v of Object.values(disk.clearedQuarantineKeys)) {
-            if (typeof v === "number") maxSeq = Math.max(maxSeq, v + 1);
+  return withCrossTabLock(MIGRATION_LOCK_KEY, () => {
+    const now = typeof Date !== "undefined" && Date.now ? Date.now() : 1;
+    let maxSeq = Math.max(now, lastMigrationOpSeq + 1);
+
+    try {
+      if (typeof window !== "undefined" && window.localStorage) {
+        const reservedRaw = localStorage.getItem(MIGRATION_SEQ_KEY);
+        if (reservedRaw) {
+          const reservedSeq = Number(reservedRaw);
+          if (!isNaN(reservedSeq) && reservedSeq > 0) {
+            maxSeq = Math.max(maxSeq, reservedSeq + 1);
           }
         }
-        if (disk.quarantinedLegacyBuckets) {
-          for (const b of Object.values(disk.quarantinedLegacyBuckets)) {
-            const qAt = extractQuarantinedAt(b);
-            if (qAt > 0) maxSeq = Math.max(maxSeq, qAt + 1);
+
+        const raw = localStorage.getItem(MIGRATION_META_KEY);
+        if (raw) {
+          const disk = JSON.parse(raw);
+          if (typeof disk.operationSeq === "number") {
+            maxSeq = Math.max(maxSeq, disk.operationSeq + 1);
+          }
+          if (disk.clearedQuarantineKeys) {
+            for (const v of Object.values(disk.clearedQuarantineKeys)) {
+              if (typeof v === "number") maxSeq = Math.max(maxSeq, v + 1);
+            }
+          }
+          if (disk.quarantinedLegacyBuckets) {
+            for (const b of Object.values(disk.quarantinedLegacyBuckets)) {
+              const qAt = extractQuarantinedAt(b);
+              if (qAt > 0) maxSeq = Math.max(maxSeq, qAt + 1);
+            }
           }
         }
       }
-    }
-  } catch {}
-  if (meta) {
-    if (typeof meta.operationSeq === "number") {
-      maxSeq = Math.max(maxSeq, meta.operationSeq + 1);
-    }
-    if (meta.clearedQuarantineKeys) {
-      for (const v of Object.values(meta.clearedQuarantineKeys)) {
-        if (typeof v === "number") maxSeq = Math.max(maxSeq, v + 1);
+    } catch {}
+
+    if (meta) {
+      if (typeof meta.operationSeq === "number") {
+        maxSeq = Math.max(maxSeq, meta.operationSeq + 1);
       }
-    }
-    if (meta.quarantinedLegacyBuckets) {
-      for (const b of Object.values(meta.quarantinedLegacyBuckets)) {
-        const qAt = extractQuarantinedAt(b);
-        if (qAt > 0) maxSeq = Math.max(maxSeq, qAt + 1);
+      if (meta.clearedQuarantineKeys) {
+        for (const v of Object.values(meta.clearedQuarantineKeys)) {
+          if (typeof v === "number") maxSeq = Math.max(maxSeq, v + 1);
+        }
       }
+      if (meta.quarantinedLegacyBuckets) {
+        for (const b of Object.values(meta.quarantinedLegacyBuckets)) {
+          const qAt = extractQuarantinedAt(b);
+          if (qAt > 0) maxSeq = Math.max(maxSeq, qAt + 1);
+        }
+      }
+      meta.operationSeq = maxSeq;
     }
-    meta.operationSeq = maxSeq;
-  }
-  lastMigrationOpSeq = maxSeq;
-  return maxSeq;
+
+    lastMigrationOpSeq = maxSeq;
+
+    try {
+      if (typeof window !== "undefined" && window.localStorage) {
+        localStorage.setItem(MIGRATION_SEQ_KEY, String(maxSeq));
+      }
+    } catch {}
+
+    return maxSeq;
+  });
 }
 
 export function getMigrationMetadata(): MigrationMeta {
@@ -325,7 +424,17 @@ export function getMigrationMetadata(): MigrationMeta {
 
     if (hasLegacyBooleanClears) {
       try {
-        localStorage.setItem(MIGRATION_META_KEY, JSON.stringify(result));
+        const mergedUpgrade = withCrossTabLock(MIGRATION_LOCK_KEY, () => {
+          const latestRaw = localStorage.getItem(MIGRATION_META_KEY);
+          const latestDisk = latestRaw ? JSON.parse(latestRaw) : {};
+          // Merge legacy upgrade with latest disk metadata to prevent dropping concurrent writes
+          const merged = mergeMigrationMetadata(latestDisk, result);
+          localStorage.setItem(MIGRATION_META_KEY, JSON.stringify(merged));
+          return merged;
+        });
+        if (mergedUpgrade) {
+          return mergedUpgrade;
+        }
       } catch {}
     }
 
@@ -348,7 +457,17 @@ export function getMigrationMetadata(): MigrationMeta {
 export function setMigrationMetadata(meta: MigrationMeta): void {
   if (typeof window === "undefined" || !window.localStorage) return;
   try {
-    localStorage.setItem(MIGRATION_META_KEY, JSON.stringify(meta));
+    withCrossTabLock(MIGRATION_LOCK_KEY, () => {
+      localStorage.setItem(MIGRATION_META_KEY, JSON.stringify(meta));
+      if (typeof meta.operationSeq === "number") {
+        try {
+          const currentReserved = Number(localStorage.getItem(MIGRATION_SEQ_KEY) || 0);
+          if (meta.operationSeq > currentReserved) {
+            localStorage.setItem(MIGRATION_SEQ_KEY, String(meta.operationSeq));
+          }
+        } catch {}
+      }
+    });
   } catch {}
 }
 
@@ -449,10 +568,10 @@ export function mergeMigrationMetadata(
     const clSafeAt = getClearedAtTimestamp(mergedClearedKeys[safeId], qAt);
     const maxClAt = Math.max(clAt, clSafeAt);
 
-    // Only supersede clear markers if quarantine is strictly newer than both clear markers.
-    // When operations occur in the same millisecond or tie, explicit clear deterministically wins!
-    if (qAt > 0 && (maxClAt === 0 || qAt > maxClAt)) {
-      // Strictly newer quarantine supersedes stale clear markers!
+    // If quarantine is newer than or equal to both clear markers, quarantine wins to preserve safety guard!
+    // (A real quarantine retains the guard on a shared legacy bucket unless an explicit clear is strictly newer)
+    if (qAt > 0 && (maxClAt === 0 || qAt >= maxClAt)) {
+      // Newer or concurrent quarantine supersedes stale clear markers!
       delete mergedClearedKeys[bucketId];
       delete mergedClearedKeys[safeId];
       delete mergedClearedKeys[`palluvo_ecommerce_orders_${bucketId}`];
@@ -485,8 +604,8 @@ export function mergeMigrationMetadata(
       getClearedAtTimestamp(mergedClearedKeys[k], qAt),
       getClearedAtTimestamp(mergedClearedKeys[safeK], qAt)
     );
-    // Explicit clear wins ties (qAt === maxClAt); only quarantine if strictly newer
-    if (maxClAt === 0 || qAt > maxClAt) {
+    // Quarantine remains in mergedLegacyBuckets if newer than or equal to clear (preserving safety guard)
+    if (maxClAt === 0 || qAt >= maxClAt) {
       mergedLegacyBuckets[k] = v;
     }
   }
@@ -582,13 +701,13 @@ export function isQuarantinedAccountId(accountId?: string | null): boolean {
       getClearedAtTimestamp(meta.clearedQuarantineKeys?.[safeId], qAt)
     );
 
-    // A strictly newer quarantine supersedes an older clear marker
-    if (bucketInfo && (clAt === 0 || qAt > clAt)) {
+    // A newer or equal quarantine retains the safety guard on a shared legacy bucket
+    if (bucketInfo && (clAt === 0 || qAt >= clAt)) {
       return true;
     }
 
-    // Explicit clear wins ties or newer
-    if (clAt > 0 && clAt >= qAt) {
+    // Only mask quarantine/tombstone if explicitly cleared strictly after quarantine
+    if (clAt > 0 && clAt > qAt) {
       return false;
     }
 
@@ -660,13 +779,13 @@ export function isQuarantinedStorageKey(key?: string | null): boolean {
       : 0;
     const clAt = Math.max(clKeyAt, clSuffixAt);
 
-    // If quarantine is strictly newer than clear: QUARANTINE WINS!
-    if (bucketInfo && (clAt === 0 || qAt > clAt)) {
+    // If quarantine is newer than or equal to clear: QUARANTINE WINS to preserve safety guard!
+    if (bucketInfo && (clAt === 0 || qAt >= clAt)) {
       return true;
     }
 
-    // Explicit clear wins ties or newer
-    if (clAt > 0 && clAt >= qAt) {
+    // Only mask if explicitly cleared strictly after quarantine
+    if (clAt > 0 && clAt > qAt) {
       return false;
     }
 
