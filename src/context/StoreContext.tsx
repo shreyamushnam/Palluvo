@@ -211,6 +211,7 @@ export const MIGRATION_SEQ_KEY = "palluvo_migration_reserved_op_seq";
 let lastMigrationOpSeq = 0;
 let currentBrowsingContextId = "";
 let lockClaimCounter = 0;
+let lastLockStorageWriteError = false;
 
 /**
  * Returns a globally unique, high-entropy identifier for this browsing context.
@@ -299,96 +300,284 @@ function getAllLocalStorageKeys(): string[] {
 }
 
 /**
- * Two-phase mutual exclusion lock acquisition in localStorage with intent registration,
- * verification delay, and deterministic tie-breaking.
+ * Lamport Bakery cross-tab mutual exclusion lock acquisition in localStorage.
+ *
+ * Each contender writes exclusively to its own dedicated per-claim key
+ * (`${lockKey}_claim_${lockOwnerId}`) and NEVER writes to a shared lock key or
+ * another contender's key. This guarantees that a paused contender resuming after
+ * another contender acquires the lock can never overwrite or clobber a live owner's lock.
+ *
+ * Protocol phases:
+ * 0. Read-only fast check: abort if a direct lock at `lockKey` or an established
+ *    `"claimed"` record is already held by another unexpired owner.
+ * 1. Doorway entry: write own `claimKey` with `phase: "choosing", ticket: 0`.
+ * 2. Ticket calculation: inspect all unexpired claims and compute a strictly greater
+ *    monotonic ticket `myTicket = Math.max(Date.now(), maxObservedTicket + 1)`.
+ * 3. Doorway exit (final write): update own `claimKey` with `phase: "claimed", ticket: myTicket`.
+ *    No storage writes occur after this step.
+ * 4. Two-pass Bakery verification: wait (bounded) for any `"choosing"` contender to publish
+ *    its ticket (or abort if it remains `"choosing"`), and verify that `(myTicket, lockOwnerId)`
+ *    has strictly higher priority than every other unexpired claim.
+ * 5. Self-lease revalidation: confirm own `claimKey` remains intact and has sufficient
+ *    remaining lease validity before entering the critical section.
  */
-export function tryAcquireCrossTabLock(lockKey: string, lockOwnerId: string, ttlMs = 500): boolean {
+export function tryAcquireCrossTabLock(lockKey: string, lockOwnerId: string, ttlMs = 400): boolean {
   if (typeof window === "undefined" || !window.localStorage) return true;
-  const now = Date.now();
+  const startNow = Date.now();
+  const leaseExpiresAt = startNow + ttlMs;
+  const claimPrefix = `${lockKey}_claim_`;
+  const claimKey = `${claimPrefix}${lockOwnerId}`;
 
-  try {
-    const rawExisting = localStorage.getItem(lockKey);
-    if (rawExisting) {
+  const hasUnexpiredDirectLock = (checkNow: number): boolean => {
+    try {
+      const rawExisting = localStorage.getItem(lockKey);
+      if (!rawExisting) return false;
       const existing = JSON.parse(rawExisting);
-      if (existing && typeof existing.expiresAt === "number" && existing.expiresAt > now) {
-        if (existing.owner !== lockOwnerId) {
-          return false;
-        }
+      if (existing && typeof existing.expiresAt === "number" && existing.expiresAt > checkNow) {
+        return existing.owner !== lockOwnerId;
+      }
+      return false;
+    } catch {
+      return true;
+    }
+  };
+
+  // Phase 0: Read-only check for an existing unexpired lock before writing anything
+  if (hasUnexpiredDirectLock(startNow)) {
+    return false;
+  }
+  try {
+    const initialKeys = getAllLocalStorageKeys();
+    for (const k of initialKeys) {
+      if (k.startsWith(claimPrefix) && k !== claimKey) {
+        const raw = localStorage.getItem(k);
+        if (!raw) continue;
+        try {
+          const parsed = JSON.parse(raw);
+          if (parsed && typeof parsed.expiresAt === "number") {
+            if (parsed.expiresAt <= startNow) {
+              if (startNow - parsed.expiresAt > 2000) {
+                try { localStorage.removeItem(k); } catch {}
+              }
+              continue;
+            }
+            if (parsed.phase === "claimed" && parsed.owner !== lockOwnerId) {
+              return false;
+            }
+          }
+        } catch {}
       }
     }
-  } catch {}
-
-  const intentKey = `${lockKey}_intent_${lockOwnerId}`;
-  try {
-    localStorage.setItem(intentKey, String(now));
   } catch {
     return false;
   }
 
-  // Small pause to let concurrent intent writes in other contexts register in storage
-  const pauseStart = Date.now();
-  while (Date.now() - pauseStart < 2) {}
-
+  // Phase 1: Doorway entry — announce "choosing" in our own dedicated key
+  const choosingData = JSON.stringify({
+    owner: lockOwnerId,
+    phase: "choosing",
+    ticket: 0,
+    expiresAt: leaseExpiresAt,
+  });
   try {
-    const intentPrefix = `${lockKey}_intent_`;
-    const allKeys = getAllLocalStorageKeys();
-    for (const k of allKeys) {
-      if (k.startsWith(intentPrefix) && k !== intentKey) {
-        const otherTimeStr = localStorage.getItem(k);
-        const otherTime = otherTimeStr ? Number(otherTimeStr) : 0;
-        // Clean up stale intents older than 3 seconds
-        if (otherTime > 0 && now - otherTime >= 3000) {
-          try { localStorage.removeItem(k); } catch {}
-          continue;
-        }
-        if (otherTime > 0 && (now - otherTime < 3000)) {
-          const otherOwnerId = k.slice(intentPrefix.length);
-          if (otherTime < now || (otherTime === now && otherOwnerId < lockOwnerId)) {
-            localStorage.removeItem(intentKey);
+    localStorage.setItem(claimKey, choosingData);
+    if (localStorage.getItem(claimKey) !== choosingData) {
+      lastLockStorageWriteError = true;
+      try { localStorage.removeItem(claimKey); } catch {}
+      return false;
+    }
+  } catch {
+    lastLockStorageWriteError = true;
+    return false;
+  }
+
+  // Phase 2: Observe all active claims after doorway registration to assign a monotonic ticket
+  let maxObservedTicket = startNow;
+  try {
+    const now2 = Date.now();
+    if (now2 + 40 >= leaseExpiresAt || hasUnexpiredDirectLock(now2)) {
+      try { localStorage.removeItem(claimKey); } catch {}
+      return false;
+    }
+    const keys = getAllLocalStorageKeys();
+    for (const k of keys) {
+      if (k.startsWith(claimPrefix) && k !== claimKey) {
+        const otherRaw = localStorage.getItem(k);
+        if (!otherRaw) continue;
+        try {
+          const otherClaim = JSON.parse(otherRaw);
+          if (otherClaim && typeof otherClaim.expiresAt === "number" && otherClaim.expiresAt > now2) {
+            const otherTicket =
+              typeof otherClaim.ticket === "number"
+                ? otherClaim.ticket
+                : typeof otherClaim.claimTime === "number"
+                ? otherClaim.claimTime
+                : 0;
+            if (otherTicket > maxObservedTicket) {
+              maxObservedTicket = otherTicket;
+            }
+          }
+        } catch {}
+      }
+    }
+  } catch {
+    try { localStorage.removeItem(claimKey); } catch {}
+    return false;
+  }
+
+  const myTicket = Math.max(Date.now(), maxObservedTicket + 1);
+
+  // Phase 3: Doorway exit — publish numbered claim to our own dedicated key (FINAL WRITE)
+  const claimedData = JSON.stringify({
+    owner: lockOwnerId,
+    phase: "claimed",
+    ticket: myTicket,
+    acquiredAt: Date.now(),
+    expiresAt: leaseExpiresAt,
+  });
+  try {
+    if (Date.now() + 40 >= leaseExpiresAt) {
+      try { localStorage.removeItem(claimKey); } catch {}
+      return false;
+    }
+    localStorage.setItem(claimKey, claimedData);
+    if (localStorage.getItem(claimKey) !== claimedData) {
+      lastLockStorageWriteError = true;
+      try { localStorage.removeItem(claimKey); } catch {}
+      return false;
+    }
+  } catch {
+    lastLockStorageWriteError = true;
+    try { localStorage.removeItem(claimKey); } catch {}
+    return false;
+  }
+
+  // Phase 4: Two-pass Bakery verification over all contender keys (pure read/verify after final write)
+  for (let pass = 0; pass < 2; pass++) {
+    try {
+      const checkNow = Date.now();
+      if (checkNow + 35 >= leaseExpiresAt || hasUnexpiredDirectLock(checkNow)) {
+        try { localStorage.removeItem(claimKey); } catch {}
+        return false;
+      }
+
+      const allKeys = getAllLocalStorageKeys();
+      for (const k of allKeys) {
+        if (k.startsWith(claimPrefix) && k !== claimKey) {
+          let otherRaw = localStorage.getItem(k);
+          if (!otherRaw) continue;
+          let otherClaim: {
+            owner?: string;
+            phase?: string;
+            ticket?: number;
+            claimTime?: number;
+            expiresAt?: number;
+          } | null = null;
+          try {
+            otherClaim = JSON.parse(otherRaw);
+          } catch {
+            otherClaim = null;
+          }
+          if (!otherClaim || typeof otherClaim.expiresAt !== "number") continue;
+
+          if (otherClaim.expiresAt <= Date.now()) {
+            if (Date.now() - otherClaim.expiresAt > 2000) {
+              try { localStorage.removeItem(k); } catch {}
+            }
+            continue;
+          }
+
+          // If another contender is currently in the "choosing" doorway, wait briefly (bounded)
+          // for it to publish its ticket; if it stays in "choosing", abort rather than racing past it.
+          if (otherClaim.phase === "choosing") {
+            const waitStart = Date.now();
+            let spins = 0;
+            while (Date.now() - waitStart < 3 && ++spins < 40) {
+              otherRaw = localStorage.getItem(k);
+              if (!otherRaw) {
+                otherClaim = null;
+                break;
+              }
+              try {
+                otherClaim = JSON.parse(otherRaw);
+              } catch {
+                otherClaim = null;
+                break;
+              }
+              if (
+                !otherClaim ||
+                typeof otherClaim.expiresAt !== "number" ||
+                otherClaim.expiresAt <= Date.now() ||
+                otherClaim.phase !== "choosing"
+              ) {
+                break;
+              }
+            }
+            if (
+              otherClaim &&
+              typeof otherClaim.expiresAt === "number" &&
+              otherClaim.expiresAt > Date.now() &&
+              otherClaim.phase === "choosing"
+            ) {
+              try { localStorage.removeItem(claimKey); } catch {}
+              return false;
+            }
+          }
+
+          if (!otherClaim || typeof otherClaim.expiresAt !== "number" || otherClaim.expiresAt <= Date.now()) {
+            continue;
+          }
+
+          const otherTicket =
+            typeof otherClaim.ticket === "number" && otherClaim.ticket > 0
+              ? otherClaim.ticket
+              : typeof otherClaim.claimTime === "number" && otherClaim.claimTime > 0
+              ? otherClaim.claimTime
+              : 0;
+          const otherOwner = otherClaim.owner || k.slice(claimPrefix.length);
+
+          if (
+            otherTicket <= 0 ||
+            otherTicket < myTicket ||
+            (otherTicket === myTicket && otherOwner < lockOwnerId)
+          ) {
+            try { localStorage.removeItem(claimKey); } catch {}
             return false;
           }
         }
       }
+    } catch {
+      try { localStorage.removeItem(claimKey); } catch {}
+      return false;
+    }
+  }
+
+  // Phase 5: Final self-claim integrity & remaining lease check before entering critical section
+  try {
+    if (Date.now() + 30 >= leaseExpiresAt || hasUnexpiredDirectLock(Date.now())) {
+      try { localStorage.removeItem(claimKey); } catch {}
+      return false;
+    }
+    const selfVerifyRaw = localStorage.getItem(claimKey);
+    if (!selfVerifyRaw) return false;
+    const selfVerify = JSON.parse(selfVerifyRaw);
+    if (
+      !selfVerify ||
+      selfVerify.owner !== lockOwnerId ||
+      selfVerify.phase !== "claimed" ||
+      selfVerify.ticket !== myTicket ||
+      typeof selfVerify.expiresAt !== "number" ||
+      Date.now() + 30 >= selfVerify.expiresAt
+    ) {
+      try { localStorage.removeItem(claimKey); } catch {}
+      return false;
     }
   } catch {
-    try { localStorage.removeItem(intentKey); } catch {}
+    try { localStorage.removeItem(claimKey); } catch {}
     return false;
   }
 
-  // Double check existing lock hasn't been acquired while intent was evaluated
-  try {
-    const rawExisting2 = localStorage.getItem(lockKey);
-    if (rawExisting2) {
-      const existing2 = JSON.parse(rawExisting2);
-      if (existing2 && typeof existing2.expiresAt === "number" && existing2.expiresAt > now) {
-        if (existing2.owner !== lockOwnerId) {
-          localStorage.removeItem(intentKey);
-          return false;
-        }
-      }
-    }
-  } catch {}
-
-  const lockData = JSON.stringify({
-    owner: lockOwnerId,
-    acquiredAt: now,
-    expiresAt: now + ttlMs,
-  });
-
-  try {
-    localStorage.setItem(lockKey, lockData);
-    localStorage.removeItem(intentKey);
-    const verify = localStorage.getItem(lockKey);
-    if (verify) {
-      const parsedVerify = JSON.parse(verify);
-      if (parsedVerify && parsedVerify.owner === lockOwnerId) {
-        return true;
-      }
-    }
-  } catch {}
-
-  try { localStorage.removeItem(intentKey); } catch {}
-  return false;
+  return true;
 }
 
 export function releaseCrossTabLock(lockKey: string, lockOwnerId: string): void {
@@ -403,31 +592,48 @@ export function releaseCrossTabLock(lockKey: string, lockOwnerId: string): void 
     }
   } catch {}
   try {
+    localStorage.removeItem(`${lockKey}_claim_${lockOwnerId}`);
+  } catch {}
+  try {
     localStorage.removeItem(`${lockKey}_intent_${lockOwnerId}`);
   } catch {}
 }
 
 /**
  * Executes a callback with exclusive cross-tab mutual exclusion in localStorage.
- * If the lock cannot be acquired within the timeout, the callback is NOT executed
- * (preventing un-serialized read/modify/write races) and returns null.
+ * Uses a bounded retry budget (capped by both attempt count and elapsed time, with
+ * immediate exit on storage write failure) so lock contention or storage quota errors
+ * never block rendering or input. If the lock cannot be acquired, the callback is NOT
+ * executed and returns null.
  */
-export function withCrossTabLock<T>(lockKey: string, fn: () => T, maxWaitMs = 600): T | null {
+export function withCrossTabLock<T>(lockKey: string, fn: () => T, maxWaitMs = 80): T | null {
   if (typeof window === "undefined" || !window.localStorage) {
     return fn();
   }
   const lockOwnerId = generateLockOwnerId();
   const startTime = Date.now();
+  const maxAttempts = Math.max(1, Math.min(5, Math.ceil(maxWaitMs / 15)));
   let acquired = false;
 
-  while (Date.now() - startTime < maxWaitMs) {
-    if (tryAcquireCrossTabLock(lockKey, lockOwnerId, 500)) {
+  for (let attempt = 0; attempt < maxAttempts; attempt++) {
+    if (attempt > 0 && Date.now() - startTime >= maxWaitMs) {
+      break;
+    }
+    lastLockStorageWriteError = false;
+    if (tryAcquireCrossTabLock(lockKey, lockOwnerId, 400)) {
       acquired = true;
       break;
     }
-    const jitter = Math.floor(Math.random() * 5) + 2;
-    const pauseStart = Date.now();
-    while (Date.now() - pauseStart < jitter) {}
+    // If storage rejected the claim write (e.g. near quota), do not busy-wait or retry
+    if (lastLockStorageWriteError) {
+      break;
+    }
+    if (attempt < maxAttempts - 1 && Date.now() - startTime < maxWaitMs) {
+      const jitter = Math.floor(Math.random() * 3) + 1;
+      const pauseStart = Date.now();
+      let spins = 0;
+      while (Date.now() - pauseStart < jitter && ++spins < 40) {}
+    }
   }
 
   if (!acquired) {
@@ -450,12 +656,10 @@ function extractQuarantinedAt(b: unknown): number {
   return 0;
 }
 
-function isLocalStorageAvailable(): boolean {
+function isLocalStorageReadable(): boolean {
   if (typeof window === "undefined" || !window.localStorage) return false;
   try {
-    const testKey = "__palluvo_storage_test__";
-    localStorage.setItem(testKey, "1");
-    localStorage.removeItem(testKey);
+    localStorage.getItem(MIGRATION_SEQ_KEY);
     return true;
   } catch {
     return false;
@@ -467,11 +671,12 @@ function isLocalStorageAvailable(): boolean {
  * observed sequence or quarantine/clear timestamp across all browsing contexts, serialized via
  * cross-tab locking and shared sequence reservation in localStorage.
  *
- * Keeps retrying until the cross-tab lock is acquired so that sequence reservations are
- * always strictly serialized under exclusive ownership and never return unreserved sequences.
+ * Uses a single bounded lock acquisition path so that lock contention or storage write failures
+ * (e.g. near quota when the availability check succeeds but larger claim/sequence writes fail)
+ * never busy-wait indefinitely or freeze the page. Returns null if reservation cannot be completed.
  */
-export function getNextMigrationOpSeq(meta?: MigrationMeta): number {
-  if (!isLocalStorageAvailable()) {
+export function getNextMigrationOpSeq(meta?: MigrationMeta): number | null {
+  if (!isLocalStorageReadable()) {
     const now = typeof Date !== "undefined" && Date.now ? Date.now() : 1;
     const seq = Math.max(now, lastMigrationOpSeq + 1);
     lastMigrationOpSeq = seq;
@@ -479,77 +684,76 @@ export function getNextMigrationOpSeq(meta?: MigrationMeta): number {
     return seq;
   }
 
-  // Keep retrying until exclusive cross-tab lock is acquired.
-  // Sequence reservations must NEVER be performed without exclusive ownership.
-  while (true) {
-    const reservedSeq = withCrossTabLock(MIGRATION_LOCK_KEY, () => {
-      const now = typeof Date !== "undefined" && Date.now ? Date.now() : 1;
-      let maxSeq = Math.max(now, lastMigrationOpSeq + 1);
+  const reservedSeq = withCrossTabLock(MIGRATION_LOCK_KEY, () => {
+    const now = typeof Date !== "undefined" && Date.now ? Date.now() : 1;
+    let maxSeq = Math.max(now, lastMigrationOpSeq + 1);
 
-      try {
-        const reservedRaw = localStorage.getItem(MIGRATION_SEQ_KEY);
-        if (reservedRaw) {
-          const storedSeq = Number(reservedRaw);
-          if (!isNaN(storedSeq) && storedSeq > 0) {
-            maxSeq = Math.max(maxSeq, storedSeq + 1);
-          }
+    try {
+      const reservedRaw = localStorage.getItem(MIGRATION_SEQ_KEY);
+      if (reservedRaw) {
+        const storedSeq = Number(reservedRaw);
+        if (!isNaN(storedSeq) && storedSeq > 0) {
+          maxSeq = Math.max(maxSeq, storedSeq + 1);
         }
+      }
 
-        const raw = localStorage.getItem(MIGRATION_META_KEY);
-        if (raw) {
-          const disk = JSON.parse(raw);
-          if (typeof disk.operationSeq === "number") {
-            maxSeq = Math.max(maxSeq, disk.operationSeq + 1);
-          }
-          if (disk.clearedQuarantineKeys) {
-            for (const v of Object.values(disk.clearedQuarantineKeys)) {
-              if (typeof v === "number") maxSeq = Math.max(maxSeq, v + 1);
-            }
-          }
-          if (disk.quarantinedLegacyBuckets) {
-            for (const b of Object.values(disk.quarantinedLegacyBuckets)) {
-              const qAt = extractQuarantinedAt(b);
-              if (qAt > 0) maxSeq = Math.max(maxSeq, qAt + 1);
-            }
-          }
+      const raw = localStorage.getItem(MIGRATION_META_KEY);
+      if (raw) {
+        const disk = JSON.parse(raw);
+        if (typeof disk.operationSeq === "number") {
+          maxSeq = Math.max(maxSeq, disk.operationSeq + 1);
         }
-      } catch {}
-
-      if (meta) {
-        if (typeof meta.operationSeq === "number") {
-          maxSeq = Math.max(maxSeq, meta.operationSeq + 1);
-        }
-        if (meta.clearedQuarantineKeys) {
-          for (const v of Object.values(meta.clearedQuarantineKeys)) {
+        if (disk.clearedQuarantineKeys) {
+          for (const v of Object.values(disk.clearedQuarantineKeys)) {
             if (typeof v === "number") maxSeq = Math.max(maxSeq, v + 1);
           }
         }
-        if (meta.quarantinedLegacyBuckets) {
-          for (const b of Object.values(meta.quarantinedLegacyBuckets)) {
+        if (disk.quarantinedLegacyBuckets) {
+          for (const b of Object.values(disk.quarantinedLegacyBuckets)) {
             const qAt = extractQuarantinedAt(b);
             if (qAt > 0) maxSeq = Math.max(maxSeq, qAt + 1);
           }
         }
-        meta.operationSeq = maxSeq;
       }
+    } catch {}
 
-      lastMigrationOpSeq = maxSeq;
-
-      try {
-        localStorage.setItem(MIGRATION_SEQ_KEY, String(maxSeq));
-      } catch {}
-
-      return maxSeq;
-    }, 200);
-
-    if (typeof reservedSeq === "number") {
-      return reservedSeq;
+    if (meta) {
+      if (typeof meta.operationSeq === "number") {
+        maxSeq = Math.max(maxSeq, meta.operationSeq + 1);
+      }
+      if (meta.clearedQuarantineKeys) {
+        for (const v of Object.values(meta.clearedQuarantineKeys)) {
+          if (typeof v === "number") maxSeq = Math.max(maxSeq, v + 1);
+        }
+      }
+      if (meta.quarantinedLegacyBuckets) {
+        for (const b of Object.values(meta.quarantinedLegacyBuckets)) {
+          const qAt = extractQuarantinedAt(b);
+          if (qAt > 0) maxSeq = Math.max(maxSeq, qAt + 1);
+        }
+      }
     }
 
-    const jitter = Math.floor(Math.random() * 5) + 2;
-    const pauseStart = Date.now();
-    while (Date.now() - pauseStart < jitter) {}
-  }
+    // Persist and verify shared sequence reservation in localStorage before committing in memory
+    try {
+      const serializedSeq = String(maxSeq);
+      localStorage.setItem(MIGRATION_SEQ_KEY, serializedSeq);
+      if (localStorage.getItem(MIGRATION_SEQ_KEY) !== serializedSeq) {
+        return null;
+      }
+    } catch {
+      return null;
+    }
+
+    lastMigrationOpSeq = maxSeq;
+    if (meta) {
+      meta.operationSeq = maxSeq;
+    }
+
+    return maxSeq;
+  }, 80);
+
+  return typeof reservedSeq === "number" ? reservedSeq : null;
 }
 
 export function getMigrationMetadata(): MigrationMeta {
@@ -705,6 +909,20 @@ export function mergeMigrationMetadata(
         if (key.startsWith("retry_migration_")) {
           // Fresh retry failure: current attempt failed and overrides earlier clear
           delete mergedClearedKeys[key];
+          mergedFailedKeys[key] = true;
+        } else if (key.startsWith("deferred_quarantine_")) {
+          // Deferred quarantine sequence reservation: retain guard and supersede earlier clears for this bucket
+          const sourceId = key.slice("deferred_quarantine_".length);
+          const safeId = sourceId.toLowerCase().replace(/[^a-z0-9_]/g, (ch) => `_${ch.charCodeAt(0).toString(16)}_`);
+          delete mergedClearedKeys[key];
+          delete mergedClearedKeys[sourceId];
+          delete mergedClearedKeys[safeId];
+          delete mergedClearedKeys[`palluvo_ecommerce_orders_${sourceId}`];
+          delete mergedClearedKeys[`palluvo_ecommerce_orders_${safeId}`];
+          delete mergedClearedKeys[`palluvo_ecommerce_addresses_${sourceId}`];
+          delete mergedClearedKeys[`palluvo_ecommerce_addresses_${safeId}`];
+          delete mergedClearedKeys[`retry_migration_${sourceId}`];
+          delete mergedClearedKeys[`retry_migration_${safeId}`];
           mergedFailedKeys[key] = true;
         } else {
           try {
@@ -894,6 +1112,18 @@ export function isQuarantinedAccountId(accountId?: string | null): boolean {
     const safeId = trimmed.toLowerCase().replace(/[^a-z0-9_]/g, (ch) => `_${ch.charCodeAt(0).toString(16)}_`);
     const meta = getMigrationMetadata();
 
+    // 1. Never mask failed or deferred quarantine guards
+    if (
+      meta.failedQuarantineKeys?.[`deferred_quarantine_${trimmed}`] ||
+      meta.failedQuarantineKeys?.[`deferred_quarantine_${safeId}`] ||
+      meta.failedQuarantineKeys?.[`palluvo_ecommerce_orders_${safeId}`] ||
+      meta.failedQuarantineKeys?.[`palluvo_ecommerce_orders_${trimmed}`] ||
+      meta.failedQuarantineKeys?.[`palluvo_ecommerce_addresses_${safeId}`] ||
+      meta.failedQuarantineKeys?.[`palluvo_ecommerce_addresses_${trimmed}`]
+    ) {
+      return true;
+    }
+
     const bucketInfo = meta.quarantinedLegacyBuckets?.[trimmed] || meta.quarantinedLegacyBuckets?.[safeId];
     const qAt = bucketInfo?.quarantinedAt || 0;
 
@@ -926,9 +1156,7 @@ export function isQuarantinedAccountId(accountId?: string | null): boolean {
     }
     if (
       meta.tombstonedKeys?.[`palluvo_ecommerce_orders_${safeId}`] ||
-      meta.tombstonedKeys?.[`palluvo_ecommerce_orders_${trimmed}`] ||
-      meta.failedQuarantineKeys?.[`palluvo_ecommerce_orders_${safeId}`] ||
-      meta.failedQuarantineKeys?.[`palluvo_ecommerce_orders_${trimmed}`]
+      meta.tombstonedKeys?.[`palluvo_ecommerce_orders_${trimmed}`]
     ) {
       return true;
     }
@@ -954,11 +1182,21 @@ export function isQuarantinedStorageKey(key?: string | null): boolean {
     const suffix = match ? match[1] : undefined;
     const safeSuffix = suffix ? suffix.toLowerCase().replace(/[^a-z0-9_]/g, (ch) => `_${ch.charCodeAt(0).toString(16)}_`) : undefined;
 
-    // Check failed quarantine keys on suffix variants
-    if (suffix && (meta.failedQuarantineKeys?.[`palluvo_ecommerce_orders_${suffix}`] || meta.failedQuarantineKeys?.[`palluvo_ecommerce_addresses_${suffix}`])) {
+    // Check failed or deferred quarantine keys on suffix variants
+    if (
+      suffix &&
+      (meta.failedQuarantineKeys?.[`deferred_quarantine_${suffix}`] ||
+        meta.failedQuarantineKeys?.[`palluvo_ecommerce_orders_${suffix}`] ||
+        meta.failedQuarantineKeys?.[`palluvo_ecommerce_addresses_${suffix}`])
+    ) {
       if (key.includes(suffix)) return true;
     }
-    if (safeSuffix && (meta.failedQuarantineKeys?.[`palluvo_ecommerce_orders_${safeSuffix}`] || meta.failedQuarantineKeys?.[`palluvo_ecommerce_addresses_${safeSuffix}`])) {
+    if (
+      safeSuffix &&
+      (meta.failedQuarantineKeys?.[`deferred_quarantine_${safeSuffix}`] ||
+        meta.failedQuarantineKeys?.[`palluvo_ecommerce_orders_${safeSuffix}`] ||
+        meta.failedQuarantineKeys?.[`palluvo_ecommerce_addresses_${safeSuffix}`])
+    ) {
       if (key.includes(safeSuffix)) return true;
     }
 
@@ -1176,9 +1414,9 @@ export function quarantineLegacyBucket(accountId: string, relatedEmails?: string
     if (migrationMeta.failedQuarantineKeys) {
       for (const failedKey of Object.keys(migrationMeta.failedQuarantineKeys)) {
         if (!keysToQuarantine.has(failedKey)) {
-          // Skip retry_migration_* sentinels: these are metadata sentinels for copy retry guards,
-          // not localStorage storage keys. They must only be cleared when their corresponding migration attempt succeeds.
-          if (failedKey.startsWith("retry_migration_")) {
+          // Skip retry_migration_* and deferred_quarantine_* sentinels: these are metadata sentinels,
+          // not localStorage storage keys. They must only be cleared when their corresponding operation succeeds.
+          if (failedKey.startsWith("retry_migration_") || failedKey.startsWith("deferred_quarantine_")) {
             continue;
           }
           try {
@@ -1206,10 +1444,47 @@ export function quarantineLegacyBucket(accountId: string, relatedEmails?: string
       }
     }
 
-    const quarantineTimestamp = getNextMigrationOpSeq(migrationMeta);
     const existingEmails = migrationMeta.quarantinedLegacyBuckets[trimmedId]?.emails || [];
     const normalizedRelated = relatedEmails ? relatedEmails.map((e) => e.toLowerCase().trim()) : [];
     const allEmails = Array.from(new Set([...existingEmails, ...normalizedRelated]));
+
+    const quarantineTimestamp = getNextMigrationOpSeq(migrationMeta);
+    if (quarantineTimestamp === null) {
+      // Lock/sequence reservation failed (e.g. storage quota exceeded or contention timeout).
+      // Surface and defer: record deferred quarantine sentinels in failedQuarantineKeys to preserve
+      // the bucket guard and defer sequence assignment without freezing the page.
+      migrationMeta.failedQuarantineKeys = migrationMeta.failedQuarantineKeys || {};
+      migrationMeta.failedQuarantineKeys[`deferred_quarantine_${trimmedId}`] = true;
+      migrationMeta.failedQuarantineKeys[`deferred_quarantine_${safeId}`] = true;
+      if (allEmails.length > 0) {
+        const existing = migrationMeta.quarantinedCollisionIds[trimmedId] || [];
+        migrationMeta.quarantinedCollisionIds[trimmedId] = Array.from(
+          new Set([...existing, ...allEmails])
+        );
+      }
+      if (callerMeta) {
+        callerMeta.failedQuarantineKeys = callerMeta.failedQuarantineKeys || {};
+        callerMeta.failedQuarantineKeys[`deferred_quarantine_${trimmedId}`] = true;
+        callerMeta.failedQuarantineKeys[`deferred_quarantine_${safeId}`] = true;
+        if (allEmails.length > 0) {
+          const existingCaller = callerMeta.quarantinedCollisionIds[trimmedId] || [];
+          callerMeta.quarantinedCollisionIds[trimmedId] = Array.from(
+            new Set([...existingCaller, ...allEmails])
+          );
+        }
+      }
+      setMigrationMetadata(migrationMeta);
+      return;
+    }
+
+    if (migrationMeta.failedQuarantineKeys) {
+      delete migrationMeta.failedQuarantineKeys[`deferred_quarantine_${trimmedId}`];
+      delete migrationMeta.failedQuarantineKeys[`deferred_quarantine_${safeId}`];
+    }
+    if (callerMeta?.failedQuarantineKeys) {
+      delete callerMeta.failedQuarantineKeys[`deferred_quarantine_${trimmedId}`];
+      delete callerMeta.failedQuarantineKeys[`deferred_quarantine_${safeId}`];
+    }
 
     migrationMeta.quarantinedLegacyBuckets[trimmedId] = {
       quarantinedAt: quarantineTimestamp,
@@ -3372,10 +3647,11 @@ export function reviewAndRepairQuarantinedUnknownRecords(
  * Removes quarantine and tombstone markers that were mistakenly applied to a single account owner
  * who merely had changed-email aliases. Persists the clear to disk immediately and records
  * cleared quarantine keys to prevent subsequent metadata merges from resurrecting cleared state.
+ * Returns true when the clear sequence was reserved and applied, or false if deferred.
  */
-export function clearFalseQuarantine(accountId: string, canonicalId: string, migrationMeta?: MigrationMeta): void {
-  if (typeof window === "undefined" || !window.localStorage) return;
-  if (!accountId) return;
+export function clearFalseQuarantine(accountId: string, canonicalId: string, migrationMeta?: MigrationMeta): boolean {
+  if (typeof window === "undefined" || !window.localStorage) return false;
+  if (!accountId) return false;
   try {
     const trimmed = accountId.trim();
     const safeId = trimmed.toLowerCase().replace(/[^a-z0-9_]/g, (ch) => `_${ch.charCodeAt(0).toString(16)}_`);
@@ -3389,6 +3665,8 @@ export function clearFalseQuarantine(accountId: string, canonicalId: string, mig
       `palluvo_ecommerce_addresses_${safeId}`,
       `retry_migration_${trimmed}`,
       `retry_migration_${safeId}`,
+      `deferred_quarantine_${trimmed}`,
+      `deferred_quarantine_${safeId}`,
     ];
 
     if (trimmed.includes("@")) {
@@ -3407,6 +3685,19 @@ export function clearFalseQuarantine(accountId: string, canonicalId: string, mig
       );
     }
 
+    const clearTimestamp = getNextMigrationOpSeq(migrationMeta);
+    if (clearTimestamp === null) {
+      // Lock reservation failed (e.g. storage write error or contention timeout).
+      // Defer clearing without deleting tombstones/quarantine backups to prevent
+      // unreserved or ambiguous sequence ordering.
+      if (migrationMeta) {
+        migrationMeta.failedQuarantineKeys = migrationMeta.failedQuarantineKeys || {};
+        migrationMeta.failedQuarantineKeys[`retry_migration_${trimmed}`] = true;
+        migrationMeta.failedQuarantineKeys[`retry_migration_${safeId}`] = true;
+      }
+      return false;
+    }
+
     localStorage.removeItem(`palluvo_tombstone_${trimmed}`);
     localStorage.removeItem(`palluvo_tombstone_${safeId}`);
     for (const k of keysToClear) {
@@ -3414,7 +3705,6 @@ export function clearFalseQuarantine(accountId: string, canonicalId: string, mig
       localStorage.removeItem(`palluvo_quarantine_${k}`);
     }
 
-    const clearTimestamp = getNextMigrationOpSeq(migrationMeta);
     const applyClearToMeta = (metaToUpdate: MigrationMeta) => {
       metaToUpdate.clearedQuarantineKeys = metaToUpdate.clearedQuarantineKeys || {};
       for (const k of keysToClear) {
@@ -3452,7 +3742,10 @@ export function clearFalseQuarantine(accountId: string, canonicalId: string, mig
     const diskMeta = getMigrationMetadata();
     applyClearToMeta(diskMeta);
     setMigrationMetadata(diskMeta);
-  } catch {}
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 /**
@@ -4443,23 +4736,31 @@ export function migrateLegacyAccountAliases(): void {
           return false;
         })();
 
+        let clearSucceeded = true;
         if (hasRecordsFromDifferentOwner) {
           if (trimmedVal === canonicalId) {
             // Source is already canonical: copyCustomerData has rewritten the canonical bucket
             // with only validated records, and quarantined foreign records away from canonicalId.
             // DO NOT quarantine the canonical bucket or tombstone canonicalId!
-            clearFalseQuarantine(trimmedVal, canonicalId, migrationMeta);
+            clearSucceeded = clearFalseQuarantine(trimmedVal, canonicalId, migrationMeta);
           } else {
             // Shared legacy bucket still contains records from another explicit owner:
             // Keep the legacy bucket quarantined so records with a different owner remain isolated!
             quarantineLegacyBucket(trimmedVal, ownerCluster.emails, migrationMeta);
-            clearFalseQuarantine(canonicalId, canonicalId, migrationMeta);
+            clearSucceeded = clearFalseQuarantine(canonicalId, canonicalId, migrationMeta);
           }
         } else {
-          clearFalseQuarantine(trimmedVal, canonicalId, migrationMeta);
-          if (trimmedVal !== canonicalId) {
-            clearFalseQuarantine(canonicalId, canonicalId, migrationMeta);
+          clearSucceeded = clearFalseQuarantine(trimmedVal, canonicalId, migrationMeta);
+          if (clearSucceeded && trimmedVal !== canonicalId) {
+            clearSucceeded = clearFalseQuarantine(canonicalId, canonicalId, migrationMeta);
           }
+        }
+
+        if (!clearSucceeded) {
+          migrationMeta.failedQuarantineKeys = migrationMeta.failedQuarantineKeys || {};
+          migrationMeta.failedQuarantineKeys[`retry_migration_${trimmedVal}`] = true;
+          setMigrationMetadata(migrationMeta);
+          continue;
         }
 
         for (const e of emailKeys) {
@@ -5327,6 +5628,12 @@ export function lookupAccountId(identifier?: string | null): string | null {
           if (!copySuccess) {
             return val;
           }
+          if (!clearFalseQuarantine(val, targetId, migrationMeta)) {
+            migrationMeta.failedQuarantineKeys = migrationMeta.failedQuarantineKeys || {};
+            migrationMeta.failedQuarantineKeys[`retry_migration_${val}`] = true;
+            setMigrationMetadata(migrationMeta);
+            return val;
+          }
           map[key] = targetId;
           meta[key] = {
             ...meta[key],
@@ -5334,7 +5641,6 @@ export function lookupAccountId(identifier?: string | null): string | null {
             type: meta[key]?.type || "primary",
             updatedAt: Date.now(),
           };
-          clearFalseQuarantine(val, targetId, migrationMeta);
           try {
             localStorage.setItem(ACCOUNT_MAP_KEY, JSON.stringify(map));
             setAccountMetadata(meta);
