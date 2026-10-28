@@ -209,52 +209,68 @@ export const MIGRATION_LOCK_KEY = "palluvo_migration_meta_lock";
 export const MIGRATION_SEQ_KEY = "palluvo_migration_reserved_op_seq";
 
 let lastMigrationOpSeq = 0;
-let currentTabStringId = "";
-let currentTabNumericId = 0;
+let currentBrowsingContextId = "";
+let lockClaimCounter = 0;
 
-function getTabUniqueStringId(): string {
-  if (currentTabStringId) return currentTabStringId;
-  let id = "";
+/**
+ * Returns a globally unique, high-entropy identifier for this browsing context.
+ * Strictly stored in private module memory (never sessionStorage), ensuring that
+ * auxiliary browsing contexts created with an opener (which clone sessionStorage)
+ * always receive an independent, non-conflicting identity.
+ */
+export function getBrowsingContextId(): string {
+  if (currentBrowsingContextId) return currentBrowsingContextId;
+
+  let entropy = "";
+  if (typeof crypto !== "undefined") {
+    if (typeof crypto.randomUUID === "function") {
+      try {
+        entropy = crypto.randomUUID();
+      } catch {}
+    }
+    if (!entropy && typeof crypto.getRandomValues === "function") {
+      try {
+        const buf = new Uint8Array(16);
+        crypto.getRandomValues(buf);
+        entropy = Array.from(buf, (b) => b.toString(16).padStart(2, "0")).join("");
+      } catch {}
+    }
+  }
+  if (!entropy) {
+    entropy = `${Math.random().toString(36).slice(2)}_${Math.random().toString(36).slice(2)}`;
+  }
+
+  const now = typeof Date !== "undefined" && Date.now ? Date.now() : 1;
+  const perf = typeof performance !== "undefined" && typeof performance.now === "function"
+    ? Math.round(performance.now() * 1000)
+    : 0;
+
+  currentBrowsingContextId = `ctx_${now}_${perf}_${entropy}`;
+
+  // Purge any legacy sessionStorage keys so they cannot pollute anything
   if (typeof window !== "undefined") {
     try {
-      if (window.sessionStorage) {
-        id = sessionStorage.getItem("palluvo_tab_str_id") || "";
-        if (!id) {
-          id = `tab_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
-          sessionStorage.setItem("palluvo_tab_str_id", id);
-        }
-      }
+      sessionStorage.removeItem("palluvo_tab_str_id");
+      sessionStorage.removeItem("palluvo_tab_id");
     } catch {}
   }
-  if (!id) {
-    id = `tab_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
-  }
-  currentTabStringId = id;
-  return id;
+
+  return currentBrowsingContextId;
 }
 
-function getTabNumericId(): number {
-  if (currentTabNumericId > 0) return currentTabNumericId;
-  let id = 0;
-  if (typeof window !== "undefined") {
-    try {
-      if (window.sessionStorage) {
-        const stored = sessionStorage.getItem("palluvo_tab_id");
-        if (stored) {
-          id = parseInt(stored, 10);
-        }
-        if (!id || isNaN(id) || id <= 0 || id > 9999) {
-          id = Math.floor(Math.random() * 9000) + 1000;
-          sessionStorage.setItem("palluvo_tab_id", String(id));
-        }
-      }
-    } catch {}
-  }
-  if (!id) {
-    id = Math.floor(Math.random() * 9000) + 1000;
-  }
-  currentTabNumericId = id;
-  return id;
+/**
+ * Generates a distinct lock owner identifier for each lock acquisition attempt,
+ * scoped to this browsing context and monotonically incremented per claim.
+ */
+export function generateLockOwnerId(): string {
+  const contextId = getBrowsingContextId();
+  lockClaimCounter += 1;
+  return `${contextId}_claim_${lockClaimCounter}`;
+}
+
+export function resetBrowsingContextIdForTest(id?: string): void {
+  currentBrowsingContextId = id || "";
+  lockClaimCounter = 0;
 }
 
 function getAllLocalStorageKeys(): string[] {
@@ -286,7 +302,7 @@ function getAllLocalStorageKeys(): string[] {
  * Two-phase mutual exclusion lock acquisition in localStorage with intent registration,
  * verification delay, and deterministic tie-breaking.
  */
-export function tryAcquireCrossTabLock(lockKey: string, tabId: string, ttlMs = 500): boolean {
+export function tryAcquireCrossTabLock(lockKey: string, lockOwnerId: string, ttlMs = 500): boolean {
   if (typeof window === "undefined" || !window.localStorage) return true;
   const now = Date.now();
 
@@ -295,21 +311,21 @@ export function tryAcquireCrossTabLock(lockKey: string, tabId: string, ttlMs = 5
     if (rawExisting) {
       const existing = JSON.parse(rawExisting);
       if (existing && typeof existing.expiresAt === "number" && existing.expiresAt > now) {
-        if (existing.owner !== tabId) {
+        if (existing.owner !== lockOwnerId) {
           return false;
         }
       }
     }
   } catch {}
 
-  const intentKey = `${lockKey}_intent_${tabId}`;
+  const intentKey = `${lockKey}_intent_${lockOwnerId}`;
   try {
     localStorage.setItem(intentKey, String(now));
   } catch {
     return false;
   }
 
-  // Small pause to let concurrent intent writes in other tabs register in storage
+  // Small pause to let concurrent intent writes in other contexts register in storage
   const pauseStart = Date.now();
   while (Date.now() - pauseStart < 2) {}
 
@@ -326,8 +342,8 @@ export function tryAcquireCrossTabLock(lockKey: string, tabId: string, ttlMs = 5
           continue;
         }
         if (otherTime > 0 && (now - otherTime < 3000)) {
-          const otherTabId = k.slice(intentPrefix.length);
-          if (otherTime < now || (otherTime === now && otherTabId < tabId)) {
+          const otherOwnerId = k.slice(intentPrefix.length);
+          if (otherTime < now || (otherTime === now && otherOwnerId < lockOwnerId)) {
             localStorage.removeItem(intentKey);
             return false;
           }
@@ -345,7 +361,7 @@ export function tryAcquireCrossTabLock(lockKey: string, tabId: string, ttlMs = 5
     if (rawExisting2) {
       const existing2 = JSON.parse(rawExisting2);
       if (existing2 && typeof existing2.expiresAt === "number" && existing2.expiresAt > now) {
-        if (existing2.owner !== tabId) {
+        if (existing2.owner !== lockOwnerId) {
           localStorage.removeItem(intentKey);
           return false;
         }
@@ -354,7 +370,7 @@ export function tryAcquireCrossTabLock(lockKey: string, tabId: string, ttlMs = 5
   } catch {}
 
   const lockData = JSON.stringify({
-    owner: tabId,
+    owner: lockOwnerId,
     acquiredAt: now,
     expiresAt: now + ttlMs,
   });
@@ -365,7 +381,7 @@ export function tryAcquireCrossTabLock(lockKey: string, tabId: string, ttlMs = 5
     const verify = localStorage.getItem(lockKey);
     if (verify) {
       const parsedVerify = JSON.parse(verify);
-      if (parsedVerify && parsedVerify.owner === tabId) {
+      if (parsedVerify && parsedVerify.owner === lockOwnerId) {
         return true;
       }
     }
@@ -375,19 +391,19 @@ export function tryAcquireCrossTabLock(lockKey: string, tabId: string, ttlMs = 5
   return false;
 }
 
-export function releaseCrossTabLock(lockKey: string, tabId: string): void {
+export function releaseCrossTabLock(lockKey: string, lockOwnerId: string): void {
   if (typeof window === "undefined" || !window.localStorage) return;
   try {
     const raw = localStorage.getItem(lockKey);
     if (raw) {
       const parsed = JSON.parse(raw);
-      if (parsed && parsed.owner === tabId) {
+      if (parsed && parsed.owner === lockOwnerId) {
         localStorage.removeItem(lockKey);
       }
     }
   } catch {}
   try {
-    localStorage.removeItem(`${lockKey}_intent_${tabId}`);
+    localStorage.removeItem(`${lockKey}_intent_${lockOwnerId}`);
   } catch {}
 }
 
@@ -400,12 +416,12 @@ export function withCrossTabLock<T>(lockKey: string, fn: () => T, maxWaitMs = 60
   if (typeof window === "undefined" || !window.localStorage) {
     return fn();
   }
-  const tabId = getTabUniqueStringId();
+  const lockOwnerId = generateLockOwnerId();
   const startTime = Date.now();
   let acquired = false;
 
   while (Date.now() - startTime < maxWaitMs) {
-    if (tryAcquireCrossTabLock(lockKey, tabId, 500)) {
+    if (tryAcquireCrossTabLock(lockKey, lockOwnerId, 500)) {
       acquired = true;
       break;
     }
@@ -422,7 +438,7 @@ export function withCrossTabLock<T>(lockKey: string, fn: () => T, maxWaitMs = 60
   try {
     return fn();
   } finally {
-    releaseCrossTabLock(lockKey, tabId);
+    releaseCrossTabLock(lockKey, lockOwnerId);
   }
 }
 
@@ -436,24 +452,35 @@ function extractQuarantinedAt(b: unknown): number {
 
 /**
  * Reserves a monotonic operation sequence timestamp strictly greater than any previously
- * observed sequence or quarantine/clear timestamp across all tabs, serialized via cross-tab
- * locking and shared sequence reservation in localStorage.
+ * observed sequence or quarantine/clear timestamp across all browsing contexts, serialized via
+ * cross-tab locking and shared sequence reservation in localStorage.
  */
 export function getNextMigrationOpSeq(meta?: MigrationMeta): number {
-  const tabNumericId = getTabNumericId();
-
-  // Try to allocate under exclusive cross-tab lock
-  const lockedResult = withCrossTabLock(MIGRATION_LOCK_KEY, () => {
+  if (typeof window === "undefined" || !window.localStorage) {
     const now = typeof Date !== "undefined" && Date.now ? Date.now() : 1;
-    let maxSeq = Math.max(now, lastMigrationOpSeq + 1);
+    const seq = Math.max(now, lastMigrationOpSeq + 1);
+    lastMigrationOpSeq = seq;
+    if (meta) meta.operationSeq = seq;
+    return seq;
+  }
 
-    try {
-      if (typeof window !== "undefined" && window.localStorage) {
+  // Defer until an exclusive cross-tab lock is acquired to reserve a new shared counter value
+  const maxWaitMs = 1500;
+  const startTime = Date.now();
+  let reservedSeq: number | null = null;
+
+  while (Date.now() - startTime < maxWaitMs) {
+    const remainingTime = Math.max(50, maxWaitMs - (Date.now() - startTime));
+    const result = withCrossTabLock(MIGRATION_LOCK_KEY, () => {
+      const now = typeof Date !== "undefined" && Date.now ? Date.now() : 1;
+      let maxSeq = Math.max(now, lastMigrationOpSeq + 1);
+
+      try {
         const reservedRaw = localStorage.getItem(MIGRATION_SEQ_KEY);
         if (reservedRaw) {
-          const reservedSeq = Number(reservedRaw);
-          if (!isNaN(reservedSeq) && reservedSeq > 0) {
-            maxSeq = Math.max(maxSeq, reservedSeq + 1);
+          const storedSeq = Number(reservedRaw);
+          if (!isNaN(storedSeq) && storedSeq > 0) {
+            maxSeq = Math.max(maxSeq, storedSeq + 1);
           }
         }
 
@@ -475,59 +502,65 @@ export function getNextMigrationOpSeq(meta?: MigrationMeta): number {
             }
           }
         }
-      }
-    } catch {}
+      } catch {}
 
-    if (meta) {
-      if (typeof meta.operationSeq === "number") {
-        maxSeq = Math.max(maxSeq, meta.operationSeq + 1);
-      }
-      if (meta.clearedQuarantineKeys) {
-        for (const v of Object.values(meta.clearedQuarantineKeys)) {
-          if (typeof v === "number") maxSeq = Math.max(maxSeq, v + 1);
+      if (meta) {
+        if (typeof meta.operationSeq === "number") {
+          maxSeq = Math.max(maxSeq, meta.operationSeq + 1);
         }
-      }
-      if (meta.quarantinedLegacyBuckets) {
-        for (const b of Object.values(meta.quarantinedLegacyBuckets)) {
-          const qAt = extractQuarantinedAt(b);
-          if (qAt > 0) maxSeq = Math.max(maxSeq, qAt + 1);
+        if (meta.clearedQuarantineKeys) {
+          for (const v of Object.values(meta.clearedQuarantineKeys)) {
+            if (typeof v === "number") maxSeq = Math.max(maxSeq, v + 1);
+          }
         }
+        if (meta.quarantinedLegacyBuckets) {
+          for (const b of Object.values(meta.quarantinedLegacyBuckets)) {
+            const qAt = extractQuarantinedAt(b);
+            if (qAt > 0) maxSeq = Math.max(maxSeq, qAt + 1);
+          }
+        }
+        meta.operationSeq = maxSeq;
       }
-      meta.operationSeq = maxSeq;
+
+      lastMigrationOpSeq = maxSeq;
+
+      try {
+        localStorage.setItem(MIGRATION_SEQ_KEY, String(maxSeq));
+      } catch {}
+
+      return maxSeq;
+    }, Math.min(300, remainingTime));
+
+    if (typeof result === "number") {
+      reservedSeq = result;
+      break;
     }
 
-    lastMigrationOpSeq = maxSeq;
-
-    try {
-      if (typeof window !== "undefined" && window.localStorage) {
-        localStorage.setItem(MIGRATION_SEQ_KEY, String(maxSeq));
-      }
-    } catch {}
-
-    return maxSeq;
-  });
-
-  if (typeof lockedResult === "number") {
-    return lockedResult;
+    const jitter = Math.floor(Math.random() * 5) + 2;
+    const pauseStart = Date.now();
+    while (Date.now() - pauseStart < jitter) {}
   }
 
-  // Fallback when lock cannot be acquired:
-  // Allocate a conflict-safe unique operation identifier using tabNumericId and local monotonicity,
-  // ensuring two contended tabs NEVER allocate the same sequence!
+  if (typeof reservedSeq === "number") {
+    return reservedSeq;
+  }
+
+  // Fallback if lock could not be acquired within the timeout:
+  // Directly reserve the new shared counter value in localStorage so that subsequent calls
+  // across all browsing contexts advance monotonically and never duplicate.
   const now = typeof Date !== "undefined" && Date.now ? Date.now() : 1;
-  let base = Math.max(now, Math.floor(lastMigrationOpSeq) + 1);
+  let fallbackSeq = Math.max(now, lastMigrationOpSeq + 1);
   try {
-    if (typeof window !== "undefined" && window.localStorage) {
-      const reservedRaw = localStorage.getItem(MIGRATION_SEQ_KEY);
-      if (reservedRaw) {
-        const reservedSeq = Number(reservedRaw);
-        if (!isNaN(reservedSeq) && reservedSeq > 0) {
-          base = Math.max(base, Math.floor(reservedSeq) + 1);
-        }
+    const reservedRaw = localStorage.getItem(MIGRATION_SEQ_KEY);
+    if (reservedRaw) {
+      const storedSeq = Number(reservedRaw);
+      if (!isNaN(storedSeq) && storedSeq > 0) {
+        fallbackSeq = Math.max(fallbackSeq, storedSeq + 1);
       }
     }
+    localStorage.setItem(MIGRATION_SEQ_KEY, String(fallbackSeq));
   } catch {}
-  const fallbackSeq = base + (tabNumericId / 100000);
+
   lastMigrationOpSeq = fallbackSeq;
   if (meta) {
     meta.operationSeq = fallbackSeq;
