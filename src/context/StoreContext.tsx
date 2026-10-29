@@ -458,9 +458,14 @@ export function tryAcquireCrossTabLock(lockKey: string, lockOwnerId: string, ttl
     return false;
   }
 
-  // Phase 2: Observe all claims (active and expired) and fence after doorway registration to assign a monotonic ticket,
-  // and evict expired/crashed claim records so they never linger in localStorage.
+  // Phase 2: Observe all claims (active and expired), per-owner fences, and fenced commit records
+  // after doorway registration to assign a strictly increasing monotonic ticket.
+  // Expired claims are evicted in Phase 4 (after our higher ticket is published in Phase 3)
+  // so the highest ticket watermark in localStorage never regresses.
   let maxObservedTicket = startNow;
+  const fencePrefix = `${lockKey}_fence_`;
+  const metaCommitPrefix = `${MIGRATION_META_KEY}_commit_`;
+  const seqCommitPrefix = `${MIGRATION_SEQ_KEY}_commit_`;
   try {
     const now2 = Date.now();
     if (!hasRemainingSelfLease(now2, 40) || hasUnexpiredDirectLock(now2)) {
@@ -493,17 +498,20 @@ export function tryAcquireCrossTabLock(lockKey: string, lockOwnerId: string, ttl
             if (otherTicket > maxObservedTicket) {
               maxObservedTicket = otherTicket;
             }
-            if (!isClaimActive(otherClaim, now2)) {
-              try {
-                localStorage.removeItem(k);
-              } catch {}
-            }
           }
-        } catch {
-          try {
-            localStorage.removeItem(k);
-          } catch {}
-        }
+        } catch {}
+      } else if (
+        k.startsWith(fencePrefix) ||
+        (lockKey === MIGRATION_LOCK_KEY && (k.startsWith(metaCommitPrefix) || k.startsWith(seqCommitPrefix)))
+      ) {
+        const rawRecord = localStorage.getItem(k);
+        if (!rawRecord) continue;
+        try {
+          const parsedRecord = JSON.parse(rawRecord);
+          if (parsedRecord && typeof parsedRecord.ticket === "number" && parsedRecord.ticket > maxObservedTicket) {
+            maxObservedTicket = parsedRecord.ticket;
+          }
+        } catch {}
       }
     }
   } catch {
@@ -538,6 +546,21 @@ export function tryAcquireCrossTabLock(lockKey: string, lockOwnerId: string, ttl
     return false;
   }
 
+  const evictExpiredClaimRecord = (expiredClaimKey: string, expiredOwner?: string) => {
+    const ownerId = expiredOwner || expiredClaimKey.slice(claimPrefix.length);
+    if (lockKey === MIGRATION_LOCK_KEY && ownerId) {
+      try {
+        localStorage.removeItem(`${MIGRATION_META_KEY}_commit_${ownerId}`);
+      } catch {}
+      try {
+        localStorage.removeItem(`${MIGRATION_SEQ_KEY}_commit_${ownerId}`);
+      } catch {}
+    }
+    try {
+      localStorage.removeItem(expiredClaimKey);
+    } catch {}
+  };
+
   // Phase 4: Two-pass Bakery verification over all contender keys (pure read/verify after final write)
   for (let pass = 0; pass < 2; pass++) {
     try {
@@ -566,12 +589,12 @@ export function tryAcquireCrossTabLock(lockKey: string, lockOwnerId: string, ttl
             otherClaim = null;
           }
           if (!otherClaim || typeof otherClaim !== "object") {
-            try { localStorage.removeItem(k); } catch {}
+            evictExpiredClaimRecord(k);
             continue;
           }
 
           if (!isClaimActive(otherClaim, Date.now())) {
-            try { localStorage.removeItem(k); } catch {}
+            evictExpiredClaimRecord(k, otherClaim.owner);
             continue;
           }
 
@@ -612,7 +635,7 @@ export function tryAcquireCrossTabLock(lockKey: string, lockOwnerId: string, ttl
 
           if (!otherClaim || !isClaimActive(otherClaim, Date.now())) {
             if (otherClaim) {
-              try { localStorage.removeItem(k); } catch {}
+              evictExpiredClaimRecord(k, otherClaim.owner);
             }
             continue;
           }
@@ -677,8 +700,8 @@ export function tryAcquireCrossTabLock(lockKey: string, lockOwnerId: string, ttl
 /**
  * Revalidates that the current lock holder still exclusively owns `lockKey`, that its finite
  * crash-recovery lease has not expired, and that it has not been superseded by a newer fencing
- * token or competing claim. When valid, extends the lease and records the owner's fencing token
- * so active critical sections remain valid while any resumed stale owner is blocked from committing.
+ * token or competing claim. When valid, extends the lease on the owner's dedicated claim key
+ * and verifies that the previous lease remained unexpired through the extension write.
  */
 export function verifyCrossTabLockOwnership(lockKey: string, lockOwnerId?: string): boolean {
   if (typeof window === "undefined" || !window.localStorage) return true;
@@ -690,6 +713,9 @@ export function verifyCrossTabLockOwnership(lockKey: string, lockOwnerId?: strin
   const claimPrefix = `${lockKey}_claim_`;
   const claimKey = `${claimPrefix}${ownerToCheck}`;
   const fenceKey = `${lockKey}_fence`;
+  const fencePrefix = `${lockKey}_fence_`;
+  const metaCommitPrefix = `${MIGRATION_META_KEY}_commit_`;
+  const seqCommitPrefix = `${MIGRATION_SEQ_KEY}_commit_`;
   const extensionMs = active?.ttlMs && active.ttlMs > 0 ? active.ttlMs : 400;
   const now = Date.now();
 
@@ -743,6 +769,10 @@ export function verifyCrossTabLockOwnership(lockKey: string, lockOwnerId?: strin
       return false;
     }
 
+    const previousExpiresAt =
+      typeof selfClaim.expiresAt === "number" && Number.isFinite(selfClaim.expiresAt)
+        ? selfClaim.expiresAt
+        : (typeof selfClaim.acquiredAt === "number" ? selfClaim.acquiredAt : afterSelfReadNow) + extensionMs;
     const myTicket: number = selfClaim.ticket;
 
     // 3. Verify fencing token has not advanced to another owner
@@ -760,7 +790,7 @@ export function verifyCrossTabLockOwnership(lockKey: string, lockOwnerId?: strin
       }
     }
 
-    // 4. Verify no other active claimed lock exists with higher priority
+    // 4. Verify no other claim, per-owner fence, or fenced commit record has superseded our ticket
     const allKeys = getAllLocalStorageKeys();
     for (const k of allKeys) {
       if (k.startsWith(claimPrefix) && k !== claimKey) {
@@ -769,12 +799,15 @@ export function verifyCrossTabLockOwnership(lockKey: string, lockOwnerId?: strin
         try {
           const otherClaim = JSON.parse(otherRaw);
           if (!otherClaim || typeof otherClaim !== "object") continue;
+          const otherTicket = typeof otherClaim.ticket === "number" ? otherClaim.ticket : 0;
+          const otherOwner = typeof otherClaim.owner === "string" ? otherClaim.owner : k.slice(claimPrefix.length);
+          if (otherTicket > myTicket && otherOwner !== ownerToCheck) {
+            return false;
+          }
           if (!isClaimRecordUnexpired(otherClaim, Date.now())) {
             continue;
           }
           if (otherClaim.phase === "claimed" && otherClaim.owner !== ownerToCheck) {
-            const otherTicket = typeof otherClaim.ticket === "number" ? otherClaim.ticket : 0;
-            const otherOwner = typeof otherClaim.owner === "string" ? otherClaim.owner : k.slice(claimPrefix.length);
             if (
               otherTicket <= 0 ||
               otherTicket < myTicket ||
@@ -784,12 +817,31 @@ export function verifyCrossTabLockOwnership(lockKey: string, lockOwnerId?: strin
             }
           }
         } catch {}
+      } else if (
+        k.startsWith(fencePrefix) ||
+        (lockKey === MIGRATION_LOCK_KEY && (k.startsWith(metaCommitPrefix) || k.startsWith(seqCommitPrefix)))
+      ) {
+        const otherRaw = localStorage.getItem(k);
+        if (!otherRaw) continue;
+        try {
+          const parsedRecord = JSON.parse(otherRaw);
+          if (parsedRecord && typeof parsedRecord.ticket === "number") {
+            if (
+              parsedRecord.ticket > myTicket ||
+              (parsedRecord.ticket === myTicket && parsedRecord.owner && parsedRecord.owner !== ownerToCheck)
+            ) {
+              return false;
+            }
+          }
+        } catch {}
       }
     }
 
-    // 5. Extend the active lease and publish our fencing token while still unexpired
+    // 5. Extend the active lease on our own dedicated claimKey while still unexpired,
+    // and verify after the write completes that previousExpiresAt had still not elapsed
+    // so there was zero gap in lease validity.
     const preExtendNow = Date.now();
-    if (!isClaimRecordUnexpired(selfClaim, preExtendNow)) {
+    if (preExtendNow >= previousExpiresAt) {
       return false;
     }
     const newExpiresAt = preExtendNow + extensionMs;
@@ -801,18 +853,11 @@ export function verifyCrossTabLockOwnership(lockKey: string, lockOwnerId?: strin
     if (localStorage.getItem(claimKey) !== updatedClaim) {
       return false;
     }
-
-    const fencePayload = JSON.stringify({
-      owner: ownerToCheck,
-      ticket: myTicket,
-      updatedAt: preExtendNow,
-    });
-    localStorage.setItem(fenceKey, fencePayload);
-    if (localStorage.getItem(fenceKey) !== fencePayload) {
-      return false;
-    }
-
-    if (Date.now() >= newExpiresAt) {
+    const postExtendNow = Date.now();
+    if (postExtendNow >= previousExpiresAt || postExtendNow >= newExpiresAt) {
+      try {
+        localStorage.removeItem(claimKey);
+      } catch {}
       return false;
     }
 
@@ -822,13 +867,63 @@ export function verifyCrossTabLockOwnership(lockKey: string, lockOwnerId?: strin
   }
 }
 
+function abortFencedCommitsForOwner(lockOwnerId: string): void {
+  if (typeof window === "undefined" || !window.localStorage || !lockOwnerId) return;
+  try {
+    localStorage.removeItem(`${MIGRATION_META_KEY}_commit_${lockOwnerId}`);
+  } catch {}
+  try {
+    localStorage.removeItem(`${MIGRATION_SEQ_KEY}_commit_${lockOwnerId}`);
+  } catch {}
+}
+
 export function releaseCrossTabLock(lockKey: string, lockOwnerId: string): void {
   if (typeof window === "undefined" || !window.localStorage) return;
   const claimKey = `${lockKey}_claim_${lockOwnerId}`;
   activeClaimKeysForUnload.delete(claimKey);
   const active = activeLockTickets.get(lockKey);
+  const releasedTicket = active && active.owner === lockOwnerId ? active.ticket : 0;
   if (active && active.owner === lockOwnerId) {
     activeLockTickets.delete(lockKey);
+  }
+  if (releasedTicket > 0) {
+    const ownerFenceKey = `${lockKey}_fence_${lockOwnerId}`;
+    const fencePrefix = `${lockKey}_fence_`;
+    try {
+      localStorage.setItem(
+        ownerFenceKey,
+        JSON.stringify({
+          owner: lockOwnerId,
+          ticket: releasedTicket,
+          releasedAt: Date.now(),
+        })
+      );
+      const allKeys = getAllLocalStorageKeys();
+      for (const k of allKeys) {
+        if (k.startsWith(fencePrefix) && k !== ownerFenceKey) {
+          const otherOwner = k.slice(fencePrefix.length);
+          if (
+            lockKey === MIGRATION_LOCK_KEY &&
+            (localStorage.getItem(`${MIGRATION_META_KEY}_commit_${otherOwner}`) !== null ||
+              localStorage.getItem(`${MIGRATION_SEQ_KEY}_commit_${otherOwner}`) !== null)
+          ) {
+            continue;
+          }
+          const rawOther = localStorage.getItem(k);
+          if (!rawOther) continue;
+          try {
+            const parsedOther = JSON.parse(rawOther);
+            if (parsedOther && typeof parsedOther.ticket === "number" && parsedOther.ticket < releasedTicket) {
+              localStorage.removeItem(k);
+            }
+          } catch {
+            try {
+              localStorage.removeItem(k);
+            } catch {}
+          }
+        }
+      }
+    } catch {}
   }
   try {
     const raw = localStorage.getItem(lockKey);
@@ -888,13 +983,33 @@ export function withCrossTabLock<T>(lockKey: string, fn: () => T, maxWaitMs = 80
     return null;
   }
 
+  let verifiedSuccess = false;
   try {
     const result = fn();
+    if (result === null || result === false) {
+      if (lockKey === MIGRATION_LOCK_KEY) {
+        abortFencedCommitsForOwner(lockOwnerId);
+      }
+      return result;
+    }
     if (!verifyCrossTabLockOwnership(lockKey, lockOwnerId)) {
+      if (lockKey === MIGRATION_LOCK_KEY) {
+        abortFencedCommitsForOwner(lockOwnerId);
+      }
       return null;
     }
+    verifiedSuccess = true;
     return result;
   } finally {
+    if (!verifiedSuccess) {
+      const active = activeLockTickets.get(lockKey);
+      if (active && active.owner === lockOwnerId) {
+        activeLockTickets.delete(lockKey);
+      }
+      if (lockKey === MIGRATION_LOCK_KEY) {
+        abortFencedCommitsForOwner(lockOwnerId);
+      }
+    }
     releaseCrossTabLock(lockKey, lockOwnerId);
   }
 }
@@ -918,12 +1033,370 @@ function isLocalStorageReadable(): boolean {
 }
 
 /**
+ * Checks whether a per-owner fenced commit record is valid and was committed before its owner's
+ * lock lease expired. If the owner's claim key still exists in localStorage and is expired
+ * (or belongs to another incomplete critical section), or if the claim key is absent without a
+ * sealed completion fence (`${MIGRATION_LOCK_KEY}_fence_${owner}`), it is rejected.
+ */
+function isFencedCommitRecordValid(
+  record: {
+    owner?: unknown;
+    ticket?: unknown;
+    leaseExpiresAt?: unknown;
+    committedAt?: unknown;
+  } | null | undefined,
+  now: number
+): boolean {
+  if (!record || typeof record !== "object") return false;
+  if (typeof record.owner !== "string" || !record.owner) return false;
+  if (typeof record.ticket !== "number" || !Number.isFinite(record.ticket) || record.ticket <= 0) return false;
+  if (
+    typeof record.leaseExpiresAt === "number" &&
+    typeof record.committedAt === "number" &&
+    record.committedAt >= record.leaseExpiresAt
+  ) {
+    return false;
+  }
+
+  const claimKey = `${MIGRATION_LOCK_KEY}_claim_${record.owner}`;
+  try {
+    const rawClaim = localStorage.getItem(claimKey);
+    if (rawClaim) {
+      const parsedClaim = JSON.parse(rawClaim);
+      const expiresAt =
+        parsedClaim && typeof parsedClaim.expiresAt === "number"
+          ? parsedClaim.expiresAt
+          : parsedClaim && typeof parsedClaim.acquiredAt === "number"
+          ? parsedClaim.acquiredAt + 400
+          : 0;
+      if (expiresAt <= now) {
+        // Owner's lease expired before releasing the lock; commit is aborted/uncommitted
+        abortFencedCommitsForOwner(record.owner);
+        try {
+          localStorage.removeItem(claimKey);
+        } catch {}
+        return false;
+      }
+      const active = activeLockTickets.get(MIGRATION_LOCK_KEY);
+      if (!active || active.owner !== record.owner) {
+        // Another tab is still mid-critical-section and has not finalized/released yet
+        return false;
+      }
+    } else {
+      // No active claim key remains: verify that the owner cleanly completed withCrossTabLock
+      // and published its per-owner completion fence before releasing its claim.
+      const rawOwnerFence = localStorage.getItem(`${MIGRATION_LOCK_KEY}_fence_${record.owner}`);
+      if (!rawOwnerFence) {
+        return false;
+      }
+      const parsedFence = JSON.parse(rawOwnerFence);
+      if (!parsedFence || parsedFence.owner !== record.owner || parsedFence.ticket !== record.ticket) {
+        return false;
+      }
+    }
+  } catch {
+    return false;
+  }
+
+  return true;
+}
+
+function readCommittedMigrationMetaRaw(): string | null {
+  if (typeof window === "undefined" || !window.localStorage) return null;
+  const legacyRaw = localStorage.getItem(MIGRATION_META_KEY);
+  const commitPrefix = `${MIGRATION_META_KEY}_commit_`;
+  const now = Date.now();
+
+  let bestTicket = -1;
+  let bestOwner = "";
+  let bestSerialized: string | null = null;
+
+  try {
+    const allKeys = getAllLocalStorageKeys();
+    for (const k of allKeys) {
+      if (k.startsWith(commitPrefix)) {
+        const raw = localStorage.getItem(k);
+        if (!raw) continue;
+        try {
+          const parsed = JSON.parse(raw);
+          if (!isFencedCommitRecordValid(parsed, now)) {
+            continue;
+          }
+          const ticket: number = parsed.ticket;
+          const owner: string = parsed.owner;
+          const serialized =
+            typeof parsed.serialized === "string"
+              ? parsed.serialized
+              : parsed.meta && typeof parsed.meta === "object"
+              ? JSON.stringify(parsed.meta)
+              : null;
+          if (!serialized) continue;
+          if (ticket > bestTicket || (ticket === bestTicket && owner > bestOwner)) {
+            bestTicket = ticket;
+            bestOwner = owner;
+            bestSerialized = serialized;
+          }
+        } catch {}
+      }
+    }
+  } catch {}
+
+  return bestSerialized !== null ? bestSerialized : legacyRaw;
+}
+
+function readCommittedMigrationSeq(): number {
+  if (typeof window === "undefined" || !window.localStorage) return 0;
+  let maxSeq = 0;
+  try {
+    const reservedRaw = localStorage.getItem(MIGRATION_SEQ_KEY);
+    if (reservedRaw) {
+      const storedSeq = Number(reservedRaw);
+      if (!isNaN(storedSeq) && storedSeq > 0) {
+        maxSeq = Math.max(maxSeq, storedSeq);
+      }
+    }
+  } catch {}
+
+  const seqCommitPrefix = `${MIGRATION_SEQ_KEY}_commit_`;
+  const now = Date.now();
+  try {
+    const allKeys = getAllLocalStorageKeys();
+    for (const k of allKeys) {
+      if (k.startsWith(seqCommitPrefix)) {
+        const raw = localStorage.getItem(k);
+        if (!raw) continue;
+        try {
+          const parsed = JSON.parse(raw);
+          if (!isFencedCommitRecordValid(parsed, now)) {
+            continue;
+          }
+          if (typeof parsed.seq === "number" && Number.isFinite(parsed.seq) && parsed.seq > maxSeq) {
+            maxSeq = parsed.seq;
+          }
+        } catch {}
+      }
+    }
+  } catch {}
+
+  return maxSeq;
+}
+
+/**
+ * Stages a sequence reservation to a per-owner fenced key (`${MIGRATION_SEQ_KEY}_commit_${lockOwnerId}`)
+ * BEFORE performing the final ownership and lease-continuity check. Never writes to the shared
+ * `MIGRATION_SEQ_KEY`, ensuring a resumed stale owner whose lease expired can never overwrite
+ * another owner's committed sequence reservation.
+ */
+function commitFencedMigrationSeq(seq: number, explicitOwnerId?: string): boolean {
+  if (typeof window === "undefined" || !window.localStorage) return false;
+  const active = activeLockTickets.get(MIGRATION_LOCK_KEY);
+  const lockOwnerId = explicitOwnerId || active?.owner;
+  if (!lockOwnerId) return false;
+
+  if (!verifyCrossTabLockOwnership(MIGRATION_LOCK_KEY, lockOwnerId)) {
+    return false;
+  }
+
+  const claimKey = `${MIGRATION_LOCK_KEY}_claim_${lockOwnerId}`;
+  const seqCommitKey = `${MIGRATION_SEQ_KEY}_commit_${lockOwnerId}`;
+
+  let myTicket = active?.ticket || 0;
+  let stageLeaseExpiresAt = 0;
+  try {
+    const rawClaim = localStorage.getItem(claimKey);
+    if (!rawClaim) return false;
+    const parsedClaim = JSON.parse(rawClaim);
+    if (
+      !parsedClaim ||
+      parsedClaim.owner !== lockOwnerId ||
+      parsedClaim.phase !== "claimed" ||
+      typeof parsedClaim.ticket !== "number" ||
+      typeof parsedClaim.expiresAt !== "number" ||
+      Date.now() >= parsedClaim.expiresAt
+    ) {
+      return false;
+    }
+    myTicket = parsedClaim.ticket;
+    stageLeaseExpiresAt = parsedClaim.expiresAt;
+  } catch {
+    return false;
+  }
+
+  // Write to per-owner fenced commit key BEFORE the final ownership & lease check
+  const seqPayload = JSON.stringify({
+    owner: lockOwnerId,
+    ticket: myTicket,
+    leaseExpiresAt: stageLeaseExpiresAt,
+    committedAt: Date.now(),
+    seq,
+  });
+  try {
+    localStorage.setItem(seqCommitKey, seqPayload);
+    if (localStorage.getItem(seqCommitKey) !== seqPayload) {
+      try {
+        localStorage.removeItem(seqCommitKey);
+      } catch {}
+      return false;
+    }
+  } catch {
+    try {
+      localStorage.removeItem(seqCommitKey);
+    } catch {}
+    return false;
+  }
+
+  // Post-write lease continuity & fencing verification (zero writes to shared state occur after this check)
+  if (Date.now() >= stageLeaseExpiresAt || !verifyCrossTabLockOwnership(MIGRATION_LOCK_KEY, lockOwnerId)) {
+    try {
+      localStorage.removeItem(seqCommitKey);
+    } catch {}
+    return false;
+  }
+
+  // Prune older superseded per-owner sequence commit keys with strictly smaller fencing tickets
+  const seqCommitPrefix = `${MIGRATION_SEQ_KEY}_commit_`;
+  try {
+    const allKeys = getAllLocalStorageKeys();
+    for (const k of allKeys) {
+      if (k.startsWith(seqCommitPrefix) && k !== seqCommitKey) {
+        const rawOther = localStorage.getItem(k);
+        if (!rawOther) continue;
+        try {
+          const parsedOther = JSON.parse(rawOther);
+          if (parsedOther && typeof parsedOther.ticket === "number" && parsedOther.ticket < myTicket) {
+            localStorage.removeItem(k);
+          }
+        } catch {
+          try {
+            localStorage.removeItem(k);
+          } catch {}
+        }
+      }
+    }
+  } catch {}
+
+  return true;
+}
+
+/**
+ * Stages merged migration metadata to a per-owner fenced key (`${MIGRATION_META_KEY}_commit_${lockOwnerId}`)
+ * BEFORE performing the final ownership and lease-continuity check. Never writes to the shared
+ * `MIGRATION_META_KEY`, ensuring a resumed stale owner whose lease expired can never overwrite
+ * another owner's committed metadata.
+ */
+function commitFencedMigrationMetadata(merged: MigrationMeta, explicitOwnerId?: string): boolean {
+  if (typeof window === "undefined" || !window.localStorage) return false;
+  const active = activeLockTickets.get(MIGRATION_LOCK_KEY);
+  const lockOwnerId = explicitOwnerId || active?.owner;
+  if (!lockOwnerId) return false;
+
+  if (!verifyCrossTabLockOwnership(MIGRATION_LOCK_KEY, lockOwnerId)) {
+    return false;
+  }
+
+  const claimKey = `${MIGRATION_LOCK_KEY}_claim_${lockOwnerId}`;
+  const metaCommitKey = `${MIGRATION_META_KEY}_commit_${lockOwnerId}`;
+
+  let myTicket = active?.ticket || 0;
+  let stageLeaseExpiresAt = 0;
+  try {
+    const rawClaim = localStorage.getItem(claimKey);
+    if (!rawClaim) return false;
+    const parsedClaim = JSON.parse(rawClaim);
+    if (
+      !parsedClaim ||
+      parsedClaim.owner !== lockOwnerId ||
+      parsedClaim.phase !== "claimed" ||
+      typeof parsedClaim.ticket !== "number" ||
+      typeof parsedClaim.expiresAt !== "number" ||
+      Date.now() >= parsedClaim.expiresAt
+    ) {
+      return false;
+    }
+    myTicket = parsedClaim.ticket;
+    stageLeaseExpiresAt = parsedClaim.expiresAt;
+  } catch {
+    return false;
+  }
+
+  // Write to per-owner fenced commit key BEFORE the final ownership & lease check
+  const serialized = JSON.stringify(merged);
+  const commitPayload = JSON.stringify({
+    owner: lockOwnerId,
+    ticket: myTicket,
+    leaseExpiresAt: stageLeaseExpiresAt,
+    committedAt: Date.now(),
+    meta: merged,
+    serialized,
+  });
+
+  try {
+    localStorage.setItem(metaCommitKey, commitPayload);
+    if (localStorage.getItem(metaCommitKey) !== commitPayload) {
+      try {
+        localStorage.removeItem(metaCommitKey);
+      } catch {}
+      return false;
+    }
+  } catch {
+    try {
+      localStorage.removeItem(metaCommitKey);
+    } catch {}
+    return false;
+  }
+
+  // Post-write lease continuity & fencing verification (zero writes to shared state occur after this check)
+  if (Date.now() >= stageLeaseExpiresAt || !verifyCrossTabLockOwnership(MIGRATION_LOCK_KEY, lockOwnerId)) {
+    try {
+      localStorage.removeItem(metaCommitKey);
+    } catch {}
+    return false;
+  }
+
+  if (typeof merged.operationSeq === "number" && merged.operationSeq > 0) {
+    const currentReserved = readCommittedMigrationSeq();
+    if (merged.operationSeq > currentReserved) {
+      if (!commitFencedMigrationSeq(merged.operationSeq, lockOwnerId)) {
+        try {
+          localStorage.removeItem(metaCommitKey);
+        } catch {}
+        return false;
+      }
+    }
+  }
+
+  // Prune older superseded per-owner metadata commit keys with strictly smaller fencing tickets
+  const metaCommitPrefix = `${MIGRATION_META_KEY}_commit_`;
+  try {
+    const allKeys = getAllLocalStorageKeys();
+    for (const k of allKeys) {
+      if (k.startsWith(metaCommitPrefix) && k !== metaCommitKey) {
+        const rawOther = localStorage.getItem(k);
+        if (!rawOther) continue;
+        try {
+          const parsedOther = JSON.parse(rawOther);
+          if (parsedOther && typeof parsedOther.ticket === "number" && parsedOther.ticket < myTicket) {
+            localStorage.removeItem(k);
+          }
+        } catch {
+          try {
+            localStorage.removeItem(k);
+          } catch {}
+        }
+      }
+    }
+  } catch {}
+
+  return true;
+}
+
+/**
  * Reserves a monotonic operation sequence timestamp strictly greater than any previously
  * observed sequence or quarantine/clear timestamp across all browsing contexts, serialized via
- * cross-tab locking and shared sequence reservation in localStorage.
+ * cross-tab locking and per-owner fenced sequence reservation in localStorage.
  *
- * Uses a single bounded lock acquisition path and revalidates lock ownership + fencing
- * immediately prior to committing the sequence reservation. Returns null if reservation cannot be completed.
+ * Uses a single bounded lock acquisition path and commits to a per-owner fenced key verified
+ * against the active lease so an expired owner can never overwrite newer sequence reservations.
  */
 export function getNextMigrationOpSeq(meta?: MigrationMeta): number | null {
   if (!isLocalStorageReadable()) {
@@ -939,15 +1412,12 @@ export function getNextMigrationOpSeq(meta?: MigrationMeta): number | null {
     let maxSeq = Math.max(now, lastMigrationOpSeq + 1);
 
     try {
-      const reservedRaw = localStorage.getItem(MIGRATION_SEQ_KEY);
-      if (reservedRaw) {
-        const storedSeq = Number(reservedRaw);
-        if (!isNaN(storedSeq) && storedSeq > 0) {
-          maxSeq = Math.max(maxSeq, storedSeq + 1);
-        }
+      const storedSeq = readCommittedMigrationSeq();
+      if (storedSeq > 0) {
+        maxSeq = Math.max(maxSeq, storedSeq + 1);
       }
 
-      const raw = localStorage.getItem(MIGRATION_META_KEY);
+      const raw = readCommittedMigrationMetaRaw();
       if (raw) {
         const disk = JSON.parse(raw);
         if (typeof disk.operationSeq === "number") {
@@ -984,19 +1454,7 @@ export function getNextMigrationOpSeq(meta?: MigrationMeta): number | null {
       }
     }
 
-    // Revalidate lock ownership & fencing token immediately before committing sequence write
-    if (!verifyCrossTabLockOwnership(MIGRATION_LOCK_KEY)) {
-      return null;
-    }
-
-    // Persist and verify shared sequence reservation in localStorage before committing in memory
-    try {
-      const serializedSeq = String(maxSeq);
-      localStorage.setItem(MIGRATION_SEQ_KEY, serializedSeq);
-      if (localStorage.getItem(MIGRATION_SEQ_KEY) !== serializedSeq) {
-        return null;
-      }
-    } catch {
+    if (!commitFencedMigrationSeq(maxSeq)) {
       return null;
     }
 
@@ -1098,23 +1556,18 @@ export function getMigrationMetadata(): MigrationMeta {
   }
 
   try {
-    const raw = localStorage.getItem(MIGRATION_META_KEY);
+    const raw = readCommittedMigrationMetaRaw();
     const { meta: result, hasLegacyBooleanClears } = parseMigrationMetaRaw(raw);
     attachBaseMigrationMetadata(result);
 
     if (hasLegacyBooleanClears) {
       try {
         const mergedUpgrade = withCrossTabLock(MIGRATION_LOCK_KEY, () => {
-          const latestRaw = localStorage.getItem(MIGRATION_META_KEY);
+          const latestRaw = readCommittedMigrationMetaRaw();
           const { meta: latestDisk } = parseMigrationMetaRaw(latestRaw);
           // Merge legacy upgrade with latest disk metadata to prevent dropping concurrent writes
           const merged = mergeMigrationMetadata(latestDisk, result);
-          const serializedMerged = JSON.stringify(merged);
-          if (!verifyCrossTabLockOwnership(MIGRATION_LOCK_KEY)) {
-            return null;
-          }
-          localStorage.setItem(MIGRATION_META_KEY, serializedMerged);
-          if (localStorage.getItem(MIGRATION_META_KEY) !== serializedMerged) {
+          if (!commitFencedMigrationMetadata(merged)) {
             return null;
           }
           return attachBaseMigrationMetadata(merged);
@@ -1155,7 +1608,7 @@ export function setMigrationMetadata(meta: MigrationMeta): boolean {
       // so concurrent markers added by another tab are never overwritten by a stale snapshot.
       let latestDisk: MigrationMeta;
       try {
-        const latestRaw = localStorage.getItem(MIGRATION_META_KEY);
+        const latestRaw = readCommittedMigrationMetaRaw();
         latestDisk = parseMigrationMetaRaw(latestRaw).meta;
       } catch {
         latestDisk = {
@@ -1172,31 +1625,8 @@ export function setMigrationMetadata(meta: MigrationMeta): boolean {
       }
 
       const merged = mergeMigrationMetadata(latestDisk, meta);
-      const serialized = JSON.stringify(merged);
-
-      // Revalidate ownership and extend lease immediately before committing to localStorage
-      if (!verifyCrossTabLockOwnership(MIGRATION_LOCK_KEY)) {
+      if (!commitFencedMigrationMetadata(merged)) {
         return false;
-      }
-
-      localStorage.setItem(MIGRATION_META_KEY, serialized);
-      if (localStorage.getItem(MIGRATION_META_KEY) !== serialized) {
-        return false;
-      }
-
-      if (typeof merged.operationSeq === "number") {
-        try {
-          const currentReserved = Number(localStorage.getItem(MIGRATION_SEQ_KEY) || 0);
-          if (merged.operationSeq > currentReserved) {
-            const seqStr = String(merged.operationSeq);
-            localStorage.setItem(MIGRATION_SEQ_KEY, seqStr);
-            if (localStorage.getItem(MIGRATION_SEQ_KEY) !== seqStr) {
-              return false;
-            }
-          }
-        } catch {
-          return false;
-        }
       }
 
       Object.assign(meta, merged);
