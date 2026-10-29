@@ -548,27 +548,10 @@ export function tryAcquireCrossTabLock(lockKey: string, lockOwnerId: string, ttl
 
   const evictExpiredClaimRecord = (expiredClaimKey: string, expiredOwner?: string) => {
     const ownerId = expiredOwner || expiredClaimKey.slice(claimPrefix.length);
-    if (lockKey === MIGRATION_LOCK_KEY && ownerId) {
-      let hasSealedCompletionFence = false;
-      try {
-        const rawOwnerFence = localStorage.getItem(`${lockKey}_fence_${ownerId}`);
-        if (rawOwnerFence) {
-          const parsedFence = JSON.parse(rawOwnerFence);
-          if (
-            parsedFence &&
-            parsedFence.owner === ownerId &&
-            typeof parsedFence.ticket === "number" &&
-            parsedFence.ticket > 0 &&
-            (typeof parsedFence.leaseExpiresAt !== "number" ||
-              typeof parsedFence.sealedAt !== "number" ||
-              parsedFence.sealedAt < parsedFence.leaseExpiresAt)
-          ) {
-            hasSealedCompletionFence = true;
-          }
-        }
-      } catch {}
-      // Only remove staged commit records if the owner expired BEFORE sealing its completion fence
-      if (!hasSealedCompletionFence) {
+    if (ownerId) {
+      // Because a commit is only finalized by removing claimKey BEFORE lease expiry,
+      // any owner whose claimKey is still present and expired never completed sealing.
+      if (lockKey === MIGRATION_LOCK_KEY) {
         try {
           localStorage.removeItem(`${MIGRATION_META_KEY}_commit_${ownerId}`);
         } catch {}
@@ -576,6 +559,9 @@ export function tryAcquireCrossTabLock(lockKey: string, lockOwnerId: string, ttl
           localStorage.removeItem(`${MIGRATION_SEQ_KEY}_commit_${ownerId}`);
         } catch {}
       }
+      try {
+        localStorage.removeItem(`${lockKey}_fence_${ownerId}`);
+      } catch {}
     }
     try {
       localStorage.removeItem(expiredClaimKey);
@@ -976,10 +962,14 @@ function pruneSupersededFencedRecords(lockKey: string, lockOwnerId: string, seal
 }
 
 /**
- * Durably seals the current owner's completion fence (`${lockKey}_fence_${lockOwnerId}`) while
- * the owner's claim (`${lockKey}_claim_${lockOwnerId}`) is still held and unexpired, verifies
- * read-back and post-write lease continuity, and only then prunes superseded lower-ticket records.
- * Returns false if the completion fence cannot be persisted or if ownership expired.
+ * Durably seals the current owner's completion fence (`${lockKey}_fence_${lockOwnerId}`) using a
+ * two-phase post-write timestamp proof (`"sealing"` -> post-write timestamp capture -> `"sealed"`),
+ * removes `claimKey` while the lease is still active to finalize the commit atomically, verifies
+ * post-removal lease continuity, and only then prunes superseded lower-ticket records.
+ *
+ * Because `claimKey` is only removed AFTER `"sealed"` fence verification succeeds, any crash before
+ * post-write verification leaves `claimKey` in `localStorage` where it expires and invalidates the
+ * incomplete fence/commit without ever relying on a pre-write timestamp.
  */
 function sealCrossTabLockCompletionFence(lockKey: string, explicitOwnerId?: string): boolean {
   if (typeof window === "undefined" || !window.localStorage) return true;
@@ -1016,16 +1006,50 @@ function sealCrossTabLockCompletionFence(lockKey: string, explicitOwnerId?: stri
     return false;
   }
 
-  const fencePayload = JSON.stringify({
+  // Phase 1: Write unsealed "sealing" fence record (no pre-write timestamp)
+  const sealingPayload = JSON.stringify({
     owner: lockOwnerId,
     ticket: myTicket,
+    phase: "sealing",
     leaseExpiresAt: sealLeaseExpiresAt,
-    sealedAt: Date.now(),
   });
 
   try {
-    localStorage.setItem(ownerFenceKey, fencePayload);
-    if (localStorage.getItem(ownerFenceKey) !== fencePayload) {
+    localStorage.setItem(ownerFenceKey, sealingPayload);
+    if (localStorage.getItem(ownerFenceKey) !== sealingPayload) {
+      try {
+        localStorage.removeItem(ownerFenceKey);
+      } catch {}
+      return false;
+    }
+  } catch {
+    try {
+      localStorage.removeItem(ownerFenceKey);
+    } catch {}
+    return false;
+  }
+
+  // Capture timestamp STRICTLY AFTER both the staged commit and the "sealing" fence write completed
+  const verifiedAfterWriteAt = Date.now();
+  if (verifiedAfterWriteAt >= sealLeaseExpiresAt || !verifyCrossTabLockOwnership(lockKey, lockOwnerId)) {
+    try {
+      localStorage.removeItem(ownerFenceKey);
+    } catch {}
+    return false;
+  }
+
+  // Phase 2: Record post-write verified proof while claimKey is still held in localStorage
+  const sealedPayload = JSON.stringify({
+    owner: lockOwnerId,
+    ticket: myTicket,
+    phase: "sealed",
+    leaseExpiresAt: sealLeaseExpiresAt,
+    verifiedAfterWriteAt,
+  });
+
+  try {
+    localStorage.setItem(ownerFenceKey, sealedPayload);
+    if (localStorage.getItem(ownerFenceKey) !== sealedPayload) {
       try {
         localStorage.removeItem(ownerFenceKey);
       } catch {}
@@ -1045,6 +1069,30 @@ function sealCrossTabLockCompletionFence(lockKey: string, explicitOwnerId?: stri
     return false;
   }
 
+  // Phase 3: Remove claimKey to transition atomically from held-claim to sealed-commit state,
+  // and verify that removal completed before sealLeaseExpiresAt elapsed.
+  activeClaimKeysForUnload.delete(claimKey);
+  try {
+    localStorage.removeItem(claimKey);
+  } catch {
+    try {
+      localStorage.removeItem(ownerFenceKey);
+    } catch {}
+    return false;
+  }
+
+  if (
+    Date.now() >= sealLeaseExpiresAt ||
+    localStorage.getItem(claimKey) !== null ||
+    localStorage.getItem(ownerFenceKey) !== sealedPayload
+  ) {
+    try {
+      localStorage.removeItem(ownerFenceKey);
+    } catch {}
+    return false;
+  }
+
+  // Phase 4: Only after the new commit is durably sealed and claimKey is removed, prune lower-ticket records
   pruneSupersededFencedRecords(lockKey, lockOwnerId, myTicket);
   return true;
 }
@@ -1178,93 +1226,82 @@ function isLocalStorageReadable(): boolean {
 
 /**
  * Checks whether a per-owner fenced commit record is valid and was committed before its owner's
- * lock lease expired. Once a matching completion fence (`${MIGRATION_LOCK_KEY}_fence_${owner}`)
- * is durable in localStorage, the commit is permanently sealed (even if the tab crashed before
- * removing its claim key). Before sealing, only the active in-memory owner with an unexpired claim
- * may observe its own staged record.
+ * lock lease expired:
+ * 1. If `${MIGRATION_LOCK_KEY}_claim_${owner}` is still present in localStorage, the owner has not
+ *    completed sealing. If that claim is expired, the incomplete commit and fence are aborted; if
+ *    unexpired, only the active in-memory owner may observe its own staged record.
+ * 2. Once `claimKey` has been removed, a complete `"sealed"` completion fence with numeric
+ *    `leaseExpiresAt` and `verifiedAfterWriteAt` (`verifiedAfterWriteAt < leaseExpiresAt`) is
+ *    required. Legacy or incomplete fences lacking full lease proof are rejected.
  */
 function isFencedCommitRecordValid(
   record: {
     owner?: unknown;
     ticket?: unknown;
     leaseExpiresAt?: unknown;
-    committedAt?: unknown;
   } | null | undefined,
   now: number
 ): boolean {
   if (!record || typeof record !== "object") return false;
   if (typeof record.owner !== "string" || !record.owner) return false;
   if (typeof record.ticket !== "number" || !Number.isFinite(record.ticket) || record.ticket <= 0) return false;
-  if (
-    typeof record.leaseExpiresAt === "number" &&
-    typeof record.committedAt === "number" &&
-    record.committedAt >= record.leaseExpiresAt
-  ) {
-    return false;
-  }
+  if (typeof record.leaseExpiresAt !== "number" || !Number.isFinite(record.leaseExpiresAt)) return false;
 
   const claimKey = `${MIGRATION_LOCK_KEY}_claim_${record.owner}`;
+  const ownerFenceKey = `${MIGRATION_LOCK_KEY}_fence_${record.owner}`;
   try {
-    // 1. Check if the commit has already been durably sealed via the owner's completion fence
-    const rawOwnerFence = localStorage.getItem(`${MIGRATION_LOCK_KEY}_fence_${record.owner}`);
-    if (rawOwnerFence) {
-      const parsedFence = JSON.parse(rawOwnerFence);
-      if (
-        parsedFence &&
-        parsedFence.owner === record.owner &&
-        parsedFence.ticket === record.ticket &&
-        (typeof parsedFence.leaseExpiresAt !== "number" ||
-          typeof parsedFence.sealedAt !== "number" ||
-          parsedFence.sealedAt < parsedFence.leaseExpiresAt)
-      ) {
-        // If a crashed tab sealed the commit before removing its claim key, clean up the expired claim key
-        const rawLeftoverClaim = localStorage.getItem(claimKey);
-        if (rawLeftoverClaim) {
-          try {
-            const parsedClaim = JSON.parse(rawLeftoverClaim);
-            const expiresAt =
-              parsedClaim && typeof parsedClaim.expiresAt === "number"
-                ? parsedClaim.expiresAt
-                : parsedClaim && typeof parsedClaim.acquiredAt === "number"
-                ? parsedClaim.acquiredAt + 400
-                : 0;
-            if (expiresAt <= now) {
-              localStorage.removeItem(claimKey);
-            }
-          } catch {
-            try {
-              localStorage.removeItem(claimKey);
-            } catch {}
-          }
-        }
-        return true;
+    // 1. If the owner's claim key is still in localStorage, the commit was not finalized via Phase 3 claim removal
+    const rawClaim = localStorage.getItem(claimKey);
+    if (rawClaim) {
+      const parsedClaim = JSON.parse(rawClaim);
+      const expiresAt =
+        parsedClaim && typeof parsedClaim.expiresAt === "number"
+          ? parsedClaim.expiresAt
+          : parsedClaim && typeof parsedClaim.acquiredAt === "number"
+          ? parsedClaim.acquiredAt + 400
+          : 0;
+      if (expiresAt <= now) {
+        // Owner crashed or expired before finalizing claim removal; abort incomplete commit and fence
+        abortFencedCommitsForOwner(record.owner);
+        try {
+          localStorage.removeItem(ownerFenceKey);
+        } catch {}
+        try {
+          localStorage.removeItem(claimKey);
+        } catch {}
+        return false;
       }
-      return false;
+      const active = activeLockTickets.get(MIGRATION_LOCK_KEY);
+      if (!active || active.owner !== record.owner) {
+        // Another tab is still mid-critical-section and has not sealed yet
+        return false;
+      }
+      return true;
     }
 
-    // 2. Not yet sealed: check if the owner is still actively holding an unexpired claim
-    const rawClaim = localStorage.getItem(claimKey);
-    if (!rawClaim) {
+    // 2. Claim key was removed: require a complete "sealed" completion fence with full post-write lease proof
+    const rawOwnerFence = localStorage.getItem(ownerFenceKey);
+    if (!rawOwnerFence) {
       return false;
     }
-    const parsedClaim = JSON.parse(rawClaim);
-    const expiresAt =
-      parsedClaim && typeof parsedClaim.expiresAt === "number"
-        ? parsedClaim.expiresAt
-        : parsedClaim && typeof parsedClaim.acquiredAt === "number"
-        ? parsedClaim.acquiredAt + 400
-        : 0;
-    if (expiresAt <= now) {
-      // Owner's lease expired before sealing; abort uncommitted staged record
+    const parsedFence = JSON.parse(rawOwnerFence);
+    if (
+      !parsedFence ||
+      parsedFence.owner !== record.owner ||
+      parsedFence.ticket !== record.ticket ||
+      parsedFence.phase !== "sealed" ||
+      typeof parsedFence.leaseExpiresAt !== "number" ||
+      !Number.isFinite(parsedFence.leaseExpiresAt) ||
+      typeof parsedFence.verifiedAfterWriteAt !== "number" ||
+      !Number.isFinite(parsedFence.verifiedAfterWriteAt) ||
+      parsedFence.verifiedAfterWriteAt <= 0 ||
+      parsedFence.verifiedAfterWriteAt >= parsedFence.leaseExpiresAt
+    ) {
+      // Reject unverifiable or legacy completion fence lacking complete lease proof
       abortFencedCommitsForOwner(record.owner);
       try {
-        localStorage.removeItem(claimKey);
+        localStorage.removeItem(ownerFenceKey);
       } catch {}
-      return false;
-    }
-    const active = activeLockTickets.get(MIGRATION_LOCK_KEY);
-    if (!active || active.owner !== record.owner) {
-      // Another tab is still mid-critical-section and has not sealed yet
       return false;
     }
   } catch {
@@ -1398,7 +1435,6 @@ function stageFencedMigrationSeq(seq: number, explicitOwnerId?: string): boolean
     owner: lockOwnerId,
     ticket: myTicket,
     leaseExpiresAt: stageLeaseExpiresAt,
-    committedAt: Date.now(),
     seq,
   });
   try {
@@ -1481,7 +1517,6 @@ function commitFencedMigrationMetadata(merged: MigrationMeta, explicitOwnerId?: 
     owner: lockOwnerId,
     ticket: myTicket,
     leaseExpiresAt: stageLeaseExpiresAt,
-    committedAt: Date.now(),
     meta: merged,
     serialized,
   });
