@@ -326,48 +326,51 @@ function getAllLocalStorageKeys(): string[] {
 }
 
 /**
- * Lamport Bakery cross-tab mutual exclusion lock acquisition with monotonic fencing in localStorage.
+ * Lamport Bakery cross-tab mutual exclusion lock acquisition with crash-recoverable leases
+ * and monotonic fencing in localStorage.
  *
  * Each contender writes its claim exclusively to its own dedicated per-claim key
  * (`${lockKey}_claim_${lockOwnerId}`) and NEVER writes to a shared claim key or
- * another contender's claim key.
+ * another contender's claim key during acquisition.
  *
- * Claim lifetime & fencing:
- * - By default (`ttlMs` omitted), an acquired claim has no fixed wall-clock expiration
- *   and remains valid for the entire critical section until `releaseCrossTabLock` is called
- *   in `withCrossTabLock`'s `finally` block (with `pagehide`/`beforeunload` cleanup if the
- *   browsing context unloads). Thus, a slow `JSON.parse`/`JSON.stringify` or tab suspension
- *   cannot cause another tab to treat an active owner's claim as expired and enter concurrently.
- * - If an explicit numeric `ttlMs > 0` is supplied, `expiresAt` is honored and automatically
- *   extended during ownership revalidation.
- * - Upon acquiring the lock, a strictly increasing fencing token (`myTicket`) is recorded in
- *   `${lockKey}_fence` and `activeLockTickets`. Before any critical-section commit,
- *   `verifyCrossTabLockOwnership` verifies both the live claim and the fencing token so an
- *   expired or superseded owner can never commit.
+ * Crash recovery & stale-owner protection:
+ * - Every claim carries a finite numeric `expiresAt` lease (default `ttlMs = 400`).
+ *   Any claim lacking a valid future `expiresAt` (or exceeding `acquiredAt + ttlMs`) is
+ *   treated as expired and evicted on the next acquisition attempt, ensuring orphaned
+ *   claims left behind by a browser or renderer crash never permanently block `MIGRATION_LOCK_KEY`.
+ * - Ticket assignment inspects both active and expired claims as well as `${lockKey}_fence`
+ *   so every new owner receives a strictly greater monotonic `ticket` than any prior owner.
+ * - While a critical section is actively executing within its lease window, calls to
+ *   `verifyCrossTabLockOwnership` extend `expiresAt` and record the owner's fencing token.
+ *   If a tab is suspended or `fn()` runs past `expiresAt`, `verifyCrossTabLockOwnership`
+ *   detects the expired/evicted claim (or higher fencing token) before commit and aborts.
  */
-export function tryAcquireCrossTabLock(lockKey: string, lockOwnerId: string, ttlMs?: number): boolean {
+export function tryAcquireCrossTabLock(lockKey: string, lockOwnerId: string, ttlMs = 400): boolean {
   if (typeof window === "undefined" || !window.localStorage) return true;
   ensureUnloadCleanupRegistered();
 
   const startNow = Date.now();
-  const hasExplicitTtl = typeof ttlMs === "number" && Number.isFinite(ttlMs) && ttlMs > 0;
-  const leaseExpiresAt = hasExplicitTtl ? startNow + ttlMs : undefined;
+  const effectiveTtlMs = typeof ttlMs === "number" && Number.isFinite(ttlMs) && ttlMs > 0 ? ttlMs : 400;
+  const leaseExpiresAt = startNow + effectiveTtlMs;
   const claimPrefix = `${lockKey}_claim_`;
   const claimKey = `${claimPrefix}${lockOwnerId}`;
+  const fenceKey = `${lockKey}_fence`;
 
   const isClaimActive = (
-    claim: { expiresAt?: unknown; phase?: unknown } | null | undefined,
+    claim: { expiresAt?: unknown; acquiredAt?: unknown; phase?: unknown } | null | undefined,
     checkNow: number
   ): boolean => {
     if (!claim || typeof claim !== "object") return false;
-    if (typeof claim.expiresAt === "number") {
+    if (typeof claim.expiresAt === "number" && Number.isFinite(claim.expiresAt)) {
       return claim.expiresAt > checkNow;
     }
-    return claim.phase === "claimed" || claim.phase === "choosing";
+    if (typeof claim.acquiredAt === "number" && Number.isFinite(claim.acquiredAt)) {
+      return claim.acquiredAt + effectiveTtlMs > checkNow;
+    }
+    return false;
   };
 
   const hasRemainingSelfLease = (checkNow: number, minRemainingMs: number): boolean => {
-    if (leaseExpiresAt === undefined) return true;
     return checkNow + minRemainingMs < leaseExpiresAt;
   };
 
@@ -377,14 +380,17 @@ export function tryAcquireCrossTabLock(lockKey: string, lockOwnerId: string, ttl
       if (!rawExisting) return false;
       const existing = JSON.parse(rawExisting);
       if (existing && typeof existing === "object") {
-        if (typeof existing.expiresAt === "number") {
+        if (typeof existing.expiresAt === "number" && Number.isFinite(existing.expiresAt)) {
           if (existing.expiresAt > checkNow) {
             return existing.owner !== lockOwnerId;
           }
           return false;
         }
-        if (typeof existing.owner === "string" && existing.owner.length > 0) {
-          return existing.owner !== lockOwnerId;
+        if (typeof existing.acquiredAt === "number" && Number.isFinite(existing.acquiredAt)) {
+          if (existing.acquiredAt + effectiveTtlMs > checkNow) {
+            return existing.owner !== lockOwnerId;
+          }
+          return false;
         }
       }
       return false;
@@ -417,13 +423,10 @@ export function tryAcquireCrossTabLock(lockKey: string, lockOwnerId: string, ttl
         try {
           const parsed = JSON.parse(raw);
           if (!parsed || typeof parsed !== "object") continue;
-          if (typeof parsed.expiresAt === "number" && parsed.expiresAt <= startNow) {
-            if (startNow - parsed.expiresAt > 2000) {
-              try { localStorage.removeItem(k); } catch {}
-            }
+          if (!isClaimActive(parsed, startNow)) {
             continue;
           }
-          if (isClaimActive(parsed, startNow) && parsed.phase === "claimed" && parsed.owner !== lockOwnerId) {
+          if (parsed.phase === "claimed" && parsed.owner !== lockOwnerId) {
             return false;
           }
         } catch {}
@@ -433,16 +436,14 @@ export function tryAcquireCrossTabLock(lockKey: string, lockOwnerId: string, ttl
     return false;
   }
 
-  // Phase 1: Doorway entry — announce "choosing" in our own dedicated key
-  const choosingPayload: Record<string, unknown> = {
+  // Phase 1: Doorway entry — announce "choosing" in our own dedicated key with finite crash-recoverable lease
+  const choosingData = JSON.stringify({
     owner: lockOwnerId,
     phase: "choosing",
     ticket: 0,
-  };
-  if (leaseExpiresAt !== undefined) {
-    choosingPayload.expiresAt = leaseExpiresAt;
-  }
-  const choosingData = JSON.stringify(choosingPayload);
+    acquiredAt: startNow,
+    expiresAt: leaseExpiresAt,
+  });
   try {
     activeClaimKeysForUnload.add(claimKey);
     localStorage.setItem(claimKey, choosingData);
@@ -457,7 +458,8 @@ export function tryAcquireCrossTabLock(lockKey: string, lockOwnerId: string, ttl
     return false;
   }
 
-  // Phase 2: Observe all active claims after doorway registration to assign a monotonic ticket
+  // Phase 2: Observe all claims (active and expired) and fence after doorway registration to assign a monotonic ticket,
+  // and evict expired/crashed claim records so they never linger in localStorage.
   let maxObservedTicket = startNow;
   try {
     const now2 = Date.now();
@@ -465,6 +467,15 @@ export function tryAcquireCrossTabLock(lockKey: string, lockOwnerId: string, ttl
       cleanupOwnClaim();
       return false;
     }
+    try {
+      const rawFence = localStorage.getItem(fenceKey);
+      if (rawFence) {
+        const parsedFence = JSON.parse(rawFence);
+        if (parsedFence && typeof parsedFence.ticket === "number" && parsedFence.ticket > maxObservedTicket) {
+          maxObservedTicket = parsedFence.ticket;
+        }
+      }
+    } catch {}
     const keys = getAllLocalStorageKeys();
     for (const k of keys) {
       if (k.startsWith(claimPrefix) && k !== claimKey) {
@@ -472,7 +483,7 @@ export function tryAcquireCrossTabLock(lockKey: string, lockOwnerId: string, ttl
         if (!otherRaw) continue;
         try {
           const otherClaim = JSON.parse(otherRaw);
-          if (isClaimActive(otherClaim, now2)) {
+          if (otherClaim && typeof otherClaim === "object") {
             const otherTicket =
               typeof otherClaim.ticket === "number"
                 ? otherClaim.ticket
@@ -482,8 +493,17 @@ export function tryAcquireCrossTabLock(lockKey: string, lockOwnerId: string, ttl
             if (otherTicket > maxObservedTicket) {
               maxObservedTicket = otherTicket;
             }
+            if (!isClaimActive(otherClaim, now2)) {
+              try {
+                localStorage.removeItem(k);
+              } catch {}
+            }
           }
-        } catch {}
+        } catch {
+          try {
+            localStorage.removeItem(k);
+          } catch {}
+        }
       }
     }
   } catch {
@@ -494,16 +514,13 @@ export function tryAcquireCrossTabLock(lockKey: string, lockOwnerId: string, ttl
   const myTicket = Math.max(Date.now(), maxObservedTicket + 1);
 
   // Phase 3: Doorway exit — publish numbered claim to our own dedicated key (FINAL WRITE)
-  const claimedPayload: Record<string, unknown> = {
+  const claimedData = JSON.stringify({
     owner: lockOwnerId,
     phase: "claimed",
     ticket: myTicket,
     acquiredAt: Date.now(),
-  };
-  if (leaseExpiresAt !== undefined) {
-    claimedPayload.expiresAt = leaseExpiresAt;
-  }
-  const claimedData = JSON.stringify(claimedPayload);
+    expiresAt: leaseExpiresAt,
+  });
   try {
     if (!hasRemainingSelfLease(Date.now(), 40)) {
       cleanupOwnClaim();
@@ -540,6 +557,7 @@ export function tryAcquireCrossTabLock(lockKey: string, lockOwnerId: string, ttl
             phase?: string;
             ticket?: number;
             claimTime?: number;
+            acquiredAt?: number;
             expiresAt?: number;
           } | null = null;
           try {
@@ -547,16 +565,13 @@ export function tryAcquireCrossTabLock(lockKey: string, lockOwnerId: string, ttl
           } catch {
             otherClaim = null;
           }
-          if (!otherClaim || typeof otherClaim !== "object") continue;
-
-          if (typeof otherClaim.expiresAt === "number" && otherClaim.expiresAt <= Date.now()) {
-            if (Date.now() - otherClaim.expiresAt > 2000) {
-              try { localStorage.removeItem(k); } catch {}
-            }
+          if (!otherClaim || typeof otherClaim !== "object") {
+            try { localStorage.removeItem(k); } catch {}
             continue;
           }
 
           if (!isClaimActive(otherClaim, Date.now())) {
+            try { localStorage.removeItem(k); } catch {}
             continue;
           }
 
@@ -596,6 +611,9 @@ export function tryAcquireCrossTabLock(lockKey: string, lockOwnerId: string, ttl
           }
 
           if (!otherClaim || !isClaimActive(otherClaim, Date.now())) {
+            if (otherClaim) {
+              try { localStorage.removeItem(k); } catch {}
+            }
             continue;
           }
 
@@ -641,7 +659,8 @@ export function tryAcquireCrossTabLock(lockKey: string, lockOwnerId: string, ttl
       selfVerify.owner !== lockOwnerId ||
       selfVerify.phase !== "claimed" ||
       selfVerify.ticket !== myTicket ||
-      (typeof selfVerify.expiresAt === "number" && postReadNow + 30 >= selfVerify.expiresAt)
+      typeof selfVerify.expiresAt !== "number" ||
+      postReadNow + 30 >= selfVerify.expiresAt
     ) {
       cleanupOwnClaim();
       return false;
@@ -651,14 +670,15 @@ export function tryAcquireCrossTabLock(lockKey: string, lockOwnerId: string, ttl
     return false;
   }
 
-  activeLockTickets.set(lockKey, { owner: lockOwnerId, ticket: myTicket, ttlMs: hasExplicitTtl ? ttlMs : undefined });
+  activeLockTickets.set(lockKey, { owner: lockOwnerId, ticket: myTicket, ttlMs: effectiveTtlMs });
   return true;
 }
 
 /**
- * Revalidates that the current lock holder still exclusively owns `lockKey` and has not been
- * superseded by a newer fencing token or expired lease. If the claim uses an explicit numeric
- * `ttlMs`, extends the lease upon successful verification.
+ * Revalidates that the current lock holder still exclusively owns `lockKey`, that its finite
+ * crash-recovery lease has not expired, and that it has not been superseded by a newer fencing
+ * token or competing claim. When valid, extends the lease and records the owner's fencing token
+ * so active critical sections remain valid while any resumed stale owner is blocked from committing.
  */
 export function verifyCrossTabLockOwnership(lockKey: string, lockOwnerId?: string): boolean {
   if (typeof window === "undefined" || !window.localStorage) return true;
@@ -670,20 +690,31 @@ export function verifyCrossTabLockOwnership(lockKey: string, lockOwnerId?: strin
   const claimPrefix = `${lockKey}_claim_`;
   const claimKey = `${claimPrefix}${ownerToCheck}`;
   const fenceKey = `${lockKey}_fence`;
+  const extensionMs = active?.ttlMs && active.ttlMs > 0 ? active.ttlMs : 400;
   const now = Date.now();
 
+  const isClaimRecordUnexpired = (
+    claim: { expiresAt?: unknown; acquiredAt?: unknown } | null | undefined,
+    checkNow: number
+  ): boolean => {
+    if (!claim || typeof claim !== "object") return false;
+    if (typeof claim.expiresAt === "number" && Number.isFinite(claim.expiresAt)) {
+      return claim.expiresAt > checkNow;
+    }
+    if (typeof claim.acquiredAt === "number" && Number.isFinite(claim.acquiredAt)) {
+      return claim.acquiredAt + extensionMs > checkNow;
+    }
+    return false;
+  };
+
   try {
-    // 1. Verify no conflicting direct lock exists on lockKey
+    // 1. Verify no conflicting unexpired direct lock exists on lockKey
     const rawDirect = localStorage.getItem(lockKey);
     if (rawDirect) {
       try {
         const directParsed = JSON.parse(rawDirect);
         if (directParsed && typeof directParsed === "object") {
-          if (typeof directParsed.expiresAt === "number") {
-            if (directParsed.expiresAt > now && directParsed.owner !== ownerToCheck) {
-              return false;
-            }
-          } else if (typeof directParsed.owner === "string" && directParsed.owner !== ownerToCheck) {
+          if (isClaimRecordUnexpired(directParsed, now) && directParsed.owner !== ownerToCheck) {
             return false;
           }
         }
@@ -692,8 +723,9 @@ export function verifyCrossTabLockOwnership(lockKey: string, lockOwnerId?: strin
       }
     }
 
-    // 2. Verify own claim record is intact, claimed, and unexpired
+    // 2. Verify own claim record is intact, claimed, and currently unexpired
     const rawSelf = localStorage.getItem(claimKey);
+    const afterSelfReadNow = Date.now();
     if (!rawSelf) return false;
     const selfClaim = JSON.parse(rawSelf);
     if (
@@ -707,7 +739,7 @@ export function verifyCrossTabLockOwnership(lockKey: string, lockOwnerId?: strin
     if (active && selfClaim.ticket !== active.ticket) {
       return false;
     }
-    if (typeof selfClaim.expiresAt === "number" && selfClaim.expiresAt <= now) {
+    if (!isClaimRecordUnexpired(selfClaim, afterSelfReadNow)) {
       return false;
     }
 
@@ -728,7 +760,7 @@ export function verifyCrossTabLockOwnership(lockKey: string, lockOwnerId?: strin
       }
     }
 
-    // 4. Verify no other active claimed lock exists
+    // 4. Verify no other active claimed lock exists with higher priority
     const allKeys = getAllLocalStorageKeys();
     for (const k of allKeys) {
       if (k.startsWith(claimPrefix) && k !== claimKey) {
@@ -737,7 +769,7 @@ export function verifyCrossTabLockOwnership(lockKey: string, lockOwnerId?: strin
         try {
           const otherClaim = JSON.parse(otherRaw);
           if (!otherClaim || typeof otherClaim !== "object") continue;
-          if (typeof otherClaim.expiresAt === "number" && otherClaim.expiresAt <= now) {
+          if (!isClaimRecordUnexpired(otherClaim, Date.now())) {
             continue;
           }
           if (otherClaim.phase === "claimed" && otherClaim.owner !== ownerToCheck) {
@@ -755,17 +787,33 @@ export function verifyCrossTabLockOwnership(lockKey: string, lockOwnerId?: strin
       }
     }
 
-    // 5. If claim carries a timed lease, extend it so long critical sections remain valid
-    if (typeof selfClaim.expiresAt === "number") {
-      const extensionMs = active?.ttlMs && active.ttlMs > 0 ? active.ttlMs : 400;
-      const updatedClaim = JSON.stringify({
-        ...selfClaim,
-        expiresAt: Date.now() + extensionMs,
-      });
-      localStorage.setItem(claimKey, updatedClaim);
-      if (localStorage.getItem(claimKey) !== updatedClaim) {
-        return false;
-      }
+    // 5. Extend the active lease and publish our fencing token while still unexpired
+    const preExtendNow = Date.now();
+    if (!isClaimRecordUnexpired(selfClaim, preExtendNow)) {
+      return false;
+    }
+    const newExpiresAt = preExtendNow + extensionMs;
+    const updatedClaim = JSON.stringify({
+      ...selfClaim,
+      expiresAt: newExpiresAt,
+    });
+    localStorage.setItem(claimKey, updatedClaim);
+    if (localStorage.getItem(claimKey) !== updatedClaim) {
+      return false;
+    }
+
+    const fencePayload = JSON.stringify({
+      owner: ownerToCheck,
+      ticket: myTicket,
+      updatedAt: preExtendNow,
+    });
+    localStorage.setItem(fenceKey, fencePayload);
+    if (localStorage.getItem(fenceKey) !== fencePayload) {
+      return false;
+    }
+
+    if (Date.now() >= newExpiresAt) {
+      return false;
     }
 
     return true;
@@ -801,10 +849,11 @@ export function releaseCrossTabLock(lockKey: string, lockOwnerId: string): void 
 
 /**
  * Executes a callback with exclusive cross-tab mutual exclusion in localStorage.
- * The acquired claim remains held for the entire execution of `fn()` until `finally` releases it,
- * and ownership/fencing is revalidated before returning so an invalidated owner never reports success.
+ * Uses a finite crash-recoverable lease (default 400 ms) that is revalidated and extended
+ * across critical-section steps, and verifies ownership/fencing before returning so an
+ * expired or superseded owner never commits or reports success.
  */
-export function withCrossTabLock<T>(lockKey: string, fn: () => T, maxWaitMs = 80): T | null {
+export function withCrossTabLock<T>(lockKey: string, fn: () => T, maxWaitMs = 80, ttlMs = 400): T | null {
   if (typeof window === "undefined" || !window.localStorage) {
     return fn();
   }
@@ -818,7 +867,7 @@ export function withCrossTabLock<T>(lockKey: string, fn: () => T, maxWaitMs = 80
       break;
     }
     lastLockStorageWriteError = false;
-    if (tryAcquireCrossTabLock(lockKey, lockOwnerId)) {
+    if (tryAcquireCrossTabLock(lockKey, lockOwnerId, ttlMs)) {
       acquired = true;
       break;
     }
@@ -962,9 +1011,80 @@ export function getNextMigrationOpSeq(meta?: MigrationMeta): number | null {
   return typeof reservedSeq === "number" ? reservedSeq : null;
 }
 
+const BASE_META_SYMBOL = Symbol("palluvo_migration_meta_base");
+
+type MigrationMetaWithBase = MigrationMeta & {
+  [BASE_META_SYMBOL]?: MigrationMeta;
+};
+
+function cloneMigrationMetaSnapshot(meta: MigrationMeta): MigrationMeta {
+  return {
+    migratedCollisionIds: { ...(meta.migratedCollisionIds || {}) },
+    quarantinedCollisionIds: { ...(meta.quarantinedCollisionIds || {}) },
+    quarantinedLegacyBuckets: { ...(meta.quarantinedLegacyBuckets || {}) },
+    tombstonedKeys: { ...(meta.tombstonedKeys || {}) },
+    failedQuarantineKeys: { ...(meta.failedQuarantineKeys || {}) },
+    rekeyedOwnerIds: { ...(meta.rekeyedOwnerIds || {}) },
+    clearedQuarantineKeys: { ...(meta.clearedQuarantineKeys || {}) },
+    unresolvedPhoneAliases: { ...(meta.unresolvedPhoneAliases || {}) },
+    operationSeq: typeof meta.operationSeq === "number" ? meta.operationSeq : 0,
+  };
+}
+
+function attachBaseMigrationMetadata(target: MigrationMeta, baseSource?: MigrationMeta): MigrationMeta {
+  (target as MigrationMetaWithBase)[BASE_META_SYMBOL] = cloneMigrationMetaSnapshot(baseSource || target);
+  return target;
+}
+
+function parseMigrationMetaRaw(raw: string | null): {
+  meta: MigrationMeta;
+  hasLegacyBooleanClears: boolean;
+} {
+  const parsed = raw ? JSON.parse(raw) : {};
+  let maxHistoricalQ = 0;
+  if (parsed.quarantinedLegacyBuckets) {
+    for (const b of Object.values(parsed.quarantinedLegacyBuckets)) {
+      maxHistoricalQ = Math.max(maxHistoricalQ, extractQuarantinedAt(b));
+    }
+  }
+  if (parsed.unresolvedPhoneAliases) {
+    for (const b of Object.values(parsed.unresolvedPhoneAliases)) {
+      maxHistoricalQ = Math.max(maxHistoricalQ, extractQuarantinedAt(b));
+    }
+  }
+
+  let hasLegacyBooleanClears = false;
+  const rawCleared: Record<string, number | boolean> = parsed.clearedQuarantineKeys || {};
+  const upgradedCleared: Record<string, number | boolean> = {};
+  const upgradeBaseTime = Math.max(Date.now(), maxHistoricalQ + 1);
+
+  for (const [k, v] of Object.entries(rawCleared)) {
+    if (typeof v === "number") {
+      upgradedCleared[k] = v;
+    } else if (v === true) {
+      hasLegacyBooleanClears = true;
+      upgradedCleared[k] = upgradeBaseTime;
+    }
+  }
+
+  const meta: MigrationMeta = {
+    migratedCollisionIds: parsed.migratedCollisionIds || {},
+    quarantinedCollisionIds: parsed.quarantinedCollisionIds || {},
+    quarantinedLegacyBuckets: parsed.quarantinedLegacyBuckets || {},
+    tombstonedKeys: parsed.tombstonedKeys || {},
+    failedQuarantineKeys: parsed.failedQuarantineKeys || {},
+    rekeyedOwnerIds: parsed.rekeyedOwnerIds || {},
+    clearedQuarantineKeys: upgradedCleared,
+    unresolvedPhoneAliases: parsed.unresolvedPhoneAliases || {},
+    operationSeq: Math.max(parsed.operationSeq || 0, hasLegacyBooleanClears ? upgradeBaseTime : 0),
+  };
+
+  return { meta, hasLegacyBooleanClears };
+}
+
 export function getMigrationMetadata(): MigrationMeta {
   if (typeof window === "undefined" || !window.localStorage) {
-    return {
+    return attachBaseMigrationMetadata({
       migratedCollisionIds: {},
       quarantinedCollisionIds: {},
       quarantinedLegacyBuckets: {},
@@ -974,57 +1094,19 @@ export function getMigrationMetadata(): MigrationMeta {
       clearedQuarantineKeys: {},
       unresolvedPhoneAliases: {},
       operationSeq: 0,
-    };
+    });
   }
 
   try {
     const raw = localStorage.getItem(MIGRATION_META_KEY);
-    const parsed = raw ? JSON.parse(raw) : {};
-
-    // Scan for historical quarantine timestamps to explicitly order legacy boolean clears
-    let maxHistoricalQ = 0;
-    if (parsed.quarantinedLegacyBuckets) {
-      for (const b of Object.values(parsed.quarantinedLegacyBuckets)) {
-        maxHistoricalQ = Math.max(maxHistoricalQ, extractQuarantinedAt(b));
-      }
-    }
-    if (parsed.unresolvedPhoneAliases) {
-      for (const b of Object.values(parsed.unresolvedPhoneAliases)) {
-        maxHistoricalQ = Math.max(maxHistoricalQ, extractQuarantinedAt(b));
-      }
-    }
-
-    let hasLegacyBooleanClears = false;
-    const rawCleared: Record<string, number | boolean> = parsed.clearedQuarantineKeys || {};
-    const upgradedCleared: Record<string, number | boolean> = {};
-    const upgradeBaseTime = Math.max(Date.now(), maxHistoricalQ + 1);
-
-    for (const [k, v] of Object.entries(rawCleared)) {
-      if (typeof v === "number") {
-        upgradedCleared[k] = v;
-      } else if (v === true) {
-        hasLegacyBooleanClears = true;
-        upgradedCleared[k] = upgradeBaseTime;
-      }
-    }
-
-    const result: MigrationMeta = {
-      migratedCollisionIds: parsed.migratedCollisionIds || {},
-      quarantinedCollisionIds: parsed.quarantinedCollisionIds || {},
-      quarantinedLegacyBuckets: parsed.quarantinedLegacyBuckets || {},
-      tombstonedKeys: parsed.tombstonedKeys || {},
-      failedQuarantineKeys: parsed.failedQuarantineKeys || {},
-      rekeyedOwnerIds: parsed.rekeyedOwnerIds || {},
-      clearedQuarantineKeys: upgradedCleared,
-      unresolvedPhoneAliases: parsed.unresolvedPhoneAliases || {},
-      operationSeq: Math.max(parsed.operationSeq || 0, hasLegacyBooleanClears ? upgradeBaseTime : 0),
-    };
+    const { meta: result, hasLegacyBooleanClears } = parseMigrationMetaRaw(raw);
+    attachBaseMigrationMetadata(result);
 
     if (hasLegacyBooleanClears) {
       try {
         const mergedUpgrade = withCrossTabLock(MIGRATION_LOCK_KEY, () => {
           const latestRaw = localStorage.getItem(MIGRATION_META_KEY);
-          const latestDisk = latestRaw ? JSON.parse(latestRaw) : {};
+          const { meta: latestDisk } = parseMigrationMetaRaw(latestRaw);
           // Merge legacy upgrade with latest disk metadata to prevent dropping concurrent writes
           const merged = mergeMigrationMetadata(latestDisk, result);
           const serializedMerged = JSON.stringify(merged);
@@ -1035,7 +1117,7 @@ export function getMigrationMetadata(): MigrationMeta {
           if (localStorage.getItem(MIGRATION_META_KEY) !== serializedMerged) {
             return null;
           }
-          return merged;
+          return attachBaseMigrationMetadata(merged);
         });
         if (mergedUpgrade) {
           return mergedUpgrade;
@@ -1047,7 +1129,7 @@ export function getMigrationMetadata(): MigrationMeta {
 
     return result;
   } catch {
-    return {
+    return attachBaseMigrationMetadata({
       migratedCollisionIds: {},
       quarantinedCollisionIds: {},
       quarantinedLegacyBuckets: {},
@@ -1057,27 +1139,56 @@ export function getMigrationMetadata(): MigrationMeta {
       clearedQuarantineKeys: {},
       unresolvedPhoneAliases: {},
       operationSeq: 0,
-    };
+    });
   }
 }
 
 export function setMigrationMetadata(meta: MigrationMeta): boolean {
   if (typeof window === "undefined" || !window.localStorage) return false;
   try {
-    const serialized = JSON.stringify(meta);
     const persisted = withCrossTabLock(MIGRATION_LOCK_KEY, () => {
       if (!verifyCrossTabLockOwnership(MIGRATION_LOCK_KEY)) {
         return false;
       }
+
+      // Re-read and merge the latest on-disk metadata inside the critical section before serializing
+      // so concurrent markers added by another tab are never overwritten by a stale snapshot.
+      let latestDisk: MigrationMeta;
+      try {
+        const latestRaw = localStorage.getItem(MIGRATION_META_KEY);
+        latestDisk = parseMigrationMetaRaw(latestRaw).meta;
+      } catch {
+        latestDisk = {
+          migratedCollisionIds: {},
+          quarantinedCollisionIds: {},
+          quarantinedLegacyBuckets: {},
+          tombstonedKeys: {},
+          failedQuarantineKeys: {},
+          rekeyedOwnerIds: {},
+          clearedQuarantineKeys: {},
+          unresolvedPhoneAliases: {},
+          operationSeq: 0,
+        };
+      }
+
+      const merged = mergeMigrationMetadata(latestDisk, meta);
+      const serialized = JSON.stringify(merged);
+
+      // Revalidate ownership and extend lease immediately before committing to localStorage
+      if (!verifyCrossTabLockOwnership(MIGRATION_LOCK_KEY)) {
+        return false;
+      }
+
       localStorage.setItem(MIGRATION_META_KEY, serialized);
       if (localStorage.getItem(MIGRATION_META_KEY) !== serialized) {
         return false;
       }
-      if (typeof meta.operationSeq === "number") {
+
+      if (typeof merged.operationSeq === "number") {
         try {
           const currentReserved = Number(localStorage.getItem(MIGRATION_SEQ_KEY) || 0);
-          if (meta.operationSeq > currentReserved) {
-            const seqStr = String(meta.operationSeq);
+          if (merged.operationSeq > currentReserved) {
+            const seqStr = String(merged.operationSeq);
             localStorage.setItem(MIGRATION_SEQ_KEY, seqStr);
             if (localStorage.getItem(MIGRATION_SEQ_KEY) !== seqStr) {
               return false;
@@ -1087,6 +1198,9 @@ export function setMigrationMetadata(meta: MigrationMeta): boolean {
           return false;
         }
       }
+
+      Object.assign(meta, merged);
+      attachBaseMigrationMetadata(meta, merged);
       return true;
     });
     return persisted === true;
@@ -1099,12 +1213,14 @@ export function setMigrationMetadata(meta: MigrationMeta): boolean {
  * Merges a local migration metadata snapshot with current on-disk migration metadata,
  * ensuring that newly discovered or persisted failure markers (failedQuarantineKeys)
  * are retained until verified/succeeded, preserving quarantine buckets and tombstone markers,
- * while honoring explicitly cleared quarantine state.
+ * while honoring explicitly cleared quarantine state and intentional caller removals.
  */
 export function mergeMigrationMetadata(
   currentDiskMeta: MigrationMeta,
   snapshotMeta: MigrationMeta
 ): MigrationMeta {
+  const baseMeta = (snapshotMeta as MigrationMetaWithBase)?.[BASE_META_SYMBOL];
+
   // Find max historical quarantine timestamp to ensure legacy boolean clears are upgraded with proper ordering semantics
   let maxHistoricalQ = 0;
   for (const meta of [currentDiskMeta, snapshotMeta]) {
@@ -1116,10 +1232,16 @@ export function mergeMigrationMetadata(
   }
   const upgradeBaseTime = Math.max(Date.now(), maxHistoricalQ + 1);
 
-  // 1. Union cleared keys, taking the latest timestamp for each key
+  // 1. Union cleared keys, taking the latest timestamp for each key (unless explicitly deleted from baseMeta)
   const mergedClearedKeys: Record<string, number | boolean> = {};
   for (const [k, v] of Object.entries(currentDiskMeta.clearedQuarantineKeys || {})) {
-    mergedClearedKeys[k] = v === true ? upgradeBaseTime : v;
+    const wasExplicitlyDeletedByCaller =
+      baseMeta?.clearedQuarantineKeys !== undefined &&
+      Object.prototype.hasOwnProperty.call(baseMeta.clearedQuarantineKeys, k) &&
+      !Object.prototype.hasOwnProperty.call(snapshotMeta.clearedQuarantineKeys || {}, k);
+    if (!wasExplicitlyDeletedByCaller) {
+      mergedClearedKeys[k] = v === true ? upgradeBaseTime : v;
+    }
   }
   for (const [k, v] of Object.entries(snapshotMeta.clearedQuarantineKeys || {})) {
     const existingTime = getClearedAtTimestamp(mergedClearedKeys[k], maxHistoricalQ);
@@ -1176,10 +1298,16 @@ export function mergeMigrationMetadata(
     }
   }
 
-  // Also include failed keys from currentDiskMeta if not explicitly cleared by a newer clear
+  // Also include failed keys from currentDiskMeta if not explicitly cleared or resolved by snapshotMeta
   for (const [key, isFailed] of Object.entries(currentDiskMeta.failedQuarantineKeys || {})) {
     if (isFailed && !mergedClearedKeys[key]) {
-      mergedFailedKeys[key] = true;
+      const wasExplicitlyResolvedByCaller =
+        baseMeta?.failedQuarantineKeys !== undefined &&
+        Boolean(baseMeta.failedQuarantineKeys[key]) &&
+        !snapshotMeta.failedQuarantineKeys?.[key];
+      if (!wasExplicitlyResolvedByCaller) {
+        mergedFailedKeys[key] = true;
+      }
     }
   }
 
@@ -1295,10 +1423,19 @@ export function mergeMigrationMetadata(
     }
   }
 
-  const mergedRekeyed: Record<string, string> = {
-    ...(currentDiskMeta.rekeyedOwnerIds || {}),
-    ...(snapshotMeta.rekeyedOwnerIds || {}),
-  };
+  const mergedRekeyed: Record<string, string> = {};
+  for (const [k, v] of Object.entries(currentDiskMeta.rekeyedOwnerIds || {})) {
+    const wasExplicitlyDeletedByCaller =
+      baseMeta?.rekeyedOwnerIds !== undefined &&
+      Object.prototype.hasOwnProperty.call(baseMeta.rekeyedOwnerIds, k) &&
+      !Object.prototype.hasOwnProperty.call(snapshotMeta.rekeyedOwnerIds || {}, k);
+    if (!wasExplicitlyDeletedByCaller) {
+      mergedRekeyed[k] = v;
+    }
+  }
+  for (const [k, v] of Object.entries(snapshotMeta.rekeyedOwnerIds || {})) {
+    mergedRekeyed[k] = v;
+  }
   for (const failedKey of Object.keys(mergedFailedKeys)) {
     if (failedKey.startsWith("retry_migration_")) {
       const sourceId = failedKey.slice("retry_migration_".length);
@@ -1308,7 +1445,29 @@ export function mergeMigrationMetadata(
     }
   }
 
-  return {
+  const mergedUnresolvedPhones: Record<
+    string,
+    {
+      legacyId: string;
+      candidateAccountIds: string[];
+      candidateEmails: string[];
+      quarantinedAt: number;
+    }
+  > = {};
+  for (const [k, v] of Object.entries(currentDiskMeta.unresolvedPhoneAliases || {})) {
+    const wasExplicitlyResolvedByCaller =
+      baseMeta?.unresolvedPhoneAliases !== undefined &&
+      Object.prototype.hasOwnProperty.call(baseMeta.unresolvedPhoneAliases, k) &&
+      !Object.prototype.hasOwnProperty.call(snapshotMeta.unresolvedPhoneAliases || {}, k);
+    if (!wasExplicitlyResolvedByCaller) {
+      mergedUnresolvedPhones[k] = v;
+    }
+  }
+  for (const [k, v] of Object.entries(snapshotMeta.unresolvedPhoneAliases || {})) {
+    mergedUnresolvedPhones[k] = v;
+  }
+
+  const mergedResult: MigrationMeta = {
     migratedCollisionIds: mergedMigratedCollisionIds,
     quarantinedCollisionIds: mergedCollisionIds,
     quarantinedLegacyBuckets: mergedLegacyBuckets,
@@ -1316,16 +1475,15 @@ export function mergeMigrationMetadata(
     failedQuarantineKeys: mergedFailedKeys,
     clearedQuarantineKeys: mergedClearedKeys,
     rekeyedOwnerIds: mergedRekeyed,
-    unresolvedPhoneAliases: {
-      ...(currentDiskMeta.unresolvedPhoneAliases || {}),
-      ...(snapshotMeta.unresolvedPhoneAliases || {}),
-    },
+    unresolvedPhoneAliases: mergedUnresolvedPhones,
     operationSeq: Math.max(
       currentDiskMeta.operationSeq || 0,
       snapshotMeta.operationSeq || 0,
       Date.now()
     ),
   };
+
+  return attachBaseMigrationMetadata(mergedResult, baseMeta || currentDiskMeta);
 }
 
 /**
