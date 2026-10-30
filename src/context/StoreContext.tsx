@@ -1139,6 +1139,49 @@ function sealCrossTabLockCompletionFence(lockKey: string, explicitOwnerId?: stri
   return true;
 }
 
+/**
+ * Releases the owner's sealed claim only while its lease is still valid, and reports failure (so the
+ * caller aborts the commit instead of reporting success) if the lease had expired before the removal
+ * or elapsed by the time the removal was read back. An expired owner never removes the claim: it is
+ * left present, which readers treat as an unfinalized owner and reject.
+ *
+ * Every write that makes the commit durable (staged records, sealed fence, sealed claim) has already
+ * been verified inside the lease window by `sealCrossTabLockCompletionFence`; claim removal only
+ * releases the lock and does not itself authorize any data, so a removal that lands after a
+ * suspension cannot expose anything that was written outside the lease.
+ */
+function finalizeSealedClaimRelease(lockKey: string, lockOwnerId: string): boolean {
+  if (typeof window === "undefined" || !window.localStorage) return true;
+  const claimKey = `${lockKey}_claim_${lockOwnerId}`;
+  try {
+    const rawClaim = localStorage.getItem(claimKey);
+    const claim = rawClaim ? JSON.parse(rawClaim) : null;
+    if (
+      !claim ||
+      claim.owner !== lockOwnerId ||
+      claim.phase !== "sealed" ||
+      typeof claim.expiresAt !== "number" ||
+      Date.now() >= claim.expiresAt
+    ) {
+      return false;
+    }
+    const expiresAt: number = claim.expiresAt;
+    activeClaimKeysForUnload.delete(claimKey);
+    localStorage.removeItem(claimKey);
+    if (localStorage.getItem(claimKey) !== null || Date.now() >= expiresAt) {
+      return false;
+    }
+  } catch {
+    return false;
+  }
+  const pending = pendingPruneAfterRelease.get(lockKey);
+  if (pending && pending.owner === lockOwnerId) {
+    pendingPruneAfterRelease.delete(lockKey);
+    pruneSupersededFencedRecords(lockKey, lockOwnerId, pending.ticket);
+  }
+  return true;
+}
+
 export function releaseCrossTabLock(lockKey: string, lockOwnerId: string): void {
   if (typeof window === "undefined" || !window.localStorage) return;
   const claimKey = `${lockKey}_claim_${lockOwnerId}`;
@@ -1232,6 +1275,15 @@ export function withCrossTabLock<T>(lockKey: string, fn: () => T, maxWaitMs = 80
       return result;
     }
     if (!sealCrossTabLockCompletionFence(lockKey, lockOwnerId)) {
+      if (lockKey === MIGRATION_LOCK_KEY) {
+        abortFencedCommitsForOwner(lockOwnerId);
+      }
+      try {
+        localStorage.removeItem(`${lockKey}_fence_${lockOwnerId}`);
+      } catch {}
+      return null;
+    }
+    if (!finalizeSealedClaimRelease(lockKey, lockOwnerId)) {
       if (lockKey === MIGRATION_LOCK_KEY) {
         abortFencedCommitsForOwner(lockOwnerId);
       }
