@@ -109,18 +109,33 @@ const PRICE_RANGES = [
 ];
 
 interface SearchParamsWatcherProps {
-  onParamsChange: (category: string, q: string, sort: string) => void;
+  onCategoryChange: (category: string) => void;
+  onQueryChange: (q: string) => void;
+  onSortChange: (sort: string) => void;
 }
 
-function SearchParamsWatcher({ onParamsChange }: SearchParamsWatcherProps) {
+function SearchParamsWatcher({
+  onCategoryChange,
+  onQueryChange,
+  onSortChange,
+}: SearchParamsWatcherProps) {
   const searchParams = useSearchParams();
 
+  const category = searchParams.get("category") || "";
+  const q = searchParams.get("q") || "";
+  const sort = searchParams.get("sort") || "featured";
+
   React.useEffect(() => {
-    const category = searchParams.get("category") || "";
-    const q = searchParams.get("q") || "";
-    const sort = searchParams.get("sort") || "featured";
-    onParamsChange(category, q, sort);
-  }, [searchParams, onParamsChange]);
+    onCategoryChange(category);
+  }, [category, onCategoryChange]);
+
+  React.useEffect(() => {
+    onQueryChange(q);
+  }, [q, onQueryChange]);
+
+  React.useEffect(() => {
+    onSortChange(sort);
+  }, [sort, onSortChange]);
 
   return null;
 }
@@ -131,9 +146,20 @@ export function ShopContent() {
   const [searchQuery, setSearchQuery] = useState<string>("");
   const [sortBy, setSortBy] = useState<string>("featured");
 
-  const handleParamsChange = React.useCallback((category: string, q: string, sort: string) => {
+  const lastUrlQRef = React.useRef<string>("");
+
+  const handleCategoryChange = React.useCallback((category: string) => {
     setSelectedCategory(category);
-    setSearchQuery(q);
+  }, []);
+
+  const handleQueryChange = React.useCallback((q: string) => {
+    if (q !== lastUrlQRef.current) {
+      lastUrlQRef.current = q;
+      setSearchQuery(q);
+    }
+  }, []);
+
+  const handleSortChangeFromUrl = React.useCallback((sort: string) => {
     setSortBy(sort);
   }, []);
 
@@ -274,7 +300,11 @@ export function ShopContent() {
     <div className="min-h-screen bg-[#FAF7F2] pb-24 lg:pb-12">
       {/* Isolated Suspense boundary for reading searchParams without dynamic de-opt of the catalog */}
       <Suspense fallback={null}>
-        <SearchParamsWatcher onParamsChange={handleParamsChange} />
+        <SearchParamsWatcher
+          onCategoryChange={handleCategoryChange}
+          onQueryChange={handleQueryChange}
+          onSortChange={handleSortChangeFromUrl}
+        />
       </Suspense>
 
       {/* Floating Back to Top Button */}

@@ -392,7 +392,7 @@ export default function CheckoutPage() {
   if (cart.length === 0) {
     return (
       <div className="min-h-screen bg-[#FAF7F2] py-16 text-center">
-        <h2 className="text-2xl font-serif">Your bag is empty</h2>
+        <h1 className="text-2xl font-serif">Your bag is empty</h1>
         <p className="text-xs text-neutral-600 mt-2">Add products to your bag before proceeding to checkout.</p>
         <Link
           href="/shop"
