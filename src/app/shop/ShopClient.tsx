@@ -461,10 +461,10 @@ export function ShopContent() {
               
               {/* Header */}
               <div className="flex items-center justify-between border-b border-[#E8E2D9] pb-3">
-                <h3 className="font-serif text-base font-semibold text-neutral-900 flex items-center gap-2">
+                <h2 className="font-serif text-base font-semibold text-neutral-900 flex items-center gap-2">
                   <Filter className="w-4 h-4 text-[#541920]" />
                   <span>Filters</span>
-                </h3>
+                </h2>
                 {activeFiltersCount > 0 && (
                   <button
                     onClick={clearAllFilters}
@@ -476,12 +476,18 @@ export function ShopContent() {
               </div>
 
               {/* Sort By Section */}
-              <div>
-                <h4 className="text-xs font-semibold uppercase tracking-wider text-neutral-800 mb-2.5 flex items-center gap-1.5">
-                  <ArrowUpDown className="w-3.5 h-3.5 text-[#541920]" />
-                  <span>Sort By</span>
-                </h4>
-                <div className="space-y-1">
+              <fieldset>
+                <legend id="desktop-sort-heading" className="w-full">
+                  <h3 className="text-xs font-semibold uppercase tracking-wider text-neutral-800 mb-2.5 flex items-center gap-1.5">
+                    <ArrowUpDown className="w-3.5 h-3.5 text-[#541920]" />
+                    <span>Sort By</span>
+                  </h3>
+                </legend>
+                <div
+                  role="radiogroup"
+                  aria-labelledby="desktop-sort-heading"
+                  className="space-y-1"
+                >
                   {SORT_OPTIONS.map((opt) => {
                     const isSelected = sortBy === opt.value;
                     return (
@@ -503,13 +509,13 @@ export function ShopContent() {
                     );
                   })}
                 </div>
-              </div>
+              </fieldset>
 
               {/* Categories */}
               <div className="border-t border-[#E8E2D9] pt-4">
-                <h4 className="text-xs font-semibold uppercase tracking-wider text-neutral-800 mb-2.5">
+                <h3 className="text-xs font-semibold uppercase tracking-wider text-neutral-800 mb-2.5">
                   Category
-                </h4>
+                </h3>
                 <div className="space-y-1.5">
                   {CATEGORIES.map((cat) => {
                     const isSelected = isCategoryActive(selectedCategory, cat);
@@ -542,9 +548,9 @@ export function ShopContent() {
 
               {/* Price Ranges */}
               <div className="border-t border-[#E8E2D9] pt-4">
-                <h4 className="text-xs font-semibold uppercase tracking-wider text-neutral-800 mb-2.5">
+                <h3 className="text-xs font-semibold uppercase tracking-wider text-neutral-800 mb-2.5">
                   Price
-                </h4>
+                </h3>
                 <div className="space-y-1.5">
                   {PRICE_RANGES.map((range, idx) => (
                     <label
@@ -571,9 +577,9 @@ export function ShopContent() {
 
               {/* Fabric */}
               <div className="border-t border-[#E8E2D9] pt-4">
-                <h4 className="text-xs font-semibold uppercase tracking-wider text-neutral-800 mb-2.5">
+                <h3 className="text-xs font-semibold uppercase tracking-wider text-neutral-800 mb-2.5">
                   Fabric & Weave
-                </h4>
+                </h3>
                 <div className="space-y-1.5">
                   {FABRICS.map((fabric) => {
                     const count = getFabricItemCount(fabric, productsForFabricCounts);
@@ -605,9 +611,9 @@ export function ShopContent() {
 
               {/* Occasion */}
               <div className="border-t border-[#E8E2D9] pt-4">
-                <h4 className="text-xs font-semibold uppercase tracking-wider text-neutral-800 mb-2.5">
+                <h3 className="text-xs font-semibold uppercase tracking-wider text-neutral-800 mb-2.5">
                   Occasion
-                </h4>
+                </h3>
                 <div className="space-y-1.5">
                   {OCCASIONS.map((occ) => {
                     const count = getOccasionItemCount(occ, productsForOccasionCounts);
@@ -641,7 +647,10 @@ export function ShopContent() {
           </aside>
 
           {/* Product Grid */}
-          <div className="lg:col-span-3">
+          <section aria-labelledby="shop-results-heading" className="lg:col-span-3">
+            <h2 id="shop-results-heading" className="sr-only">
+              {displayCategoryName ? `${displayCategoryName} Collection` : "Product Catalog"}
+            </h2>
             {filteredProducts.length === 0 ? (
               <div className="bg-white p-12 rounded-sm border border-[#E8E2D9] text-center space-y-4">
                 <div className="w-16 h-16 mx-auto rounded-full bg-[#F4EFE6] flex items-center justify-center text-[#541920]">
@@ -669,7 +678,7 @@ export function ShopContent() {
                 ))}
               </div>
             )}
-          </div>
+          </section>
         </div>
       </div>
 
@@ -694,11 +703,11 @@ export function ShopContent() {
               
               <div className="p-4 border-b border-[#E8E2D9] flex items-center justify-between bg-[#F4EFE6]">
                 <div>
-                  <h3 id="mobile-filters-title" className="font-serif text-base font-semibold">
+                  <h2 id="mobile-filters-title" className="font-serif text-base font-semibold">
                     {selectedCategory && selectedCategory.toLowerCase().includes("saree")
                       ? "Filter Sarees"
                       : "Filter Products"}
-                  </h3>
+                  </h2>
                   <p className="text-[11px] text-neutral-600 mt-0.5">
                     Showing {filteredProducts.length} {filteredProducts.length === 1 ? (selectedCategory?.toLowerCase().includes("saree") ? "saree" : "product") : (selectedCategory?.toLowerCase().includes("saree") ? "sarees" : "products")}
                   </p>
@@ -715,12 +724,18 @@ export function ShopContent() {
 
               <div className="p-5 overflow-y-auto space-y-6 flex-1">
                 {/* Sort By Section */}
-                <div>
-                  <h4 className="text-xs font-semibold uppercase tracking-wider text-neutral-800 mb-2.5 flex items-center gap-1.5">
-                    <ArrowUpDown className="w-3.5 h-3.5 text-[#541920]" />
-                    <span>Sort By</span>
-                  </h4>
-                  <div className="space-y-1">
+                <fieldset>
+                  <legend id="mobile-sort-heading" className="w-full">
+                    <h3 className="text-xs font-semibold uppercase tracking-wider text-neutral-800 mb-2.5 flex items-center gap-1.5">
+                      <ArrowUpDown className="w-3.5 h-3.5 text-[#541920]" />
+                      <span>Sort By</span>
+                    </h3>
+                  </legend>
+                  <div
+                    role="radiogroup"
+                    aria-labelledby="mobile-sort-heading"
+                    className="space-y-1"
+                  >
                     {SORT_OPTIONS.map((opt) => {
                       const isSelected = sortBy === opt.value;
                       return (
@@ -745,13 +760,13 @@ export function ShopContent() {
                       );
                     })}
                   </div>
-                </div>
+                </fieldset>
 
                 {/* Category */}
                 <div className="border-t border-[#E8E2D9] pt-4">
-                  <h4 className="text-xs font-semibold uppercase tracking-wider text-neutral-800 mb-2">
+                  <h3 className="text-xs font-semibold uppercase tracking-wider text-neutral-800 mb-2">
                     Category
-                  </h4>
+                  </h3>
                   <div className="space-y-1">
                     {CATEGORIES.map((cat) => {
                       const isSelected = isCategoryActive(selectedCategory, cat);
@@ -787,9 +802,9 @@ export function ShopContent() {
 
                 {/* Price */}
                 <div className="border-t border-[#E8E2D9] pt-4">
-                  <h4 className="text-xs font-semibold uppercase tracking-wider text-neutral-800 mb-2">
+                  <h3 className="text-xs font-semibold uppercase tracking-wider text-neutral-800 mb-2">
                     Price Range
-                  </h4>
+                  </h3>
                   <div className="space-y-1">
                     {PRICE_RANGES.map((range, idx) => (
                       <label
@@ -816,9 +831,9 @@ export function ShopContent() {
 
                 {/* Fabric */}
                 <div className="border-t border-[#E8E2D9] pt-4">
-                  <h4 className="text-xs font-semibold uppercase tracking-wider text-neutral-800 mb-2">
+                  <h3 className="text-xs font-semibold uppercase tracking-wider text-neutral-800 mb-2">
                     Fabric
-                  </h4>
+                  </h3>
                   <div className="space-y-1">
                     {FABRICS.map((fabric) => {
                       const count = getFabricItemCount(fabric, productsForFabricCounts);
@@ -853,9 +868,9 @@ export function ShopContent() {
 
                 {/* Occasion */}
                 <div className="border-t border-[#E8E2D9] pt-4">
-                  <h4 className="text-xs font-semibold uppercase tracking-wider text-neutral-800 mb-2">
+                  <h3 className="text-xs font-semibold uppercase tracking-wider text-neutral-800 mb-2">
                     Occasion
-                  </h4>
+                  </h3>
                   <div className="space-y-1">
                     {OCCASIONS.map((occ) => {
                       const count = getOccasionItemCount(occ, productsForOccasionCounts);
