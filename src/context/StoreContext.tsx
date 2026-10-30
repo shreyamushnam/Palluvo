@@ -549,19 +549,27 @@ export function tryAcquireCrossTabLock(lockKey: string, lockOwnerId: string, ttl
   const evictExpiredClaimRecord = (expiredClaimKey: string, expiredOwner?: string) => {
     const ownerId = expiredOwner || expiredClaimKey.slice(claimPrefix.length);
     if (ownerId) {
-      // Because a commit is only finalized by removing claimKey BEFORE lease expiry,
-      // any owner whose claimKey is still present and expired never completed sealing.
-      if (lockKey === MIGRATION_LOCK_KEY) {
+      // A "final" fence is a durable, verified commit: keep its records and only drop the stale claim.
+      let finalCommit = false;
+      try {
+        const rawFence = localStorage.getItem(`${lockKey}_fence_${ownerId}`);
+        const parsedFence = rawFence ? JSON.parse(rawFence) : null;
+        finalCommit = isFinalCompletionFence(parsedFence, ownerId, parsedFence?.ticket);
+      } catch {}
+      if (!finalCommit) {
+        // Expired owner without a "final" fence never completed: abort its staged records and fence.
+        if (lockKey === MIGRATION_LOCK_KEY) {
+          try {
+            localStorage.removeItem(`${MIGRATION_META_KEY}_commit_${ownerId}`);
+          } catch {}
+          try {
+            localStorage.removeItem(`${MIGRATION_SEQ_KEY}_commit_${ownerId}`);
+          } catch {}
+        }
         try {
-          localStorage.removeItem(`${MIGRATION_META_KEY}_commit_${ownerId}`);
-        } catch {}
-        try {
-          localStorage.removeItem(`${MIGRATION_SEQ_KEY}_commit_${ownerId}`);
+          localStorage.removeItem(`${lockKey}_fence_${ownerId}`);
         } catch {}
       }
-      try {
-        localStorage.removeItem(`${lockKey}_fence_${ownerId}`);
-      } catch {}
     }
     try {
       localStorage.removeItem(expiredClaimKey);
@@ -884,8 +892,6 @@ function abortFencedCommitsForOwner(lockOwnerId: string): void {
   } catch {}
 }
 
-const pendingPruneAfterRelease = new Map<string, { owner: string; ticket: number }>();
-
 /**
  * Prunes lower-ticket per-owner commit and completion-fence keys ONLY AFTER the current owner's
  * completion fence (`${lockKey}_fence_${lockOwnerId}`) has been durably persisted and verified.
@@ -964,14 +970,11 @@ function pruneSupersededFencedRecords(lockKey: string, lockOwnerId: string, seal
 }
 
 /**
- * Durably seals the current owner's completion fence (`${lockKey}_fence_${lockOwnerId}`) using a
- * two-phase post-write timestamp proof (`"sealing"` -> post-write timestamp capture -> `"sealed"`),
- * rewrites `claimKey` as a finite-lease `"sealed"` claim (never an unconditional removal) and
- * verifies that write landed inside the lease window. Pruning of superseded lower-ticket records is
- * deferred to `releaseCrossTabLock`, after the sealed claim has been removed.
- *
- * Any crash while `claimKey` is still present leaves it to expire, which invalidates the incomplete
- * fence/commit (prior committed records remain intact) without relying on a pre-write timestamp.
+ * Durably seals the current owner's completion fence (`${lockKey}_fence_${lockOwnerId}`):
+ * `"sealing"` -> post-write timestamp capture -> `"sealed"` -> post-write lease check -> `"final"`.
+ * `"final"` records a fact already verified in-lease and is the only state other contexts accept.
+ * The claim is never part of authorization, so removing it (in-lease or not) cannot validate a commit.
+ * Superseded lower-ticket records are pruned only after `"final"` is durable and verified.
  */
 function sealCrossTabLockCompletionFence(lockKey: string, explicitOwnerId?: string): boolean {
   if (typeof window === "undefined" || !window.localStorage) return true;
@@ -1009,6 +1012,10 @@ function sealCrossTabLockCompletionFence(lockKey: string, explicitOwnerId?: stri
   }
 
   // Phase 1: Write unsealed "sealing" fence record (no pre-write timestamp)
+  const ownMetaCommitKey = `${MIGRATION_META_KEY}_commit_${lockOwnerId}`;
+  const ownSeqCommitKey = `${MIGRATION_SEQ_KEY}_commit_${lockOwnerId}`;
+  const hadMetaCommit = lockKey === MIGRATION_LOCK_KEY && localStorage.getItem(ownMetaCommitKey) !== null;
+  const hadSeqCommit = lockKey === MIGRATION_LOCK_KEY && localStorage.getItem(ownSeqCommitKey) !== null;
   const sealingPayload = JSON.stringify({
     owner: lockOwnerId,
     ticket: myTicket,
@@ -1071,31 +1078,61 @@ function sealCrossTabLockCompletionFence(lockKey: string, explicitOwnerId?: stri
     return false;
   }
 
-  // Phase 3: Finalize by REWRITING (never removing) the claim as a "sealed" claim that keeps its
-  // finite lease. The claim stays present until releaseCrossTabLock removes it, so a tab that is
-  // suspended here and resumes after expiry can only re-write an already-expired claim record;
-  // readers treat any present-but-expired claim as an unfinalized owner and reject its commit.
-  // Finalization counts only once the post-write check below proves the write landed in-window.
-  let currentClaimExpiresAt = 0;
-  let currentClaimAcquiredAt = 0;
+  // Phase 3: The check above ran AFTER the "sealed" fence write completed, so it proves that every
+  // covered write (staged records, "sealing" fence, "sealed" fence) landed inside the lease. Record
+  // that verified fact as a "final" fence. "final" is the ONLY state readers accept from another
+  // context; claim presence/absence never authorizes a commit.
+  //
+  // If this tab is suspended here and the lease expires, any other context that observes the expired
+  // claim before "final" lands aborts the staged records (see isFencedCommitRecordValid /
+  // evictExpiredClaimRecord), so a late "final" then has nothing to authorize. If nobody observed the
+  // expiry, nobody could have acted on the opposite outcome, and the commit linearizes at the verified
+  // point above.
+  const finalPayload = JSON.stringify({
+    owner: lockOwnerId,
+    ticket: myTicket,
+    phase: "final",
+    leaseExpiresAt: sealLeaseExpiresAt,
+    verifiedAfterWriteAt,
+  });
   try {
-    const rawCurrentClaim = localStorage.getItem(claimKey);
-    const currentClaim = rawCurrentClaim ? JSON.parse(rawCurrentClaim) : null;
+    localStorage.setItem(ownerFenceKey, finalPayload);
+    if (localStorage.getItem(ownerFenceKey) !== finalPayload) {
+      try {
+        localStorage.removeItem(ownerFenceKey);
+      } catch {}
+      return false;
+    }
+  } catch {
+    try {
+      localStorage.removeItem(ownerFenceKey);
+    } catch {}
+    return false;
+  }
+
+  // Report success only if this owner still held an unexpired claim AFTER "final" landed and the
+  // staged records still exist. Any evictor must observe the claim as expired, which happens strictly
+  // after this check, so it will then see "final" and keep the records.
+  try {
+    const rawClaimAfter = localStorage.getItem(claimKey);
+    const claimAfter = rawClaimAfter ? JSON.parse(rawClaimAfter) : null;
+    const stagedPresent =
+      (!hadMetaCommit || localStorage.getItem(ownMetaCommitKey) !== null) &&
+      (!hadSeqCommit || localStorage.getItem(ownSeqCommitKey) !== null);
     if (
-      !currentClaim ||
-      currentClaim.owner !== lockOwnerId ||
-      currentClaim.phase !== "claimed" ||
-      currentClaim.ticket !== myTicket ||
-      typeof currentClaim.expiresAt !== "number" ||
-      Date.now() >= currentClaim.expiresAt
+      !claimAfter ||
+      claimAfter.owner !== lockOwnerId ||
+      claimAfter.ticket !== myTicket ||
+      typeof claimAfter.expiresAt !== "number" ||
+      Date.now() >= claimAfter.expiresAt ||
+      !stagedPresent ||
+      localStorage.getItem(ownerFenceKey) !== finalPayload
     ) {
       try {
         localStorage.removeItem(ownerFenceKey);
       } catch {}
       return false;
     }
-    currentClaimExpiresAt = currentClaim.expiresAt;
-    currentClaimAcquiredAt = typeof currentClaim.acquiredAt === "number" ? currentClaim.acquiredAt : 0;
   } catch {
     try {
       localStorage.removeItem(ownerFenceKey);
@@ -1103,83 +1140,32 @@ function sealCrossTabLockCompletionFence(lockKey: string, explicitOwnerId?: stri
     return false;
   }
 
-  const sealedClaimPayload = JSON.stringify({
-    owner: lockOwnerId,
-    phase: "sealed",
-    ticket: myTicket,
-    acquiredAt: currentClaimAcquiredAt,
-    expiresAt: currentClaimExpiresAt,
-  });
-  try {
-    localStorage.setItem(claimKey, sealedClaimPayload);
-    if (localStorage.getItem(claimKey) !== sealedClaimPayload) {
-      try {
-        localStorage.removeItem(ownerFenceKey);
-      } catch {}
-      return false;
-    }
-  } catch {
-    try {
-      localStorage.removeItem(ownerFenceKey);
-    } catch {}
-    return false;
-  }
-
-  if (Date.now() >= currentClaimExpiresAt || localStorage.getItem(ownerFenceKey) !== sealedPayload) {
-    try {
-      localStorage.removeItem(ownerFenceKey);
-    } catch {}
-    return false;
-  }
-
-  // Phase 4 (pruning of superseded lower-ticket records) is deferred to releaseCrossTabLock, AFTER
-  // the sealed claim is removed. A crash before then leaves a present sealed claim that expires and
-  // rejects this commit while every prior committed record is still intact.
-  pendingPruneAfterRelease.set(lockKey, { owner: lockOwnerId, ticket: myTicket });
+  // The new commit is durably final: superseded lower-ticket records can be pruned now.
+  pruneSupersededFencedRecords(lockKey, lockOwnerId, myTicket);
   return true;
 }
 
-/**
- * Releases the owner's sealed claim only while its lease is still valid, and reports failure (so the
- * caller aborts the commit instead of reporting success) if the lease had expired before the removal
- * or elapsed by the time the removal was read back. An expired owner never removes the claim: it is
- * left present, which readers treat as an unfinalized owner and reject.
- *
- * Every write that makes the commit durable (staged records, sealed fence, sealed claim) has already
- * been verified inside the lease window by `sealCrossTabLockCompletionFence`; claim removal only
- * releases the lock and does not itself authorize any data, so a removal that lands after a
- * suspension cannot expose anything that was written outside the lease.
- */
-function finalizeSealedClaimRelease(lockKey: string, lockOwnerId: string): boolean {
-  if (typeof window === "undefined" || !window.localStorage) return true;
-  const claimKey = `${lockKey}_claim_${lockOwnerId}`;
-  try {
-    const rawClaim = localStorage.getItem(claimKey);
-    const claim = rawClaim ? JSON.parse(rawClaim) : null;
-    if (
-      !claim ||
-      claim.owner !== lockOwnerId ||
-      claim.phase !== "sealed" ||
-      typeof claim.expiresAt !== "number" ||
-      Date.now() >= claim.expiresAt
-    ) {
-      return false;
-    }
-    const expiresAt: number = claim.expiresAt;
-    activeClaimKeysForUnload.delete(claimKey);
-    localStorage.removeItem(claimKey);
-    if (localStorage.getItem(claimKey) !== null || Date.now() >= expiresAt) {
-      return false;
-    }
-  } catch {
-    return false;
-  }
-  const pending = pendingPruneAfterRelease.get(lockKey);
-  if (pending && pending.owner === lockOwnerId) {
-    pendingPruneAfterRelease.delete(lockKey);
-    pruneSupersededFencedRecords(lockKey, lockOwnerId, pending.ticket);
-  }
-  return true;
+/** True when `fence` is a complete, in-lease `"final"` completion fence for owner/ticket. */
+function isFinalCompletionFence(fence: unknown, owner: string, ticket: unknown): boolean {
+  if (!fence || typeof fence !== "object") return false;
+  const f = fence as {
+    owner?: unknown;
+    ticket?: unknown;
+    phase?: unknown;
+    leaseExpiresAt?: unknown;
+    verifiedAfterWriteAt?: unknown;
+  };
+  return (
+    f.owner === owner &&
+    f.ticket === ticket &&
+    f.phase === "final" &&
+    typeof f.leaseExpiresAt === "number" &&
+    Number.isFinite(f.leaseExpiresAt) &&
+    typeof f.verifiedAfterWriteAt === "number" &&
+    Number.isFinite(f.verifiedAfterWriteAt) &&
+    f.verifiedAfterWriteAt > 0 &&
+    f.verifiedAfterWriteAt < f.leaseExpiresAt
+  );
 }
 
 export function releaseCrossTabLock(lockKey: string, lockOwnerId: string): void {
@@ -1205,23 +1191,27 @@ export function releaseCrossTabLock(lockKey: string, lockOwnerId: string): void 
       }
     }
   } catch {}
-  let claimRemoved = true;
+  // Claim removal never authorizes anything (readers require a "final" fence). It is still skipped
+  // while a non-final fence of ours remains (e.g. failure cleanup could not delete it), so the
+  // claim stays as expired-owner evidence and the leftover fence/records are aborted on expiry.
+  let removeClaim = true;
   try {
-    localStorage.removeItem(claimKey);
-    claimRemoved = localStorage.getItem(claimKey) === null;
+    const rawOwnFence = localStorage.getItem(ownerFenceKey);
+    if (rawOwnFence !== null) {
+      const parsedOwnFence = JSON.parse(rawOwnFence);
+      removeClaim = isFinalCompletionFence(parsedOwnFence, lockOwnerId, parsedOwnFence?.ticket);
+    }
   } catch {
-    claimRemoved = false;
+    removeClaim = false;
+  }
+  if (removeClaim) {
+    try {
+      localStorage.removeItem(claimKey);
+    } catch {}
   }
   try {
     localStorage.removeItem(`${lockKey}_intent_${lockOwnerId}`);
   } catch {}
-  const pendingPrune = pendingPruneAfterRelease.get(lockKey);
-  if (pendingPrune && pendingPrune.owner === lockOwnerId) {
-    pendingPruneAfterRelease.delete(lockKey);
-    if (claimRemoved) {
-      pruneSupersededFencedRecords(lockKey, lockOwnerId, pendingPrune.ticket);
-    }
-  }
 }
 
 /**
@@ -1283,15 +1273,6 @@ export function withCrossTabLock<T>(lockKey: string, fn: () => T, maxWaitMs = 80
       } catch {}
       return null;
     }
-    if (!finalizeSealedClaimRelease(lockKey, lockOwnerId)) {
-      if (lockKey === MIGRATION_LOCK_KEY) {
-        abortFencedCommitsForOwner(lockOwnerId);
-      }
-      try {
-        localStorage.removeItem(`${lockKey}_fence_${lockOwnerId}`);
-      } catch {}
-      return null;
-    }
     verifiedSuccess = true;
     return result;
   } finally {
@@ -1330,14 +1311,12 @@ function isLocalStorageReadable(): boolean {
 }
 
 /**
- * Checks whether a per-owner fenced commit record is valid and was committed before its owner's
- * lock lease expired:
- * 1. If `${MIGRATION_LOCK_KEY}_claim_${owner}` is still present in localStorage, the owner has not
- *    completed sealing. If that claim is expired, the incomplete commit and fence are aborted; if
- *    unexpired, only the active in-memory owner may observe its own staged record.
- * 2. Once `claimKey` has been removed, a complete `"sealed"` completion fence with numeric
- *    `leaseExpiresAt` and `verifiedAfterWriteAt` (`verifiedAfterWriteAt < leaseExpiresAt`) is
- *    required. Legacy or incomplete fences lacking full lease proof are rejected.
+ * Checks whether a per-owner fenced commit record is valid:
+ * 1. A complete `"final"` completion fence (finite `leaseExpiresAt` and `verifiedAfterWriteAt`,
+ *    `verifiedAfterWriteAt < leaseExpiresAt`) for the same owner/ticket is required for any reader
+ *    other than the in-memory owner. Legacy, `"sealing"` or `"sealed"` fences are not accepted.
+ * 2. Otherwise only the in-memory owner holding an unexpired claim may read its own staged record.
+ * 3. An expired or absent claim without a `"final"` fence aborts the staged records and fence.
  */
 function isFencedCommitRecordValid(
   record: {
@@ -1355,7 +1334,17 @@ function isFencedCommitRecordValid(
   const claimKey = `${MIGRATION_LOCK_KEY}_claim_${record.owner}`;
   const ownerFenceKey = `${MIGRATION_LOCK_KEY}_fence_${record.owner}`;
   try {
-    // 1. If the owner's claim key is still in localStorage, the commit was not finalized via Phase 3 claim removal
+    const rawOwnerFence = localStorage.getItem(ownerFenceKey);
+    const parsedFence = rawOwnerFence ? JSON.parse(rawOwnerFence) : null;
+
+    // 1. A complete "final" fence is the only cross-context proof of a commit. It is written only
+    //    after a post-write check proved every covered write landed inside the owner's lease.
+    if (isFinalCompletionFence(parsedFence, record.owner, record.ticket)) {
+      return true;
+    }
+
+    // 2. Not final. The in-memory owner may still read its own staged records while it holds an
+    //    unexpired claim; another tab's unexpired claim means that commit is still in progress.
     const rawClaim = localStorage.getItem(claimKey);
     if (rawClaim) {
       const parsedClaim = JSON.parse(rawClaim);
@@ -1365,55 +1354,27 @@ function isFencedCommitRecordValid(
           : parsedClaim && typeof parsedClaim.acquiredAt === "number"
           ? parsedClaim.acquiredAt + 400
           : 0;
-      if (expiresAt <= now) {
-        // Owner crashed or expired before finalizing claim removal; abort incomplete commit and fence
-        abortFencedCommitsForOwner(record.owner);
-        try {
-          localStorage.removeItem(ownerFenceKey);
-        } catch {}
-        try {
-          localStorage.removeItem(claimKey);
-        } catch {}
-        return false;
+      if (expiresAt > now) {
+        const active = activeLockTickets.get(MIGRATION_LOCK_KEY);
+        return !!active && active.owner === record.owner;
       }
-      const active = activeLockTickets.get(MIGRATION_LOCK_KEY);
-      if (!active || active.owner !== record.owner) {
-        // Another tab is still mid-critical-section and has not sealed yet
-        return false;
-      }
-      return true;
     }
 
-    // 2. Claim key was removed: require a complete "sealed" completion fence with full post-write lease proof
-    const rawOwnerFence = localStorage.getItem(ownerFenceKey);
-    if (!rawOwnerFence) {
-      return false;
-    }
-    const parsedFence = JSON.parse(rawOwnerFence);
-    if (
-      !parsedFence ||
-      parsedFence.owner !== record.owner ||
-      parsedFence.ticket !== record.ticket ||
-      parsedFence.phase !== "sealed" ||
-      typeof parsedFence.leaseExpiresAt !== "number" ||
-      !Number.isFinite(parsedFence.leaseExpiresAt) ||
-      typeof parsedFence.verifiedAfterWriteAt !== "number" ||
-      !Number.isFinite(parsedFence.verifiedAfterWriteAt) ||
-      parsedFence.verifiedAfterWriteAt <= 0 ||
-      parsedFence.verifiedAfterWriteAt >= parsedFence.leaseExpiresAt
-    ) {
-      // Reject unverifiable or legacy completion fence lacking complete lease proof
-      abortFencedCommitsForOwner(record.owner);
+    // 3. Claim expired or absent without a "final" fence: the owner never finalized. Claim removal
+    //    alone never authorizes a commit, so abort the staged records, the fence and any stale claim.
+    abortFencedCommitsForOwner(record.owner);
+    try {
+      localStorage.removeItem(ownerFenceKey);
+    } catch {}
+    if (rawClaim) {
       try {
-        localStorage.removeItem(ownerFenceKey);
+        localStorage.removeItem(claimKey);
       } catch {}
-      return false;
     }
+    return false;
   } catch {
     return false;
   }
-
-  return true;
 }
 
 function readCommittedMigrationMetaRaw(): string | null {
