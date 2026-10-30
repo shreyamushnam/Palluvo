@@ -884,6 +884,8 @@ function abortFencedCommitsForOwner(lockOwnerId: string): void {
   } catch {}
 }
 
+const pendingPruneAfterRelease = new Map<string, { owner: string; ticket: number }>();
+
 /**
  * Prunes lower-ticket per-owner commit and completion-fence keys ONLY AFTER the current owner's
  * completion fence (`${lockKey}_fence_${lockOwnerId}`) has been durably persisted and verified.
@@ -964,12 +966,12 @@ function pruneSupersededFencedRecords(lockKey: string, lockOwnerId: string, seal
 /**
  * Durably seals the current owner's completion fence (`${lockKey}_fence_${lockOwnerId}`) using a
  * two-phase post-write timestamp proof (`"sealing"` -> post-write timestamp capture -> `"sealed"`),
- * removes `claimKey` while the lease is still active to finalize the commit atomically, verifies
- * post-removal lease continuity, and only then prunes superseded lower-ticket records.
+ * rewrites `claimKey` as a finite-lease `"sealed"` claim (never an unconditional removal) and
+ * verifies that write landed inside the lease window. Pruning of superseded lower-ticket records is
+ * deferred to `releaseCrossTabLock`, after the sealed claim has been removed.
  *
- * Because `claimKey` is only removed AFTER `"sealed"` fence verification succeeds, any crash before
- * post-write verification leaves `claimKey` in `localStorage` where it expires and invalidates the
- * incomplete fence/commit without ever relying on a pre-write timestamp.
+ * Any crash while `claimKey` is still present leaves it to expire, which invalidates the incomplete
+ * fence/commit (prior committed records remain intact) without relying on a pre-write timestamp.
  */
 function sealCrossTabLockCompletionFence(lockKey: string, explicitOwnerId?: string): boolean {
   if (typeof window === "undefined" || !window.localStorage) return true;
@@ -1069,11 +1071,31 @@ function sealCrossTabLockCompletionFence(lockKey: string, explicitOwnerId?: stri
     return false;
   }
 
-  // Phase 3: Remove claimKey to transition atomically from held-claim to sealed-commit state,
-  // and verify that removal completed before sealLeaseExpiresAt elapsed.
-  activeClaimKeysForUnload.delete(claimKey);
+  // Phase 3: Finalize by REWRITING (never removing) the claim as a "sealed" claim that keeps its
+  // finite lease. The claim stays present until releaseCrossTabLock removes it, so a tab that is
+  // suspended here and resumes after expiry can only re-write an already-expired claim record;
+  // readers treat any present-but-expired claim as an unfinalized owner and reject its commit.
+  // Finalization counts only once the post-write check below proves the write landed in-window.
+  let currentClaimExpiresAt = 0;
+  let currentClaimAcquiredAt = 0;
   try {
-    localStorage.removeItem(claimKey);
+    const rawCurrentClaim = localStorage.getItem(claimKey);
+    const currentClaim = rawCurrentClaim ? JSON.parse(rawCurrentClaim) : null;
+    if (
+      !currentClaim ||
+      currentClaim.owner !== lockOwnerId ||
+      currentClaim.phase !== "claimed" ||
+      currentClaim.ticket !== myTicket ||
+      typeof currentClaim.expiresAt !== "number" ||
+      Date.now() >= currentClaim.expiresAt
+    ) {
+      try {
+        localStorage.removeItem(ownerFenceKey);
+      } catch {}
+      return false;
+    }
+    currentClaimExpiresAt = currentClaim.expiresAt;
+    currentClaimAcquiredAt = typeof currentClaim.acquiredAt === "number" ? currentClaim.acquiredAt : 0;
   } catch {
     try {
       localStorage.removeItem(ownerFenceKey);
@@ -1081,19 +1103,39 @@ function sealCrossTabLockCompletionFence(lockKey: string, explicitOwnerId?: stri
     return false;
   }
 
-  if (
-    Date.now() >= sealLeaseExpiresAt ||
-    localStorage.getItem(claimKey) !== null ||
-    localStorage.getItem(ownerFenceKey) !== sealedPayload
-  ) {
+  const sealedClaimPayload = JSON.stringify({
+    owner: lockOwnerId,
+    phase: "sealed",
+    ticket: myTicket,
+    acquiredAt: currentClaimAcquiredAt,
+    expiresAt: currentClaimExpiresAt,
+  });
+  try {
+    localStorage.setItem(claimKey, sealedClaimPayload);
+    if (localStorage.getItem(claimKey) !== sealedClaimPayload) {
+      try {
+        localStorage.removeItem(ownerFenceKey);
+      } catch {}
+      return false;
+    }
+  } catch {
     try {
       localStorage.removeItem(ownerFenceKey);
     } catch {}
     return false;
   }
 
-  // Phase 4: Only after the new commit is durably sealed and claimKey is removed, prune lower-ticket records
-  pruneSupersededFencedRecords(lockKey, lockOwnerId, myTicket);
+  if (Date.now() >= currentClaimExpiresAt || localStorage.getItem(ownerFenceKey) !== sealedPayload) {
+    try {
+      localStorage.removeItem(ownerFenceKey);
+    } catch {}
+    return false;
+  }
+
+  // Phase 4 (pruning of superseded lower-ticket records) is deferred to releaseCrossTabLock, AFTER
+  // the sealed claim is removed. A crash before then leaves a present sealed claim that expires and
+  // rejects this commit while every prior committed record is still intact.
+  pendingPruneAfterRelease.set(lockKey, { owner: lockOwnerId, ticket: myTicket });
   return true;
 }
 
@@ -1120,12 +1162,23 @@ export function releaseCrossTabLock(lockKey: string, lockOwnerId: string): void 
       }
     }
   } catch {}
+  let claimRemoved = true;
   try {
     localStorage.removeItem(claimKey);
-  } catch {}
+    claimRemoved = localStorage.getItem(claimKey) === null;
+  } catch {
+    claimRemoved = false;
+  }
   try {
     localStorage.removeItem(`${lockKey}_intent_${lockOwnerId}`);
   } catch {}
+  const pendingPrune = pendingPruneAfterRelease.get(lockKey);
+  if (pendingPrune && pendingPrune.owner === lockOwnerId) {
+    pendingPruneAfterRelease.delete(lockKey);
+    if (claimRemoved) {
+      pruneSupersededFencedRecords(lockKey, lockOwnerId, pendingPrune.ticket);
+    }
+  }
 }
 
 /**
