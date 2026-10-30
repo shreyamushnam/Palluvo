@@ -2,7 +2,7 @@
 
 import React, { useState, useMemo } from "react";
 import Link from "next/link";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { Filter, X, SlidersHorizontal, Check, Search, ArrowUpDown } from "lucide-react";
 import { PRODUCTS, type Product, getProductType } from "@/data/products";
 import {
@@ -108,11 +108,42 @@ const PRICE_RANGES = [
   { label: "Above ₹15,000", min: 15000, max: 999999 },
 ];
 
-export function ShopContent() {
+export interface ShopContentProps {
+  initialCategory?: string;
+  initialQuery?: string;
+  initialSort?: string;
+}
+
+export function ShopContent({
+  initialCategory = "",
+  initialQuery = "",
+  initialSort = "featured",
+}: ShopContentProps = {}) {
   const router = useRouter();
-  const searchParams = useSearchParams();
-  const selectedCategory = searchParams.get("category") || "";
-  const initialQuery = searchParams.get("q") || "";
+  const [selectedCategory, setSelectedCategory] = useState<string>(initialCategory);
+  const [searchQuery, setSearchQuery] = useState<string>(initialQuery);
+  const [sortBy, setSortBy] = useState<string>(initialSort);
+
+  // Synchronize state with URL search parameters on client side (including back/forward navigation)
+  React.useEffect(() => {
+    const syncFromLocation = () => {
+      const params = new URLSearchParams(window.location.search);
+      const cat = params.get("category") || "";
+      const q = params.get("q") || "";
+      const sort = params.get("sort") || "featured";
+      setSelectedCategory(cat);
+      setSearchQuery(q);
+      setSortBy(sort);
+    };
+
+    // Initial sync in case client-side URL has query params that differed from initial SSR
+    syncFromLocation();
+
+    window.addEventListener("popstate", syncFromLocation);
+    return () => {
+      window.removeEventListener("popstate", syncFromLocation);
+    };
+  }, []);
 
   const displayCategoryName = useMemo(() => {
     if (!selectedCategory) return "";
@@ -124,22 +155,11 @@ export function ShopContent() {
   const [selectedFabric, setSelectedFabric] = useState<string>("");
   const [selectedOccasion, setSelectedOccasion] = useState<string>("");
   const [selectedPriceRange, setSelectedPriceRange] = useState<number | null>(null);
-  const [sortBy, setSortBy] = useState<string>(searchParams.get("sort") || "featured");
   const [isMobileFilterOpen, setIsMobileFilterOpen] = useState(false);
-  const [searchQuery, setSearchQuery] = useState(initialQuery);
-
-  React.useEffect(() => {
-    setSearchQuery(initialQuery);
-  }, [initialQuery]);
-
-  React.useEffect(() => {
-    const sortParam = searchParams.get("sort") || "featured";
-    setSortBy(sortParam);
-  }, [searchParams]);
 
   const handleSortChange = (newSort: string) => {
     setSortBy(newSort);
-    const params = new URLSearchParams(searchParams.toString());
+    const params = new URLSearchParams(window.location.search);
     if (newSort === "featured") {
       params.delete("sort");
     } else {
@@ -206,7 +226,10 @@ export function ShopContent() {
       return;
     }
 
-    const params = new URLSearchParams(searchParams.toString());
+    const nextCategory = isCurrent ? "" : cat.canonicalQuery.replace(/\+/g, " ");
+    setSelectedCategory(nextCategory);
+
+    const params = new URLSearchParams(typeof window !== "undefined" ? window.location.search : "");
     if (isCurrent) {
       params.delete("category");
     } else {
@@ -243,11 +266,12 @@ export function ShopContent() {
     (selectedPriceRange !== null ? 1 : 0);
 
   const clearAllFilters = () => {
-    const params = new URLSearchParams(searchParams.toString());
+    const params = new URLSearchParams(typeof window !== "undefined" ? window.location.search : "");
     params.delete("category");
     params.delete("q");
     const qStr = params.toString();
     router.push(qStr ? `/shop?${qStr}` : "/shop", { scroll: false });
+    setSelectedCategory("");
     setSearchQuery("");
     setSelectedFabric("");
     setSelectedOccasion("");
@@ -339,7 +363,8 @@ export function ShopContent() {
                 <button
                   type="button"
                   onClick={() => {
-                    const params = new URLSearchParams(searchParams.toString());
+                    setSelectedCategory("");
+                    const params = new URLSearchParams(typeof window !== "undefined" ? window.location.search : "");
                     params.delete("category");
                     const qStr = params.toString();
                     router.push(qStr ? `/shop?${qStr}` : "/shop", { scroll: false });

@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import { Suspense } from "react";
 import { ShopContent } from "./ShopClient";
 import { SITE_URL } from "@/data/site";
 
@@ -28,9 +27,5 @@ export const metadata: Metadata = {
 };
 
 export default function ShopPage() {
-  return (
-    <Suspense fallback={<div className="p-12 text-center text-xs text-neutral-500 font-sans">Loading products…</div>}>
-      <ShopContent />
-    </Suspense>
-  );
+  return <ShopContent />;
 }

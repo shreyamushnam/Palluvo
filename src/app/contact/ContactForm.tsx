@@ -61,10 +61,17 @@ export function ContactForm() {
         </div>
       </div>
 
+      {/* Always-mounted live region for screen readers */}
+      <div className="sr-only" role="status" aria-live="polite" aria-atomic="true">
+        <span>
+          {submitted
+            ? "Demo inquiry simulated. This is a demo store; no inquiry was transmitted or saved. For real support, please email us directly at info@palluvo.store or call +91 84988 54323."
+            : ""}
+        </span>
+      </div>
+
       {submitted ? (
         <div
-          role="status"
-          aria-live="polite"
           className="p-4 bg-[#F4EFE6] border border-[#C5A575]/40 text-neutral-900 rounded-xs space-y-3 text-xs"
         >
           <div className="flex items-start gap-2.5">

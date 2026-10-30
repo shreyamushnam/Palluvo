@@ -799,10 +799,17 @@ export const OrderReturnsClient: React.FC<OrderReturnsClientProps> = ({
                     </div>
                   </div>
 
+                  {/* Always-mounted live region for screen readers */}
+                  <div className="sr-only" role="status" aria-live="polite" aria-atomic="true">
+                    <span>
+                      {isRequested
+                        ? `Demo Return Simulation for Order #${item.orderId}. This is a demo store; no return request was transmitted or saved.`
+                        : ""}
+                    </span>
+                  </div>
+
                   {isRequested && (
                     <div
-                      role="status"
-                      aria-live="polite"
                       className="mt-3 p-3 bg-[#FAF7F2] border border-[#E8E2D9] rounded-xs text-xs text-neutral-900 space-y-1"
                     >
                       <div className="flex items-center gap-1.5 font-semibold text-[#541920]">
