@@ -1,8 +1,8 @@
 "use client";
 
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, Suspense } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Filter, X, SlidersHorizontal, Check, Search, ArrowUpDown } from "lucide-react";
 import { PRODUCTS, type Product, getProductType } from "@/data/products";
 import {
@@ -108,41 +108,33 @@ const PRICE_RANGES = [
   { label: "Above ₹15,000", min: 15000, max: 999999 },
 ];
 
-export interface ShopContentProps {
-  initialCategory?: string;
-  initialQuery?: string;
-  initialSort?: string;
+interface SearchParamsWatcherProps {
+  onParamsChange: (category: string, q: string, sort: string) => void;
 }
 
-export function ShopContent({
-  initialCategory = "",
-  initialQuery = "",
-  initialSort = "featured",
-}: ShopContentProps = {}) {
-  const router = useRouter();
-  const [selectedCategory, setSelectedCategory] = useState<string>(initialCategory);
-  const [searchQuery, setSearchQuery] = useState<string>(initialQuery);
-  const [sortBy, setSortBy] = useState<string>(initialSort);
+function SearchParamsWatcher({ onParamsChange }: SearchParamsWatcherProps) {
+  const searchParams = useSearchParams();
 
-  // Synchronize state with URL search parameters on client side (including back/forward navigation)
   React.useEffect(() => {
-    const syncFromLocation = () => {
-      const params = new URLSearchParams(window.location.search);
-      const cat = params.get("category") || "";
-      const q = params.get("q") || "";
-      const sort = params.get("sort") || "featured";
-      setSelectedCategory(cat);
-      setSearchQuery(q);
-      setSortBy(sort);
-    };
+    const category = searchParams.get("category") || "";
+    const q = searchParams.get("q") || "";
+    const sort = searchParams.get("sort") || "featured";
+    onParamsChange(category, q, sort);
+  }, [searchParams, onParamsChange]);
 
-    // Initial sync in case client-side URL has query params that differed from initial SSR
-    syncFromLocation();
+  return null;
+}
 
-    window.addEventListener("popstate", syncFromLocation);
-    return () => {
-      window.removeEventListener("popstate", syncFromLocation);
-    };
+export function ShopContent() {
+  const router = useRouter();
+  const [selectedCategory, setSelectedCategory] = useState<string>("");
+  const [searchQuery, setSearchQuery] = useState<string>("");
+  const [sortBy, setSortBy] = useState<string>("featured");
+
+  const handleParamsChange = React.useCallback((category: string, q: string, sort: string) => {
+    setSelectedCategory(category);
+    setSearchQuery(q);
+    setSortBy(sort);
   }, []);
 
   const displayCategoryName = useMemo(() => {
@@ -280,6 +272,11 @@ export function ShopContent({
 
   return (
     <div className="min-h-screen bg-[#FAF7F2] pb-24 lg:pb-12">
+      {/* Isolated Suspense boundary for reading searchParams without dynamic de-opt of the catalog */}
+      <Suspense fallback={null}>
+        <SearchParamsWatcher onParamsChange={handleParamsChange} />
+      </Suspense>
+
       {/* Floating Back to Top Button */}
       <BackToTopButton />
 
