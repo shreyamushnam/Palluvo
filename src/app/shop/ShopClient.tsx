@@ -492,7 +492,7 @@ export function ShopContent() {
                     return (
                       <label
                         key={opt.value}
-                        className={`w-full min-h-[42px] px-2.5 py-1.5 flex items-center justify-between text-xs text-left rounded-xs transition-colors cursor-pointer ${
+                        className={`w-full min-h-[42px] px-2.5 py-1.5 flex items-center justify-between text-xs text-left rounded-xs transition-colors cursor-pointer has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-[#541920] has-[:focus-visible]:outline-none ${
                           isSelected
                             ? "text-[#541920] font-bold bg-[#541920]/5"
                             : "text-neutral-800 hover:text-black hover:bg-[#FAF7F2]"
@@ -745,7 +745,7 @@ export function ShopContent() {
                       return (
                         <label
                           key={opt.value}
-                          className={`w-full min-h-[44px] px-2.5 py-2 flex items-center justify-between text-xs text-left rounded-xs transition-colors cursor-pointer ${
+                          className={`w-full min-h-[44px] px-2.5 py-2 flex items-center justify-between text-xs text-left rounded-xs transition-colors cursor-pointer has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-[#541920] has-[:focus-visible]:outline-none ${
                             isSelected
                               ? "text-[#541920] font-bold bg-[#541920]/5"
                               : "text-neutral-800 hover:text-black hover:bg-[#FAF7F2]"
@@ -759,7 +759,6 @@ export function ShopContent() {
                               checked={isSelected}
                               onChange={() => {
                                 handleSortChange(opt.value);
-                                setIsMobileFilterOpen(false);
                               }}
                               className="sr-only"
                             />
