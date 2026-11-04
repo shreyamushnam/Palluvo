@@ -484,28 +484,33 @@ export function ShopContent() {
                   </h3>
                 </legend>
                 <div
-                  role="radiogroup"
                   aria-labelledby="desktop-sort-heading"
                   className="space-y-1"
                 >
                   {SORT_OPTIONS.map((opt) => {
                     const isSelected = sortBy === opt.value;
                     return (
-                      <button
+                      <label
                         key={opt.value}
-                        type="button"
-                        role="radio"
-                        aria-checked={isSelected}
-                        onClick={() => handleSortChange(opt.value)}
-                        className={`w-full min-h-[42px] px-2.5 py-1.5 flex items-center justify-between text-xs text-left rounded-xs transition-colors cursor-pointer focus-visible:ring-2 focus-visible:ring-[#541920] focus-visible:outline-none ${
+                        className={`w-full min-h-[42px] px-2.5 py-1.5 flex items-center justify-between text-xs text-left rounded-xs transition-colors cursor-pointer ${
                           isSelected
                             ? "text-[#541920] font-bold bg-[#541920]/5"
                             : "text-neutral-800 hover:text-black hover:bg-[#FAF7F2]"
                         }`}
                       >
-                        <span>{opt.label}</span>
+                        <span className="flex items-center gap-2">
+                          <input
+                            type="radio"
+                            name="desktop-sort"
+                            value={opt.value}
+                            checked={isSelected}
+                            onChange={() => handleSortChange(opt.value)}
+                            className="sr-only"
+                          />
+                          <span>{opt.label}</span>
+                        </span>
                         {isSelected && <Check className="w-3.5 h-3.5 text-[#541920]" />}
-                      </button>
+                      </label>
                     );
                   })}
                 </div>
@@ -732,31 +737,36 @@ export function ShopContent() {
                     </h3>
                   </legend>
                   <div
-                    role="radiogroup"
                     aria-labelledby="mobile-sort-heading"
                     className="space-y-1"
                   >
                     {SORT_OPTIONS.map((opt) => {
                       const isSelected = sortBy === opt.value;
                       return (
-                        <button
+                        <label
                           key={opt.value}
-                          type="button"
-                          role="radio"
-                          aria-checked={isSelected}
-                          onClick={() => {
-                            handleSortChange(opt.value);
-                            setIsMobileFilterOpen(false);
-                          }}
-                          className={`w-full min-h-[44px] px-2.5 py-2 flex items-center justify-between text-xs text-left rounded-xs transition-colors cursor-pointer focus-visible:ring-2 focus-visible:ring-[#541920] focus-visible:outline-none ${
+                          className={`w-full min-h-[44px] px-2.5 py-2 flex items-center justify-between text-xs text-left rounded-xs transition-colors cursor-pointer ${
                             isSelected
                               ? "text-[#541920] font-bold bg-[#541920]/5"
                               : "text-neutral-800 hover:text-black hover:bg-[#FAF7F2]"
                           }`}
                         >
-                          <span>{opt.label}</span>
+                          <span className="flex items-center gap-2">
+                            <input
+                              type="radio"
+                              name="mobile-sort"
+                              value={opt.value}
+                              checked={isSelected}
+                              onChange={() => {
+                                handleSortChange(opt.value);
+                                setIsMobileFilterOpen(false);
+                              }}
+                              className="sr-only"
+                            />
+                            <span>{opt.label}</span>
+                          </span>
                           {isSelected && <Check className="w-3.5 h-3.5 text-[#541920]" />}
-                        </button>
+                        </label>
                       );
                     })}
                   </div>
