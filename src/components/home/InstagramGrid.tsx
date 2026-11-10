@@ -5,46 +5,54 @@ import Image from "next/image";
 import Link from "next/link";
 import { ShoppingBag, ArrowRight } from "lucide-react";
 
-const COMMUNITY_POSTS = [
+interface StylingLook {
+  id: number;
+  image: string;
+  look: string;
+  saree: string;
+  productId: string;
+}
+
+const STYLING_LOOKS: StylingLook[] = [
   {
     id: 1,
     image: "/images/community/customer_1.jpg",
-    handle: "@ananya_drapes",
+    look: "Cocktail Draping",
     saree: "Wine Tissue Silk",
     productId: "pal-001",
   },
   {
     id: 2,
     image: "/images/community/customer_2.jpg",
-    handle: "@priya_elegance",
+    look: "Daytime Festive",
     saree: "Mustard Cotton Silk",
     productId: "pal-004",
   },
   {
     id: 3,
     image: "/images/community/customer_3.jpg",
-    handle: "@tanya.ethnic",
+    look: "Traditional Bridal",
     saree: "Red Banarasi Brocade",
     productId: "pal-005",
   },
   {
     id: 4,
     image: "/images/community/customer_4.jpg",
-    handle: "@meera.weaves",
+    look: "Reception Splendor",
     saree: "Royal Blue Kanjeevaram",
     productId: "pal-002",
   },
   {
     id: 5,
     image: "/images/community/customer_5.jpg",
-    handle: "@radhika_celebrates",
+    look: "Pastel Elegance",
     saree: "Lavender Organza",
     productId: "pal-007",
   },
   {
     id: 6,
     image: "/images/community/customer_6.jpg",
-    handle: "@sneha_saree_diaries",
+    look: "Heritage Festive",
     saree: "Emerald Green Silk",
     productId: "pal-009",
   },
@@ -58,16 +66,16 @@ export const InstagramGrid: React.FC = () => {
         {/* Header */}
         <div className="text-center max-w-xl mx-auto mb-8 space-y-2">
           <h2 className="text-2xl sm:text-3xl font-serif font-normal text-neutral-900">
-            Styled by PALLUVO
+            Styling Inspiration
           </h2>
           <p className="text-xs text-neutral-600 font-sans">
-            Real customers celebrating in handcrafted PALLUVO weaves across India.
+            Curated drape concepts and heirloom styling inspiration for handcrafted PALLUVO weaves. (Prototype demonstration)
           </p>
         </div>
 
         {/* 6-Image Grid */}
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-3.5">
-          {COMMUNITY_POSTS.map((post) => (
+          {STYLING_LOOKS.map((post) => (
             <Link
               key={post.id}
               href={`/product/${post.productId}`}
@@ -82,7 +90,7 @@ export const InstagramGrid: React.FC = () => {
               />
               <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/35 to-transparent opacity-100 lg:opacity-0 lg:group-hover:opacity-100 [@media(hover:none)]:opacity-100 group-focus-visible:opacity-100 transition-opacity flex flex-col items-center justify-end p-2 sm:p-3 text-white text-center">
                 <ShoppingBag className="w-3.5 h-3.5 sm:w-4 sm:h-4 mb-0.5 sm:mb-1 text-[#C5A575]" />
-                <span className="text-[10px] font-sans font-medium text-neutral-200 line-clamp-1">{post.handle}</span>
+                <span className="text-[10px] font-sans font-medium text-neutral-200 line-clamp-1">{post.look}</span>
                 <span className="text-[10.5px] sm:text-[11px] font-serif font-semibold mt-0.5 line-clamp-2 leading-tight">{post.saree}</span>
                 <span className="text-[9px] uppercase tracking-wider text-[#C5A575] font-semibold mt-0.5 sm:mt-1 whitespace-nowrap inline-flex items-center gap-1">
                   <span>Shop Saree</span>

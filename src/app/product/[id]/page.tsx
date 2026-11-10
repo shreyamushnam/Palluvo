@@ -91,20 +91,6 @@ export default async function ProductDetailPage({ params }: ProductPageProps) {
           "@type": "Brand",
           name: "PALLUVO",
         },
-        offers: {
-          "@type": "Offer",
-          price: product.price,
-          priceCurrency: "INR",
-          itemCondition: "https://schema.org/NewCondition",
-          availability: product.inStock !== false
-            ? "https://schema.org/InStock"
-            : "https://schema.org/OutOfStock",
-          url: `${SITE_URL}/product/${product.id}`,
-          seller: {
-            "@type": "Organization",
-            name: "PALLUVO",
-          },
-        },
       },
       {
         "@type": "BreadcrumbList",
