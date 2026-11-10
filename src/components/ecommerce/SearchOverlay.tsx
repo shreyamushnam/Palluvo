@@ -24,7 +24,7 @@ export const SearchOverlay: React.FC = () => {
   const [query, setQuery] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
   const dialogRef = useFocusTrap<HTMLDivElement>({ isOpen: isSearchOpen });
-  const touchStartRef = useRef<{ x: number; y: number } | null>(null);
+  const touchStartRef = useRef<{ x: number; y: number; scrollTop: number } | null>(null);
 
   const isDismissedByPopStateRef = useRef(false);
 
@@ -67,9 +67,24 @@ export const SearchOverlay: React.FC = () => {
 
   const handleTouchStart = (e: React.TouchEvent) => {
     if (e.touches.length === 1) {
+      // Find nearest scrollable ancestor (e.g. results content container or dialog itself)
+      let currentEl = e.target as HTMLElement | null;
+      let scrollTop = 0;
+      while (currentEl && currentEl !== dialogRef.current) {
+        if (currentEl.scrollTop > 0) {
+          scrollTop = currentEl.scrollTop;
+          break;
+        }
+        currentEl = currentEl.parentElement;
+      }
+      if (scrollTop === 0 && dialogRef.current) {
+        scrollTop = dialogRef.current.scrollTop;
+      }
+
       touchStartRef.current = {
         x: e.touches[0].clientX,
         y: e.touches[0].clientY,
+        scrollTop,
       };
     }
   };
@@ -78,11 +93,17 @@ export const SearchOverlay: React.FC = () => {
     if (!touchStartRef.current || e.changedTouches.length === 0) return;
     const deltaX = e.changedTouches[0].clientX - touchStartRef.current.x;
     const deltaY = e.changedTouches[0].clientY - touchStartRef.current.y;
+    const initialScrollTop = touchStartRef.current.scrollTop;
     touchStartRef.current = null;
 
     // Detect horizontal swipe-back (swipe right > 60px with limited vertical drift)
-    // or downward swipe dismiss (swipe down > 80px)
-    if ((deltaX > 60 && Math.abs(deltaY) < 100) || (deltaY > 80 && Math.abs(deltaX) < 100)) {
+    const isHorizontalSwipe = deltaX > 60 && Math.abs(deltaY) < 100;
+
+    // Detect downward swipe dismiss only when initiated at the very top of scrollable content (scrollTop <= 0)
+    // with downward movement > 80px and limited horizontal drift
+    const isDownwardDismiss = initialScrollTop <= 0 && deltaY > 80 && Math.abs(deltaX) < 100;
+
+    if (isHorizontalSwipe || isDownwardDismiss) {
       setIsSearchOpen(false);
     }
   };
