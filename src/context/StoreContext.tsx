@@ -65,6 +65,8 @@ interface StoreContextType {
   setDefaultAddress: (id: string) => void;
   setIsCartOpen: (open: boolean) => void;
   setIsSearchOpen: (open: boolean) => void;
+  shopSearchQuery: string;
+  setShopSearchQuery: (query: string) => void;
   setQuickViewProduct: (product: Product | null) => void;
   showToast: (message: string, type?: "success" | "info") => void;
   formatPrice: (amount: number) => string;
@@ -7619,6 +7621,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const [addresses, setAddresses] = useState<SavedAddress[]>([]);
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
+  const [shopSearchQuery, setShopSearchQuery] = useState("");
   const [quickViewProduct, setQuickViewProduct] = useState<Product | null>(null);
   const [appliedCoupon, setAppliedCoupon] = useState<string | null>(null);
   const [toast, setToast] = useState<ToastInfo | null>(null);
@@ -8306,6 +8309,8 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       setDefaultAddress,
       setIsCartOpen,
       setIsSearchOpen,
+      shopSearchQuery,
+      setShopSearchQuery,
       setQuickViewProduct,
       showToast,
       formatPrice,
@@ -8348,6 +8353,8 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       setDefaultAddress,
       setIsCartOpen,
       setIsSearchOpen,
+      shopSearchQuery,
+      setShopSearchQuery,
       setQuickViewProduct,
       showToast,
       formatPrice,

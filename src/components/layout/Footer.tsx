@@ -2,11 +2,12 @@
 
 import React, { useState, Suspense } from "react";
 import Link from "next/link";
-import { useSearchParams } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
 import dynamic from "next/dynamic";
 import { Check, MapPin } from "lucide-react";
 import type { InfoModalTab } from "@/components/layout/InfoModal";
 import { getCategoryHref } from "@/data/categories";
+import { useStore } from "@/context/StoreContext";
 
 const FOOTER_SHOP_LINKS = [
   { label: "New Arrivals", category: "New+Arrivals" },
@@ -18,8 +19,12 @@ const FOOTER_SHOP_LINKS = [
 ];
 
 function FooterCategoryLinks() {
+  const pathname = usePathname();
   const searchParams = useSearchParams();
-  const currentQ = searchParams.get("q") || "";
+  const { shopSearchQuery } = useStore();
+  const currentQ = pathname === "/shop" && shopSearchQuery.trim()
+    ? shopSearchQuery.trim()
+    : searchParams.get("q") || "";
 
   return (
     <ul className="text-xs text-[#FAF7F2]/75 font-light">

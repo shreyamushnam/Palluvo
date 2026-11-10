@@ -64,8 +64,11 @@ function getNavHrefWithQuery(baseHref: string, queryParam: string): string {
 function NavLinksList({ onLinkClick }: { onLinkClick?: () => void }) {
   const pathname = usePathname();
   const searchParams = useSearchParams();
+  const { shopSearchQuery } = useStore();
   const currentCategory = (searchParams.get("category") || "").toLowerCase().trim();
-  const currentQ = searchParams.get("q") || "";
+  const currentQ = pathname === "/shop" && shopSearchQuery.trim()
+    ? shopSearchQuery.trim()
+    : searchParams.get("q") || "";
 
   return (
     <>
@@ -96,8 +99,11 @@ function NavLinksList({ onLinkClick }: { onLinkClick?: () => void }) {
 function MobileNavLinksList({ onLinkClick }: { onLinkClick?: () => void }) {
   const pathname = usePathname();
   const searchParams = useSearchParams();
+  const { shopSearchQuery } = useStore();
   const currentCategory = (searchParams.get("category") || "").toLowerCase().trim();
-  const currentQ = searchParams.get("q") || "";
+  const currentQ = pathname === "/shop" && shopSearchQuery.trim()
+    ? shopSearchQuery.trim()
+    : searchParams.get("q") || "";
 
   return (
     <>
