@@ -48,7 +48,7 @@ export const Footer: React.FC = () => {
                 </p>
               </Link>
               <p className="text-xs text-[#FAF7F2]/65 mt-4 max-w-sm leading-relaxed font-light">
-                PALLUVO is a modern Indian ethnic fashion house bringing artisanal pure silk, organza, tussar, and handloom sarees directly to your doorstep.
+                PALLUVO is a modern Indian ethnic fashion house celebrating artisanal pure silk, organza, tussar, and handloom sarees.
               </p>
 
               {/* Newsletter Box */}

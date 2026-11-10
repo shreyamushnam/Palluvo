@@ -153,10 +153,8 @@ export function ShopContent() {
   }, []);
 
   const handleQueryChange = React.useCallback((q: string) => {
-    if (q !== lastUrlQRef.current) {
-      lastUrlQRef.current = q;
-      setSearchQuery(q);
-    }
+    lastUrlQRef.current = q;
+    setSearchQuery(q);
   }, []);
 
   const handleSortChangeFromUrl = React.useCallback((sort: string) => {
@@ -191,6 +189,25 @@ export function ShopContent() {
     isOpen: isMobileFilterOpen,
     onClose: () => setIsMobileFilterOpen(false),
   });
+
+  const updateUrlSearchQuery = (term: string) => {
+    const params = new URLSearchParams(typeof window !== "undefined" ? window.location.search : "");
+    const trimmed = term.trim();
+    if (trimmed) {
+      params.set("q", trimmed);
+      lastUrlQRef.current = trimmed;
+    } else {
+      params.delete("q");
+      lastUrlQRef.current = "";
+    }
+    const newQuery = params.toString();
+    router.push(newQuery ? `/shop?${newQuery}` : "/shop", { scroll: false });
+  };
+
+  const handleClearSearch = () => {
+    setSearchQuery("");
+    updateUrlSearchQuery("");
+  };
 
   React.useEffect(() => {
     if (isMobileFilterOpen) {
@@ -287,6 +304,7 @@ export function ShopContent() {
     const params = new URLSearchParams(typeof window !== "undefined" ? window.location.search : "");
     params.delete("category");
     params.delete("q");
+    lastUrlQRef.current = "";
     const qStr = params.toString();
     router.push(qStr ? `/shop?${qStr}` : "/shop", { scroll: false });
     setSelectedCategory("");
@@ -346,6 +364,11 @@ export function ShopContent() {
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    updateUrlSearchQuery(searchQuery);
+                  }
+                }}
                 placeholder="Search handcrafted sarees, blouses, jewelry..."
                 aria-label="Search handcrafted sarees and products"
                 className="w-full text-xs sm:text-sm bg-transparent border-none outline-none text-neutral-900 placeholder:text-neutral-500 font-sans"
@@ -353,7 +376,7 @@ export function ShopContent() {
               {searchQuery && (
                 <button
                   type="button"
-                  onClick={() => setSearchQuery("")}
+                  onClick={handleClearSearch}
                   className="p-1 text-neutral-400 hover:text-neutral-700 transition-colors shrink-0 focus-visible:ring-2 focus-visible:ring-[#541920] focus-visible:outline-none rounded-2xs cursor-pointer"
                   aria-label="Clear search"
                 >
