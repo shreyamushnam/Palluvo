@@ -120,11 +120,13 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
         <div>
           {/* Ratings & Reviews */}
           <div className="flex items-center gap-1.5 text-xs mb-1">
-            <div className="flex items-center text-[#C5A575]">
-              <Star size={12} className="fill-current" />
+            <div className="flex items-center text-[#C5A575]" title="Sample catalog rating (demo data)">
+              <Star size={12} className="fill-current" aria-hidden="true" />
               <span className="text-[11px] font-semibold text-[#1C1A18] ml-0.5">{product.rating}</span>
             </div>
-            <span className="text-[10px] text-[#5E5A54]">({product.reviewsCount})</span>
+            <span className="text-[10px] text-[#5E5A54]" title="Sample review count (demo data)">
+              ({product.reviewsCount} sample)
+            </span>
           </div>
 
           {/* Product Name */}

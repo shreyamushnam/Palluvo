@@ -138,21 +138,13 @@ export const QuickViewModalContent: React.FC<QuickViewModalContentProps> = ({
 
                   {/* Rating */}
                   <div className="flex items-center gap-2 mt-2">
-                    <div className="flex items-center gap-1 bg-[#15803D] text-white px-1.5 py-0.5 rounded-xs text-xs font-bold">
+                    <div className="flex items-center gap-1 bg-[#15803D] text-white px-1.5 py-0.5 rounded-xs text-xs font-bold" title="Sample catalog rating (demo data)">
                       <span>{product.rating}</span>
-                      <Star className="w-3 h-3 fill-current" />
+                      <Star className="w-3 h-3 fill-current" aria-hidden="true" />
                     </div>
-                    {(product.reviewsCount ?? product.reviewCount ?? 0) > 0 ? (
-                      <span className="text-xs text-neutral-600">
-                        ({product.reviewsCount ?? product.reviewCount ?? 0}{" "}
-                        {(product.reviewsCount ?? product.reviewCount ?? 0) === 1
-                          ? "review"
-                          : "reviews"}
-                        )
-                      </span>
-                    ) : (
-                      <span className="text-xs text-neutral-600">(0 reviews)</span>
-                    )}
+                    <span className="text-xs text-neutral-600">
+                      ({product.reviewsCount ?? product.reviewCount ?? 0} sample reviews)
+                    </span>
                   </div>
                 </div>
 

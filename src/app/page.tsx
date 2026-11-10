@@ -13,7 +13,7 @@ import { BackToTopButton } from "@/components/common/BackToTopButton";
 export const metadata: Metadata = {
   title: "PALLUVO | Buy Designer Sarees Online | Pure Silk, Handloom, & Bridal",
   description:
-    "Shop premium Indian sarees online at PALLUVO. Discover handwoven Kanjeevaram silk, Banarasi brocades, lightweight organza, and festive party wear. Free shipping on orders of ₹1,999 or more & easy returns.",
+    "Explore handwoven Kanjeevaram silk, Banarasi brocades, lightweight organza, and festive party wear on the PALLUVO prototype storefront. Showcasing curated drapes, illustrative brand shipping, and sample policies.",
   alternates: {
     canonical: "/",
   },

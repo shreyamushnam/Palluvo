@@ -22,7 +22,7 @@ const TRUST_PILLARS = [
   {
     icon: RotateCcw,
     title: "Easy Returns",
-    description: "Simple return experience",
+    description: "Sample return workflow (demo simulation)",
   },
 ];
 

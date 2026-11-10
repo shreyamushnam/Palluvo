@@ -19,8 +19,11 @@ export interface Product {
   price: number;
   originalPrice: number;
   discountPercent: number;
+  /** Sample catalog rating for prototype display and sorting */
   rating: number;
+  /** Sample catalog review count for prototype display */
   reviewsCount: number;
+  /** Sample catalog review count for prototype display (legacy alias) */
   reviewCount?: number;
   category: "Silk" | "Handloom" | "Cotton" | "Festive" | "Bridal" | "Party Wear" | "Printed";
   color: string;
@@ -68,6 +71,7 @@ export const PRODUCTS: Product[] = [
     price: 3999,
     originalPrice: 4999,
     discountPercent: 20,
+    // Sample catalog rating and review count (prototype demo data)
     rating: 4.8,
     reviewsCount: 120,
     reviewCount: 120,

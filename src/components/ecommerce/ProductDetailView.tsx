@@ -303,11 +303,11 @@ export const ProductDetailView: React.FC<ProductDetailViewProps> = ({
                     : `${product.category} ${product.hasBlousePiece ? "Sarees" : "Collection"}`}
                 </span>
                 <div className="flex items-center gap-2">
-                  <div className="flex items-center text-[#C5A575]">
-                    <Star className="w-3.5 h-3.5 fill-current" />
+                  <div className="flex items-center text-[#C5A575]" title="Sample catalog rating (demo data)">
+                    <Star className="w-3.5 h-3.5 fill-current" aria-hidden="true" />
                     <span className="text-xs font-bold text-neutral-900 ml-1">{product.rating}</span>
-                    <span className="text-[11px] text-neutral-600 font-sans ml-0.5">
-                      ({product.reviewsCount ?? product.reviewCount ?? 0})
+                    <span className="text-[11px] text-neutral-600 font-sans ml-1">
+                      ({product.reviewsCount ?? product.reviewCount ?? 0} sample reviews)
                     </span>
                   </div>
                   <button
