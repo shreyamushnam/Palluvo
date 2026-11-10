@@ -26,6 +26,8 @@ export const SearchOverlay: React.FC = () => {
   const dialogRef = useFocusTrap<HTMLDivElement>({ isOpen: isSearchOpen });
   const touchStartRef = useRef<{ x: number; y: number } | null>(null);
 
+  const isDismissedByPopStateRef = useRef(false);
+
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
@@ -34,6 +36,7 @@ export const SearchOverlay: React.FC = () => {
     };
 
     if (isSearchOpen) {
+      isDismissedByPopStateRef.current = false;
       setTimeout(() => inputRef.current?.focus(), 100);
       document.body.style.overflow = "hidden";
       window.addEventListener("keydown", handleKeyDown);
@@ -41,6 +44,7 @@ export const SearchOverlay: React.FC = () => {
       // Support native mobile swipe-back / browser back gesture
       window.history.pushState({ searchOverlay: true }, "");
       const handlePopState = () => {
+        isDismissedByPopStateRef.current = true;
         setIsSearchOpen(false);
       };
       window.addEventListener("popstate", handlePopState);
@@ -49,6 +53,12 @@ export const SearchOverlay: React.FC = () => {
         document.body.style.overflow = "unset";
         window.removeEventListener("keydown", handleKeyDown);
         window.removeEventListener("popstate", handlePopState);
+
+        // If closed via non-Back dismissal (Escape, close button, backdrop, link navigation, etc.),
+        // unwind the pushed history state so the user's history stack is not polluted.
+        if (!isDismissedByPopStateRef.current && window.history.state?.searchOverlay) {
+          window.history.back();
+        }
       };
     } else {
       document.body.style.overflow = "unset";
