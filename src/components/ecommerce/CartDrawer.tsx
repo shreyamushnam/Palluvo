@@ -398,8 +398,8 @@ export const CartDrawer: React.FC = () => {
                 <ShieldCheck className="w-3.5 h-3.5 text-[#15803D]" />
                 <span>
                   {isAllSarees
-                    ? "100% Authentic Handcrafted Sarees • Easy 7-Day Returns"
-                    : "100% Authentic Handcrafted Products • Easy 7-Day Returns"}
+                    ? "100% Authentic Handcrafted Sarees • Demo 7-Day Return Simulation"
+                    : "100% Authentic Handcrafted Products • Demo 7-Day Return Simulation"}
                 </span>
               </div>
             </div>

@@ -87,8 +87,11 @@ export const QuickViewModalContent: React.FC<QuickViewModalContentProps> = ({
                   priority
                 />
                 {product.discountPercent && (
-                  <span className="absolute top-3 left-3 bg-[#15803D] text-white text-[11px] font-bold px-2 py-0.5 rounded-xs uppercase tracking-wider">
-                    {product.discountPercent}% OFF
+                  <span
+                    title="Illustrative catalog discount (demo simulation)"
+                    className="absolute top-3 left-3 bg-[#15803D] text-white text-[11px] font-bold px-2 py-0.5 rounded-xs uppercase tracking-wider"
+                  >
+                    {product.discountPercent}% OFF (Demo)
                   </span>
                 )}
               </div>
@@ -149,7 +152,7 @@ export const QuickViewModalContent: React.FC<QuickViewModalContentProps> = ({
                 </div>
 
                 {/* Price */}
-                <div className="flex items-baseline gap-3 pt-1 border-t border-[#E8E2D9] tabular-nums">
+                <div className="flex flex-wrap items-baseline gap-3 pt-1 border-t border-[#E8E2D9] tabular-nums" title="Illustrative sample price (demo simulation)">
                   <span className="text-2xl font-serif font-bold text-[#541920] tabular-nums">
                     {formatPrice(product.price)}
                   </span>
@@ -160,9 +163,10 @@ export const QuickViewModalContent: React.FC<QuickViewModalContentProps> = ({
                   )}
                   {product.discountPercent && (
                     <span className="text-xs font-bold text-[#15803D] tabular-nums">
-                      Save <span className="tabular-nums">{formatPrice(product.originalPrice! - product.price)}</span>
+                      Save <span className="tabular-nums">{formatPrice(product.originalPrice! - product.price)}</span> (Demo)
                     </span>
                   )}
+                  <span className="text-[11px] text-neutral-500 font-sans font-normal">(demo price)</span>
                 </div>
 
                 <p className="text-xs text-neutral-600 leading-relaxed font-sans line-clamp-3">

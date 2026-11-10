@@ -82,8 +82,11 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
             </span>
           )}
           {product.discountPercent > 0 && (
-            <span className="px-2 py-0.5 bg-[#15803D] text-[#FAF7F2] text-[9px] uppercase tracking-wider font-semibold rounded-xs w-fit">
-              {product.discountPercent}% OFF
+            <span
+              title="Illustrative catalog discount (demo simulation)"
+              className="px-2 py-0.5 bg-[#15803D] text-[#FAF7F2] text-[9px] uppercase tracking-wider font-semibold rounded-xs w-fit"
+            >
+              {product.discountPercent}% OFF (Demo)
             </span>
           )}
         </div>
@@ -144,7 +147,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
 
         {/* Pricing Block */}
         <div className="mt-2.5 pt-2 border-t border-[#1C1A18]/6 flex flex-col">
-          <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5 tabular-nums">
+          <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5 tabular-nums" title="Illustrative sample price (demo simulation)">
             <span className="font-serif-display text-lg font-semibold text-[#1C1A18] tabular-nums">
               {formatPrice(product.price)}
             </span>
@@ -153,6 +156,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
                 {formatPrice(product.originalPrice)}
               </span>
             )}
+            <span className="text-[10px] text-neutral-500 font-sans font-normal">(demo price)</span>
           </div>
 
           {/* Add to Bag Button */}

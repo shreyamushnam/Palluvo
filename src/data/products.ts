@@ -16,8 +16,11 @@ export interface Product {
   id: string;
   name: string;
   fabric: string;
+  /** Illustrative sample catalog price for demonstration checkout simulation */
   price: number;
+  /** Illustrative reference price for demonstration markdown simulation */
   originalPrice: number;
+  /** Illustrative discount percentage for demonstration prototype */
   discountPercent: number;
   /** Sample catalog rating for prototype display and sorting */
   rating: number;

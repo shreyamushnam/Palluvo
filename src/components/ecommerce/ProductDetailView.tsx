@@ -245,8 +245,11 @@ export const ProductDetailView: React.FC<ProductDetailViewProps> = ({
               </div>
 
               {product.discountPercent > 0 && !isZoomed && (
-                <div className="absolute top-2.5 left-2.5 bg-[#15803D] text-white text-xs font-bold px-2.5 py-1 rounded-xs uppercase tracking-wider shadow-xs pointer-events-none">
-                  {product.discountPercent}% OFF
+                <div
+                  title="Illustrative catalog discount (demo simulation)"
+                  className="absolute top-2.5 left-2.5 bg-[#15803D] text-white text-xs font-bold px-2.5 py-1 rounded-xs uppercase tracking-wider shadow-xs pointer-events-none"
+                >
+                  {product.discountPercent}% OFF (Demo)
                 </div>
               )}
               {product.id === "pal-010" && activeImageIdx === 1 && !isZoomed && (
@@ -328,7 +331,7 @@ export const ProductDetailView: React.FC<ProductDetailViewProps> = ({
 
             {/* Price & Quantity Stepper */}
             <div className="pt-0.5 sm:pt-1.5 border-t border-[#E8E2D9] flex items-center justify-between gap-1 sm:gap-2 tabular-nums">
-              <div className="flex items-baseline gap-1 sm:gap-3 shrink-0 tabular-nums">
+              <div className="flex flex-wrap items-baseline gap-1 sm:gap-3 shrink-0 tabular-nums" title="Illustrative sample price (demo simulation)">
                 <span className="text-xl sm:text-3xl font-serif font-bold text-[#541920] tabular-nums">
                   {formatPrice(product.price)}
                 </span>
@@ -339,9 +342,10 @@ export const ProductDetailView: React.FC<ProductDetailViewProps> = ({
                 )}
                 {product.discountPercent > 0 && (
                   <span className="text-[11px] sm:text-xs font-bold text-[#15803D] tabular-nums">
-                    {product.discountPercent}% OFF
+                    {product.discountPercent}% OFF (Demo)
                   </span>
                 )}
+                <span className="text-[11px] text-neutral-500 font-sans font-normal">(demo price)</span>
               </div>
 
               {/* Quantity Stepper */}
