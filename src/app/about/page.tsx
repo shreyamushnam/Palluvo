@@ -5,7 +5,7 @@ import { Sparkles, ArrowRight } from "lucide-react";
 export const metadata: Metadata = {
   title: "About Us | Brand Philosophy & Handloom Heritage | PALLUVO",
   description:
-    "Discover the story of PALLUVO, celebrating the timeless poetry of slow Indian textiles, artisanal master weavers, and pure silk mark certification.",
+    "Discover the story of PALLUVO, celebrating the timeless poetry of slow Indian textiles, artisanal master weavers, and authentic Silk Mark certification on pure silks.",
   alternates: {
     canonical: "/about",
   },
@@ -45,7 +45,7 @@ export default function AboutPage() {
         </blockquote>
 
         <p>
-          Each weave in our collection is curated directly from master weaving clusters across Kanchipuram, Varanasi, Chanderi, and Paithan. Certified with authentic Silk Mark purity, our textiles are designed to become treasured family heirlooms.
+          Each weave in our collection is curated directly from master weaving clusters across Kanchipuram, Varanasi, Chanderi, and Paithan. With authentic Silk Mark certification on eligible pure silks, our textiles are designed to become treasured family heirlooms.
         </p>
 
         <div className="pt-8 border-t border-[#E8E2D9] flex flex-col sm:flex-row items-center justify-between gap-4">

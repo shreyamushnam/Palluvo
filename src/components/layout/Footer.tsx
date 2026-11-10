@@ -22,7 +22,7 @@ function FooterCategoryLinks() {
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const { shopSearchQuery } = useStore();
-  const currentQ = pathname === "/shop" && shopSearchQuery.trim()
+  const currentQ = pathname === "/shop"
     ? shopSearchQuery.trim()
     : searchParams.get("q") || "";
 

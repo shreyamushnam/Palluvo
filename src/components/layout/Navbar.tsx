@@ -66,7 +66,7 @@ function NavLinksList({ onLinkClick }: { onLinkClick?: () => void }) {
   const searchParams = useSearchParams();
   const { shopSearchQuery } = useStore();
   const currentCategory = (searchParams.get("category") || "").toLowerCase().trim();
-  const currentQ = pathname === "/shop" && shopSearchQuery.trim()
+  const currentQ = pathname === "/shop"
     ? shopSearchQuery.trim()
     : searchParams.get("q") || "";
 
@@ -101,7 +101,7 @@ function MobileNavLinksList({ onLinkClick }: { onLinkClick?: () => void }) {
   const searchParams = useSearchParams();
   const { shopSearchQuery } = useStore();
   const currentCategory = (searchParams.get("category") || "").toLowerCase().trim();
-  const currentQ = pathname === "/shop" && shopSearchQuery.trim()
+  const currentQ = pathname === "/shop"
     ? shopSearchQuery.trim()
     : searchParams.get("q") || "";
 

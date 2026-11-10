@@ -388,7 +388,13 @@ export function ShopContent() {
               <input
                 type="text"
                 value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
+                onChange={(e) => {
+                  const nextVal = e.target.value;
+                  setSearchQuery(nextVal);
+                  if (!nextVal.trim()) {
+                    updateUrlSearchQuery("");
+                  }
+                }}
                 onKeyDown={(e) => {
                   if (e.key === "Enter") {
                     updateUrlSearchQuery(searchQuery);
