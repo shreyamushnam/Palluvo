@@ -67,9 +67,18 @@ export function getProductBreadcrumb(product: Product): ProductBreadcrumb {
   };
 }
 
-export function getCategoryHref(categoryNameOrQuery: string): string {
+export function getCategoryHref(categoryNameOrQuery: string, currentQuery?: string): string {
   const canon = getCategoryCanonicalQuery(categoryNameOrQuery);
-  return canon ? `/shop?category=${canon}` : "/shop";
+  const params = new URLSearchParams();
+  if (canon) {
+    params.set("category", canon);
+  }
+  const trimmed = currentQuery?.trim();
+  if (trimmed) {
+    params.set("q", trimmed);
+  }
+  const qs = params.toString();
+  return qs ? `/shop?${qs}` : "/shop";
 }
 
 export function matchesCategory(product: Product, category: string): boolean {

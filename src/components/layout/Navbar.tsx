@@ -50,19 +50,32 @@ function isNavLinkActive(link: NavLinkItem, pathname: string, currentCategory: s
   return !currentCategory;
 }
 
+function getNavHrefWithQuery(baseHref: string, queryParam: string): string {
+  if (!baseHref.startsWith("/shop")) return baseHref;
+  const trimmed = queryParam.trim();
+  if (!trimmed) return baseHref;
+  const [path, existingQuery] = baseHref.split("?");
+  const params = new URLSearchParams(existingQuery || "");
+  params.set("q", trimmed);
+  const qs = params.toString();
+  return qs ? `${path}?${qs}` : path;
+}
+
 function NavLinksList({ onLinkClick }: { onLinkClick?: () => void }) {
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const currentCategory = (searchParams.get("category") || "").toLowerCase().trim();
+  const currentQ = searchParams.get("q") || "";
 
   return (
     <>
       {NAV_LINKS.map((link) => {
         const isActive = isNavLinkActive(link, pathname, currentCategory);
+        const resolvedHref = getNavHrefWithQuery(link.href, currentQ);
         return (
           <Link
             key={link.label}
-            href={link.href}
+            href={resolvedHref}
             onClick={onLinkClick}
             aria-current={isActive ? "page" : undefined}
             className={`relative py-1 px-1.5 rounded-xs hover:text-[#541920] transition-colors focus-visible:ring-2 focus-visible:ring-[#541920] focus-visible:outline-none ${
@@ -84,15 +97,17 @@ function MobileNavLinksList({ onLinkClick }: { onLinkClick?: () => void }) {
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const currentCategory = (searchParams.get("category") || "").toLowerCase().trim();
+  const currentQ = searchParams.get("q") || "";
 
   return (
     <>
       {NAV_LINKS.map((link) => {
         const isActive = isNavLinkActive(link, pathname, currentCategory);
+        const resolvedHref = getNavHrefWithQuery(link.href, currentQ);
         return (
           <Link
             key={link.label}
-            href={link.href}
+            href={resolvedHref}
             onClick={onLinkClick}
             aria-current={isActive ? "page" : undefined}
             className={`font-serif-display text-2xl py-1 min-h-[44px] flex items-center border-b border-[#1C1A18]/5 transition-colors ${

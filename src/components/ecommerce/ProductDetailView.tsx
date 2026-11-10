@@ -581,7 +581,7 @@ export const ProductDetailView: React.FC<ProductDetailViewProps> = ({
                     aria-labelledby="accordion-trigger-returns"
                   >
                     <p className="pb-3 text-neutral-600 leading-relaxed font-sans">
-                      7-day hassle-free return and exchange policy. Doorstep reverse pickup available across India.
+                      Under our brand returns policy, orders receive a 7-day hassle-free return and exchange policy with doorstep reverse pickup available across India. Please note that orders placed through this prototype storefront are local simulations and do not trigger physical reverse pickup or real collection.
                     </p>
                   </div>
                 )}

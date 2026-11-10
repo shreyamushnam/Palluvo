@@ -1,10 +1,64 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, Suspense } from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import dynamic from "next/dynamic";
 import { Check, MapPin } from "lucide-react";
 import type { InfoModalTab } from "@/components/layout/InfoModal";
+import { getCategoryHref } from "@/data/categories";
+
+const FOOTER_SHOP_LINKS = [
+  { label: "New Arrivals", category: "New+Arrivals" },
+  { label: "Sarees", category: "" },
+  { label: "Silk Sarees", category: "Silk" },
+  { label: "Handloom", category: "Handloom" },
+  { label: "Festive Edits", category: "Festive" },
+  { label: "Bridal Sarees", category: "Bridal" },
+];
+
+function FooterCategoryLinks() {
+  const searchParams = useSearchParams();
+  const currentQ = searchParams.get("q") || "";
+
+  return (
+    <ul className="text-xs text-[#FAF7F2]/75 font-light">
+      {FOOTER_SHOP_LINKS.map((link) => {
+        const href = getCategoryHref(link.category, currentQ);
+        return (
+          <li key={link.label}>
+            <Link
+              href={href}
+              className="min-h-[44px] inline-flex items-center hover:text-[#C5A575] transition-colors focus-visible:ring-2 focus-visible:ring-[#C5A575] focus-visible:outline-none rounded-2xs"
+            >
+              {link.label}
+            </Link>
+          </li>
+        );
+      })}
+    </ul>
+  );
+}
+
+function FooterCategoryLinksFallback() {
+  return (
+    <ul className="text-xs text-[#FAF7F2]/75 font-light">
+      {FOOTER_SHOP_LINKS.map((link) => {
+        const href = getCategoryHref(link.category);
+        return (
+          <li key={link.label}>
+            <Link
+              href={href}
+              className="min-h-[44px] inline-flex items-center hover:text-[#C5A575] transition-colors focus-visible:ring-2 focus-visible:ring-[#C5A575] focus-visible:outline-none rounded-2xs"
+            >
+              {link.label}
+            </Link>
+          </li>
+        );
+      })}
+    </ul>
+  );
+}
 
 const InfoModal = dynamic(
   () => import("@/components/layout/InfoModal").then((mod) => mod.InfoModal),
@@ -111,38 +165,9 @@ export const Footer: React.FC = () => {
               <p className="text-xs uppercase tracking-[0.2em] text-[#C5A575] font-semibold mb-2">
                 Shop
               </p>
-              <ul className="text-xs text-[#FAF7F2]/75 font-light">
-                <li>
-                  <Link href="/shop?category=New+Arrivals" className="min-h-[44px] inline-flex items-center hover:text-[#C5A575] transition-colors focus-visible:ring-2 focus-visible:ring-[#C5A575] focus-visible:outline-none rounded-2xs">
-                    New Arrivals
-                  </Link>
-                </li>
-                <li>
-                  <Link href="/shop" className="min-h-[44px] inline-flex items-center hover:text-[#C5A575] transition-colors focus-visible:ring-2 focus-visible:ring-[#C5A575] focus-visible:outline-none rounded-2xs">
-                    Sarees
-                  </Link>
-                </li>
-                <li>
-                  <Link href="/shop?category=Silk" className="min-h-[44px] inline-flex items-center hover:text-[#C5A575] transition-colors focus-visible:ring-2 focus-visible:ring-[#C5A575] focus-visible:outline-none rounded-2xs">
-                    Silk Sarees
-                  </Link>
-                </li>
-                <li>
-                  <Link href="/shop?category=Handloom" className="min-h-[44px] inline-flex items-center hover:text-[#C5A575] transition-colors focus-visible:ring-2 focus-visible:ring-[#C5A575] focus-visible:outline-none rounded-2xs">
-                    Handloom
-                  </Link>
-                </li>
-                <li>
-                  <Link href="/shop?category=Festive" className="min-h-[44px] inline-flex items-center hover:text-[#C5A575] transition-colors focus-visible:ring-2 focus-visible:ring-[#C5A575] focus-visible:outline-none rounded-2xs">
-                    Festive Edits
-                  </Link>
-                </li>
-                <li>
-                  <Link href="/shop?category=Bridal" className="min-h-[44px] inline-flex items-center hover:text-[#C5A575] transition-colors focus-visible:ring-2 focus-visible:ring-[#C5A575] focus-visible:outline-none rounded-2xs">
-                    Bridal Sarees
-                  </Link>
-                </li>
-              </ul>
+              <Suspense fallback={<FooterCategoryLinksFallback />}>
+                <FooterCategoryLinks />
+              </Suspense>
             </div>
 
             {/* HELP */}
