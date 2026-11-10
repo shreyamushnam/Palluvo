@@ -5,6 +5,7 @@ import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
 import { Search, User, Heart, ShoppingBag, Menu, X, Bell } from "lucide-react";
 import { useStore } from "@/context/StoreContext";
+import { useShopSearch } from "@/context/ShopSearchContext";
 import { useFocusTrap } from "@/hooks/useFocusTrap";
 
 interface NavLinkItem {
@@ -64,7 +65,7 @@ function getNavHrefWithQuery(baseHref: string, queryParam: string): string {
 function NavLinksList({ onLinkClick }: { onLinkClick?: () => void }) {
   const pathname = usePathname();
   const searchParams = useSearchParams();
-  const { shopSearchQuery } = useStore();
+  const { shopSearchQuery } = useShopSearch();
   const currentCategory = (searchParams.get("category") || "").toLowerCase().trim();
   const currentQ = pathname === "/shop"
     ? shopSearchQuery.trim()
@@ -99,7 +100,7 @@ function NavLinksList({ onLinkClick }: { onLinkClick?: () => void }) {
 function MobileNavLinksList({ onLinkClick }: { onLinkClick?: () => void }) {
   const pathname = usePathname();
   const searchParams = useSearchParams();
-  const { shopSearchQuery } = useStore();
+  const { shopSearchQuery } = useShopSearch();
   const currentCategory = (searchParams.get("category") || "").toLowerCase().trim();
   const currentQ = pathname === "/shop"
     ? shopSearchQuery.trim()

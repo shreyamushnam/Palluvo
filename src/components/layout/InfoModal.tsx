@@ -96,7 +96,7 @@ export const InfoModal: React.FC<InfoModalProps> = ({
     },
     {
       q: "What is your return & exchange policy?",
-      a: "We offer a hassle-free 7-day return and exchange policy from the delivery date. We provide doorstep reverse pickup across all serviced pin codes in India.",
+      a: "Our official brand policy offers a hassle-free 7-day return and exchange window from the delivery date, with doorstep reverse pickup across all serviced pin codes in India. Please note that orders placed through this prototype website are local simulations and do not trigger physical reverse pickup or real refunds.",
     },
     {
       q: "How should I wash and store my luxury pure silk sarees?",
@@ -494,8 +494,18 @@ export const InfoModal: React.FC<InfoModalProps> = ({
                   <div>
                     <h3 className="font-serif text-2xl text-neutral-900">7-Day Return & Exchange</h3>
                     <p className="text-xs text-neutral-600 mt-1 font-sans">
-                      Complete peace of mind with doorstep reverse pickup across India.
+                      Brand policy overview: 7-day returns with doorstep reverse pickup across India.
                     </p>
+                  </div>
+
+                  <div className="p-3.5 bg-[#F4EFE6] border border-[#C5A575]/40 rounded-xs text-xs text-neutral-800 flex items-start gap-2.5">
+                    <Sparkles className="w-4 h-4 text-[#541920] shrink-0 mt-0.5" aria-hidden="true" />
+                    <div className="space-y-0.5">
+                      <span className="font-semibold text-neutral-900 block">Demonstration Workflow Notice</span>
+                      <p className="text-neutral-600 text-[11px] leading-relaxed">
+                        Orders and returns placed through this prototype storefront are local simulations for demonstration and do not trigger physical reverse pickup, logistics dispatch, or real monetary refunds.
+                      </p>
+                    </div>
                   </div>
 
                   <div className="space-y-3 text-xs text-neutral-700 leading-relaxed font-sans">
@@ -505,7 +515,7 @@ export const InfoModal: React.FC<InfoModalProps> = ({
                         <span>Easy Return Window</span>
                       </strong>
                       <p>
-                        You can initiate a return or exchange within <strong>7 days of delivery</strong> directly from your account or by emailing us at <strong>info@palluvo.store</strong>.
+                        Under our brand policy, you can initiate a return or exchange within <strong>7 days of delivery</strong> directly from your account or by emailing us at <strong>info@palluvo.store</strong>.
                       </p>
                     </div>
 
@@ -523,10 +533,13 @@ export const InfoModal: React.FC<InfoModalProps> = ({
                     <div className="p-4 bg-white rounded-xs border border-[#E8E2D9] space-y-2">
                       <strong className="text-neutral-900 font-semibold flex items-center gap-2 text-sm">
                         <CreditCard className="w-4 h-4 text-[#541920]" />
-                        <span>Refund Processing</span>
+                        <span>Refund Processing (Brand Policy)</span>
                       </strong>
                       <p>
                         Once our quality check team receives and inspects the drape, refunds are credited back to your original payment method (or UPI/Bank Account for COD orders) within 24 to 48 hours.
+                      </p>
+                      <p className="text-[11px] text-neutral-500 pt-1 border-t border-[#FAF7F2]">
+                        Note: Prototype returns are local simulations and do not trigger physical reverse collection or bank refund transfers.
                       </p>
                     </div>
                   </div>

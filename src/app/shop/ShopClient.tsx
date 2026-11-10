@@ -15,7 +15,7 @@ import {
 import { ProductCard } from "@/components/ecommerce/ProductCard";
 import { BackToTopButton } from "@/components/common/BackToTopButton";
 import { useFocusTrap } from "@/hooks/useFocusTrap";
-import { useStore } from "@/context/StoreContext";
+import { useShopSearch } from "@/context/ShopSearchContext";
 
 export { matchesCategory, getCategoryItemCount };
 
@@ -143,7 +143,7 @@ function SearchParamsWatcher({
 
 export function ShopContent() {
   const router = useRouter();
-  const { setShopSearchQuery } = useStore();
+  const { setShopSearchQuery } = useShopSearch();
   const [selectedCategory, setSelectedCategory] = useState<string>("");
   const [searchQuery, setSearchQuery] = useState<string>("");
   const [sortBy, setSortBy] = useState<string>("featured");
@@ -152,10 +152,13 @@ export function ShopContent() {
 
   React.useEffect(() => {
     setShopSearchQuery(searchQuery);
+  }, [searchQuery, setShopSearchQuery]);
+
+  React.useEffect(() => {
     return () => {
       setShopSearchQuery("");
     };
-  }, [searchQuery, setShopSearchQuery]);
+  }, [setShopSearchQuery]);
 
   const handleCategoryChange = React.useCallback((category: string) => {
     setSelectedCategory(category);

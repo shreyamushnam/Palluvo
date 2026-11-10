@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { Cormorant_Garamond, Montserrat } from "next/font/google";
 import "./globals.css";
 import { StoreProvider } from "@/context/StoreContext";
+import { ShopSearchProvider } from "@/context/ShopSearchContext";
 import { AnnouncementBar } from "@/components/layout/AnnouncementBar";
 import { Navbar } from "@/components/layout/Navbar";
 import { Footer } from "@/components/layout/Footer";
@@ -154,28 +155,30 @@ export default function RootLayout({
           Skip to main content
         </a>
         <StoreProvider>
-          {/* Top Announcement Bar */}
-          <AnnouncementBar />
+          <ShopSearchProvider>
+            {/* Top Announcement Bar */}
+            <AnnouncementBar />
 
-          {/* Sticky E-Commerce Navigation */}
-          <Navbar />
+            {/* Sticky E-Commerce Navigation */}
+            <Navbar />
 
-          {/* Main App Content */}
-          <main id="main-content" tabIndex={-1} className="flex-1 outline-none">
-            {children}
-          </main>
+            {/* Main App Content */}
+            <main id="main-content" tabIndex={-1} className="flex-1 outline-none">
+              {children}
+            </main>
 
-          {/* E-Commerce Footer */}
-          <Footer />
+            {/* E-Commerce Footer */}
+            <Footer />
 
-          {/* Mobile Bottom Navigation Bar */}
-          <MobileBottomNav />
+            {/* Mobile Bottom Navigation Bar */}
+            <MobileBottomNav />
 
-          {/* Global Interactive Overlays */}
-          <CartDrawer />
-          <SearchOverlay />
-          <QuickViewModal />
-          <Toast />
+            {/* Global Interactive Overlays */}
+            <CartDrawer />
+            <SearchOverlay />
+            <QuickViewModal />
+            <Toast />
+          </ShopSearchProvider>
         </StoreProvider>
       </body>
     </html>

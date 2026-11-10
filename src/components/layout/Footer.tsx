@@ -7,7 +7,7 @@ import dynamic from "next/dynamic";
 import { Check, MapPin } from "lucide-react";
 import type { InfoModalTab } from "@/components/layout/InfoModal";
 import { getCategoryHref } from "@/data/categories";
-import { useStore } from "@/context/StoreContext";
+import { useShopSearch } from "@/context/ShopSearchContext";
 
 const FOOTER_SHOP_LINKS = [
   { label: "New Arrivals", category: "New+Arrivals" },
@@ -21,7 +21,7 @@ const FOOTER_SHOP_LINKS = [
 function FooterCategoryLinks() {
   const pathname = usePathname();
   const searchParams = useSearchParams();
-  const { shopSearchQuery } = useStore();
+  const { shopSearchQuery } = useShopSearch();
   const currentQ = pathname === "/shop"
     ? shopSearchQuery.trim()
     : searchParams.get("q") || "";
