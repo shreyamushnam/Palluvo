@@ -12,7 +12,7 @@ const TRUST_PILLARS = [
   {
     icon: CheckCircle2,
     title: "Quality Checked",
-    description: "Every piece inspected before dispatch",
+    description: "Illustrative artisan inspection policy (prototype demo)",
   },
   {
     icon: ShieldCheck,

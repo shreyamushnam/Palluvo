@@ -11,7 +11,8 @@ import {
   ArrowRight, 
   Clock, 
   Trash2,
-  Calendar
+  Calendar,
+  Info
 } from "lucide-react";
 
 interface NotificationItem {
@@ -30,20 +31,20 @@ const INITIAL_NOTIFICATIONS: NotificationItem[] = [
   {
     id: "notif-1",
     type: "order",
-    title: "Order #PAL-8924 Dispatched",
-    description: "Your handcrafted Wine Tissue Silk Saree has been dispatched from our Varanasi weaving studio with insured express delivery.",
-    timestamp: "10 minutes ago",
+    title: "Sample Order #PAL-8924 Simulation Dispatched",
+    description: "Illustrative dispatch notice for sample Wine Tissue Silk Saree demonstration. (Prototype simulation; no physical consignment or courier dispatch occurs).",
+    timestamp: "Sample event: 10 mins ago",
     isRead: false,
-    actionText: "Track Consignment",
+    actionText: "View Demo Orders",
     actionHref: "/account",
-    tag: "Order Dispatch",
+    tag: "Demo Dispatch",
   },
   {
     id: "notif-2",
     type: "drop",
     title: "New Royal Kanjeevaram Collection Live",
     description: "Explore 12 heirloom bridal weaves crafted with certified 2G gold zari motifs, now open for bespoke reservations.",
-    timestamp: "2 hours ago",
+    timestamp: "Sample event: 2 hours ago",
     isRead: false,
     actionText: "Explore Collection",
     actionHref: "/shop?category=Kanjeevaram",
@@ -52,24 +53,24 @@ const INITIAL_NOTIFICATIONS: NotificationItem[] = [
   {
     id: "notif-3",
     type: "offer",
-    title: "Exclusive Private Privilege: 10% Off",
-    description: "Use your celebration code PALLUVO10 on orders of ₹1,999 or more to enjoy complimentary insured courier and artisan care kit.",
-    timestamp: "Yesterday",
+    title: "Demo Private Privilege: 10% Off Simulation",
+    description: "Use demonstration code PALLUVO10 on orders of ₹1,999 or more to test the sample discount and express shipping calculation. (Illustrative prototype offer).",
+    timestamp: "Sample event: Yesterday",
     isRead: true,
     actionText: "Shop With Privilege",
     actionHref: "/shop",
-    tag: "Private Offer",
+    tag: "Demo Offer",
   },
   {
     id: "notif-4",
     type: "consultation",
-    title: "Bridal Draping & Styling Consultation Ready",
-    description: "Your complimentary wedding ensemble curation notes and fabric swatches have been prepared by our senior sari draper.",
-    timestamp: "3 days ago",
+    title: "Sample Bridal Draping Consultation Notes",
+    description: "Illustrative wedding ensemble curation swatch guide prepared for demonstration. Contact our concierge to ask general styling questions.",
+    timestamp: "Sample event: 3 days ago",
     isRead: true,
     actionText: "Contact Concierge",
     actionHref: "/contact",
-    tag: "Styling Note",
+    tag: "Demo Styling Note",
   },
 ];
 
@@ -154,6 +155,17 @@ export const NotificationsClient: React.FC = () => {
                 <span>Mark all as read</span>
               </button>
             )}
+          </div>
+
+          {/* Prototype Simulation Disclosure */}
+          <div className="mt-4 p-3 bg-[#F4EFE6] border border-[#C5A575]/40 rounded-xs text-xs text-neutral-800 flex items-start gap-2.5">
+            <Info className="w-4 h-4 text-[#541920] shrink-0 mt-0.5" aria-hidden="true" />
+            <div className="space-y-0.5">
+              <span className="font-semibold text-neutral-900 block">Demonstration Feed</span>
+              <p className="text-neutral-600 text-[11px] leading-relaxed">
+                The notifications below are sample demonstration entries illustrating order alerts, promotions, and styling updates. Orders and dispatches are simulated on this prototype storefront and do not represent physical shipments or real-time courier tracking.
+              </p>
+            </div>
           </div>
         </div>
 
