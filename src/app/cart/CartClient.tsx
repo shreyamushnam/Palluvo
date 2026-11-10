@@ -99,17 +99,17 @@ export default function CartPage() {
                       <Sparkles className="w-3.5 h-3.5 text-[#15803D] shrink-0" />
                       <span>
                         {appliedCoupon === "PALLUVO10"
-                          ? "Congratulations! You qualify for FREE Express Shipping with coupon PALLUVO10."
-                          : "Congratulations! You qualify for FREE Standard Shipping."}
+                          ? "Simulation unlocked: Demo Free Express Shipping with coupon PALLUVO10."
+                          : "Simulation unlocked: Demo Free Standard Shipping."}
                       </span>
                     </span>
                   ) : (
                     <span>
-                      Add <strong className="tabular-nums">{formatPrice(freeShippingLeft)}</strong> more to get{" "}
+                      Add <strong className="tabular-nums">{formatPrice(freeShippingLeft)}</strong> more to unlock{" "}
                       <strong>
-                        {appliedCoupon === "PALLUVO10" ? "FREE Express Shipping" : "FREE Shipping"}
+                        {appliedCoupon === "PALLUVO10" ? "Demo Free Express Shipping" : "Demo Free Shipping"}
                       </strong>
-                      {appliedCoupon === "PALLUVO10" ? " with coupon PALLUVO10" : ""}!
+                      {appliedCoupon === "PALLUVO10" ? " with coupon PALLUVO10" : ""} (Prototype Simulation)
                     </span>
                   )}
                   <span className="font-semibold text-neutral-900">{progressPercent}%</span>
@@ -118,8 +118,8 @@ export default function CartPage() {
                   role="progressbar"
                   aria-label={
                     appliedCoupon === "PALLUVO10"
-                      ? "Free express shipping progress"
-                      : "Free shipping progress"
+                      ? "Demo free express shipping simulation progress"
+                      : "Demo free shipping simulation progress"
                   }
                   aria-valuenow={progressPercent}
                   aria-valuemin={0}
@@ -127,13 +127,13 @@ export default function CartPage() {
                   aria-valuetext={
                     freeShippingLeft === 0
                       ? appliedCoupon === "PALLUVO10"
-                        ? "Free express shipping unlocked with coupon PALLUVO10"
-                        : "Free standard shipping unlocked"
-                      : `Add ${formatPrice(freeShippingLeft)} more to get ${
+                        ? "Demo free express shipping simulation unlocked with coupon PALLUVO10"
+                        : "Demo free standard shipping simulation unlocked"
+                      : `Add ${formatPrice(freeShippingLeft)} more to unlock ${
                           appliedCoupon === "PALLUVO10"
-                            ? "free express shipping with coupon PALLUVO10"
-                            : "free shipping"
-                        }`
+                            ? "demo free express shipping with coupon PALLUVO10"
+                            : "demo free shipping"
+                        } (Prototype simulation)`
                   }
                   className="w-full bg-[#EFEAE1] h-2 rounded-full overflow-hidden"
                 >
@@ -287,7 +287,7 @@ export default function CartPage() {
                   <form onSubmit={handleApplyCoupon} className="space-y-1.5">
                     <div>
                       <label htmlFor="cart-page-coupon" className="block text-xs font-semibold text-neutral-800 mb-1">
-                        Coupon Code <span className="text-[11px] font-normal text-neutral-600">(use PALLUVO10 for 10% off)</span>
+                        Coupon Code <span className="text-[11px] font-normal text-neutral-600">(use PALLUVO10 for demo 10% discount simulation)</span>
                       </label>
                       <div className="flex gap-2">
                         <input
