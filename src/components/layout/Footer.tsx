@@ -269,7 +269,7 @@ export const Footer: React.FC = () => {
             <div className="flex gap-4">
               <span>100% Genuine Sarees</span>
               <span>•</span>
-              <span>Silk Mark Certified</span>
+              <span>Silk Mark on Certified Silks</span>
               <span>•</span>
               <span>Demo Checkout – No Real Payment</span>
             </div>

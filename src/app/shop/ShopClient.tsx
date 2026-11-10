@@ -175,11 +175,19 @@ export function ShopContent() {
 
   const handleSortChange = (newSort: string) => {
     setSortBy(newSort);
-    const params = new URLSearchParams(window.location.search);
+    const params = new URLSearchParams(typeof window !== "undefined" ? window.location.search : "");
     if (newSort === "featured") {
       params.delete("sort");
     } else {
       params.set("sort", newSort);
+    }
+    const trimmed = searchQuery.trim();
+    if (trimmed) {
+      params.set("q", trimmed);
+      lastUrlQRef.current = trimmed;
+    } else {
+      params.delete("q");
+      lastUrlQRef.current = "";
     }
     const newQuery = params.toString();
     router.push(newQuery ? `/shop?${newQuery}` : "/shop", { scroll: false });
@@ -269,6 +277,14 @@ export function ShopContent() {
       params.delete("category");
     } else {
       params.set("category", cat.canonicalQuery.replace(/\+/g, " "));
+    }
+    const trimmed = searchQuery.trim();
+    if (trimmed) {
+      params.set("q", trimmed);
+      lastUrlQRef.current = trimmed;
+    } else {
+      params.delete("q");
+      lastUrlQRef.current = "";
     }
     const newQuery = params.toString();
     router.push(newQuery ? `/shop?${newQuery}` : "/shop", { scroll: false });
@@ -416,6 +432,14 @@ export function ShopContent() {
                     setSelectedCategory("");
                     const params = new URLSearchParams(typeof window !== "undefined" ? window.location.search : "");
                     params.delete("category");
+                    const trimmed = searchQuery.trim();
+                    if (trimmed) {
+                      params.set("q", trimmed);
+                      lastUrlQRef.current = trimmed;
+                    } else {
+                      params.delete("q");
+                      lastUrlQRef.current = "";
+                    }
                     const qStr = params.toString();
                     router.push(qStr ? `/shop?${qStr}` : "/shop", { scroll: false });
                   }}
