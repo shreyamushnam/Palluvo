@@ -26,9 +26,9 @@ const TABS: CollectionTab[] = [
   },
   {
     id: "popular",
-    label: "Popular",
+    label: "Stylist Picks",
     shopHref: "/shop?sort=popular",
-    viewAllText: "View All Popular",
+    viewAllText: "View All Stylist Picks",
     getProducts: () =>
       PRODUCTS.filter((p) => p.isTrending || (p.rating >= 4.8 && !p.isNewArrival))
         .concat(PRODUCTS.filter((p) => p.isTrending))
@@ -81,7 +81,7 @@ export const FeaturedCollectionSection: React.FC = () => {
             </h2>
           </div>
 
-          {/* Tab Controls (New Arrivals, Popular, Curated Edits) */}
+          {/* Tab Controls (New Arrivals, Stylist Picks, Curated Edits) */}
           <div className="w-full sm:w-auto max-w-full min-w-0">
             <div
               role="tablist"

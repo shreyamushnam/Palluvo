@@ -225,7 +225,7 @@ export const SearchOverlay: React.FC = () => {
 
                 <div>
                   <h3 className="text-xs font-semibold tracking-wider uppercase text-neutral-600 mb-3">
-                    Trending Sarees Right Now
+                    Curated Sarees (Demo Inspiration)
                   </h3>
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                     {PRODUCTS.slice(0, 3).map((product) => (

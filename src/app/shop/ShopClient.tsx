@@ -22,7 +22,7 @@ export { matchesCategory, getCategoryItemCount };
 const SORT_OPTIONS = [
   { value: "featured", label: "Featured Weaves" },
   { value: "newest", label: "Newest Arrivals" },
-  { value: "popular", label: "Popular & Trending" },
+  { value: "popular", label: "Stylist Picks (Demo)" },
   { value: "curated", label: "Curated Edits" },
   { value: "price-low", label: "Price: Low to High" },
   { value: "price-high", label: "Price: High to Low" },

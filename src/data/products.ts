@@ -44,7 +44,9 @@ export interface Product {
   isNewArrival?: boolean;
   /** Sample catalog flag for curated editorial highlights (sample selection, not derived from sales volume) */
   isBestseller?: boolean;
+  /** Sample catalog flag for trending curation (sample selection, not derived from real-time activity) */
   isTrending?: boolean;
+  /** Illustrative prototype flag indicating eligible pure silk certification (demo simulation data) */
   isSilkMark?: boolean;
   tags?: string[];
   origin?: string;
@@ -593,6 +595,10 @@ export function getProductMetaDescription(product: Product, maxLength: number = 
   return `${trimmed.replace(/[.,:;—\s]+$/, "")}…`;
 }
 
+/**
+ * Evaluates whether a product is eligible for pure silk certification under the illustrative catalog data.
+ * Note: Silk Mark data in this prototype storefront is simulated demo data and not connected to a live SMOI verification registry.
+ */
 export function isSilkMarkCertified(product: Product): boolean {
   return product.isSilkMark === true;
 }

@@ -848,7 +848,7 @@ export default function AccountPage() {
             <div className="bg-white p-4 rounded-sm border border-[#E8E2D9] text-center flex flex-col items-center">
               <Award className="w-5 h-5 text-[#C5A575] mb-2" />
               <h3 className="text-xs font-semibold text-neutral-900 mb-0.5 font-serif">Silk Mark Authenticity</h3>
-              <p className="text-[11px] text-neutral-600 leading-relaxed font-sans">Certified pure silk drapes hallmarked with authentic government Silk Mark assurance.</p>
+              <p className="text-[11px] text-neutral-600 leading-relaxed font-sans">Illustrative pure silk mark assurance on eligible weaves (prototype demo data).</p>
             </div>
             <div className="bg-white p-4 rounded-sm border border-[#E8E2D9] text-center flex flex-col items-center">
               <RotateCcw className="w-5 h-5 text-[#C5A575] mb-2" />

@@ -84,7 +84,7 @@ export const InfoModal: React.FC<InfoModalProps> = ({
   const faqs = [
     {
       q: "Are all PALLUVO sarees authentic and Silk Mark certified?",
-      a: "Yes. Every pure silk saree in our collection carries the official Silk Mark Organisation of India certification, verifying 100% natural pure silk fibers and tested zari threading.",
+      a: "Under our brand curation standards, every pure silk saree in our atelier collection is sourced from master weaving clusters eligible for official Silk Mark Organisation of India (SMOI) certification. Please note that certification details shown on this prototype storefront are illustrative demo representations.",
     },
     {
       q: "Does the saree come with a matching blouse piece?",
