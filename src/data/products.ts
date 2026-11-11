@@ -42,6 +42,7 @@ export interface Product {
   blouseOptions?: string[];
   inStock: boolean;
   isNewArrival?: boolean;
+  /** Sample catalog flag for curated editorial highlights (sample selection, not derived from sales volume) */
   isBestseller?: boolean;
   isTrending?: boolean;
   isSilkMark?: boolean;
@@ -106,6 +107,7 @@ export const PRODUCTS: Product[] = [
     blouseOptions: ["With Blouse", "Without Blouse"],
     inStock: true,
     isNewArrival: true,
+    // Sample catalog selection for curated highlights (prototype demo)
     isBestseller: true,
     isSilkMark: true,
     tags: ["silk", "festive", "wine", "tissue"],
@@ -185,6 +187,7 @@ export const PRODUCTS: Product[] = [
     hasBlousePiece: true,
     blouseOptions: ["With Blouse", "Without Blouse"],
     inStock: true,
+    // Sample catalog selection for curated highlights (prototype demo)
     isBestseller: true,
     isSilkMark: true,
     tags: ["handloom", "purple", "festive"],
@@ -262,6 +265,7 @@ export const PRODUCTS: Product[] = [
     hasBlousePiece: true,
     blouseOptions: ["With Blouse", "Without Blouse"],
     inStock: true,
+    // Sample catalog selection for curated highlights (prototype demo)
     isBestseller: true,
     isSilkMark: true,
     tags: ["bridal", "red", "banarasi", "wedding"],

@@ -852,8 +852,8 @@ export default function AccountPage() {
             </div>
             <div className="bg-white p-4 rounded-sm border border-[#E8E2D9] text-center flex flex-col items-center">
               <RotateCcw className="w-5 h-5 text-[#C5A575] mb-2" />
-              <h3 className="text-xs font-semibold text-neutral-900 mb-0.5 font-serif">Complimentary Returns</h3>
-              <p className="text-[11px] text-neutral-600 leading-relaxed font-sans">Hassle-free 7-day doorstep reverse pickups and swift exchanges.</p>
+              <h3 className="text-xs font-semibold text-neutral-900 mb-0.5 font-serif">Brand Returns Policy</h3>
+              <p className="text-[11px] text-neutral-600 leading-relaxed font-sans">Illustrative 7-day doorstep return policy (prototype orders are simulated; no physical reverse pickup occurs).</p>
             </div>
             <div className="bg-white p-4 rounded-sm border border-[#E8E2D9] text-center flex flex-col items-center">
               <Headphones className="w-5 h-5 text-[#C5A575] mb-2" />

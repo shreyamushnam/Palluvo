@@ -77,8 +77,11 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
         {/* Badges */}
         <div className="absolute bottom-2 left-2 sm:bottom-auto sm:top-2.5 sm:left-2.5 flex flex-col gap-1 z-10 pointer-events-none items-start">
           {product.isBestseller && (
-            <span className="px-2 py-0.5 bg-[#541920] text-[#FAF7F2] text-[9px] uppercase tracking-wider font-semibold rounded-xs w-fit">
-              Bestseller
+            <span
+              title="Curated editorial highlight (sample catalog selection)"
+              className="px-2 py-0.5 bg-[#541920] text-[#FAF7F2] text-[9px] uppercase tracking-wider font-semibold rounded-xs w-fit"
+            >
+              Featured
             </span>
           )}
           {product.discountPercent > 0 && (
