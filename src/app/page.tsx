@@ -34,7 +34,7 @@ export default function HomePage() {
       {/* 8-Category Visual Shopping Grid */}
       <CategoryGrid />
 
-      {/* Consolidated Featured Collection (New Arrivals, Popular, Bestsellers) */}
+      {/* Consolidated Featured Collection (New Arrivals, Popular, Curated Edits) */}
       <FeaturedCollectionSection />
 
       {/* Stylist Curated "Shop The Look" Bundle Builder */}

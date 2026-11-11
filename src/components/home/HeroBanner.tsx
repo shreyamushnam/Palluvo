@@ -11,7 +11,7 @@ const SLIDES = [
     titleLine1: "Every drape,",
     titleLine2: "a little magic",
     description: "Discover sarees crafted for moments worth remembering.",
-    curationTag: "Bestseller",
+    curationTag: "Curated",
     categoryName: "Tissue Silk",
     categoryHref: "/shop?category=Tissue+Silk",
     primaryCta: { label: "Shop Sarees", href: "/shop" },

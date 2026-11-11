@@ -6,7 +6,7 @@ import { ArrowRight } from "lucide-react";
 import { PRODUCTS, Product } from "@/data/products";
 import { ProductCard } from "@/components/ecommerce/ProductCard";
 
-type CollectionTabKey = "new-arrivals" | "popular" | "bestsellers";
+type CollectionTabKey = "new-arrivals" | "popular" | "featured";
 
 interface CollectionTab {
   id: CollectionTabKey;
@@ -36,10 +36,10 @@ const TABS: CollectionTab[] = [
         .slice(0, 4),
   },
   {
-    id: "bestsellers",
-    label: "Bestsellers",
-    shopHref: "/shop?sort=bestselling",
-    viewAllText: "View All Bestsellers",
+    id: "featured",
+    label: "Curated Edits",
+    shopHref: "/shop?sort=featured",
+    viewAllText: "View All Curated Edits",
     getProducts: () => PRODUCTS.filter((p) => p.isBestseller).slice(0, 4),
   },
 ];
@@ -81,7 +81,7 @@ export const FeaturedCollectionSection: React.FC = () => {
             </h2>
           </div>
 
-          {/* Tab Controls (New Arrivals, Popular, Bestsellers) */}
+          {/* Tab Controls (New Arrivals, Popular, Curated Edits) */}
           <div className="w-full sm:w-auto max-w-full min-w-0">
             <div
               role="tablist"

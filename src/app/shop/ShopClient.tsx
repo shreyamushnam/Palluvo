@@ -23,7 +23,7 @@ const SORT_OPTIONS = [
   { value: "featured", label: "Featured Weaves" },
   { value: "newest", label: "Newest Arrivals" },
   { value: "popular", label: "Popular & Trending" },
-  { value: "bestselling", label: "Bestsellers" },
+  { value: "curated", label: "Curated Edits" },
   { value: "price-low", label: "Price: Low to High" },
   { value: "price-high", label: "Price: High to Low" },
   { value: "rating", label: "Highest Rated" },
@@ -316,7 +316,7 @@ export function ShopContent() {
       if (sortBy === "price-high") return b.price - a.price;
       if (sortBy === "rating") return b.rating - a.rating;
       if (sortBy === "popular") return (b.isTrending ? 2 : 0) + b.rating - ((a.isTrending ? 2 : 0) + a.rating);
-      if (sortBy === "bestselling") return (b.isBestseller ? 1 : 0) - (a.isBestseller ? 1 : 0);
+      if (sortBy === "curated" || sortBy === "bestselling") return (b.isBestseller ? 1 : 0) - (a.isBestseller ? 1 : 0);
       if (sortBy === "newest") return (b.isNewArrival ? 1 : 0) - (a.isNewArrival ? 1 : 0);
       return 0; // default featured
     });
