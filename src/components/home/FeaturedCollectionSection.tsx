@@ -28,7 +28,7 @@ const TABS: CollectionTab[] = [
     id: "stylist-picks",
     label: "Stylist Picks (Demo)",
     shopHref: "/shop?sort=popular",
-    viewAllText: "View All Stylist Picks",
+    viewAllText: "Sort Catalog by Stylist Picks",
     getProducts: () => PRODUCTS.filter((p) => p.isTrending).slice(0, 4),
   },
   {
