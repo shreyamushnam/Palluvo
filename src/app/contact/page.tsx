@@ -2,13 +2,29 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { Phone, Mail, Clock, MapPin, Sparkles } from "lucide-react";
 import { ContactForm } from "./ContactForm";
+import { SITE_URL } from "@/data/site";
 
 export const metadata: Metadata = {
-  title: "Contact Concierge | Client Services & Inquiries | PALLUVO",
+  title: "Contact Concierge (Prototype Demo) | Client Inquiries | PALLUVO",
   description:
-    "Connect with the PALLUVO private concierge for bridal consultations, styling advice, and order assistance. Available Mon - Sat, 10 AM to 7 PM IST.",
+    "Connect with the PALLUVO demo concierge desk for styling questions and sample order assistance on this prototype storefront.",
   alternates: {
     canonical: "/contact",
+  },
+  openGraph: {
+    title: "Contact Concierge (Prototype Demo) | Client Inquiries | PALLUVO",
+    description:
+      "Connect with the PALLUVO demo concierge desk for styling questions and sample order assistance on this prototype storefront.",
+    url: `${SITE_URL}/contact`,
+    siteName: "PALLUVO",
+    locale: "en_IN",
+    type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Contact Concierge (Prototype Demo) | Client Inquiries | PALLUVO",
+    description:
+      "Connect with the PALLUVO demo concierge desk for styling questions and sample order assistance on this prototype storefront.",
   },
 };
 

@@ -204,7 +204,7 @@ export const ProductDetailView: React.FC<ProductDetailViewProps> = ({
               tabIndex={0}
               aria-label={isZoomed ? "Zoom out product image" : "Zoom product image"}
               onKeyDown={(e) => {
-                if (e.key === "Enter" || e.key === " ") {
+                if (e.target === e.currentTarget && (e.key === "Enter" || e.key === " ")) {
                   e.preventDefault();
                   setIsZoomed((prev) => !prev);
                 }
@@ -262,6 +262,7 @@ export const ProductDetailView: React.FC<ProductDetailViewProps> = ({
               <div
                 className="absolute bottom-2 right-2 z-20 flex sm:hidden gap-1.5 bg-black/40 backdrop-blur-xs p-1 rounded-xs"
                 onClick={(e) => e.stopPropagation()}
+                onKeyDown={(e) => e.stopPropagation()}
               >
                 {product.images.map((img, idx) => (
                   <button

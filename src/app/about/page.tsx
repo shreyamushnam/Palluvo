@@ -1,13 +1,29 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Sparkles, ArrowRight } from "lucide-react";
+import { SITE_URL } from "@/data/site";
 
 export const metadata: Metadata = {
-  title: "About Us | Brand Philosophy & Handloom Heritage | PALLUVO",
+  title: "About Us | Handloom Heritage & Philosophy (Prototype Demo) | PALLUVO",
   description:
-    "Discover the story of PALLUVO, celebrating the timeless poetry of slow Indian textiles, artisanal master weavers, and eligible handloom pure silks.",
+    "Discover the story of PALLUVO, celebrating the timeless poetry of slow Indian textiles, master weaving traditions, and handloom inspirations on this prototype storefront.",
   alternates: {
     canonical: "/about",
+  },
+  openGraph: {
+    title: "About Us | Handloom Heritage & Philosophy (Prototype Demo) | PALLUVO",
+    description:
+      "Discover the story of PALLUVO, celebrating the timeless poetry of slow Indian textiles, master weaving traditions, and handloom inspirations on this prototype storefront.",
+    url: `${SITE_URL}/about`,
+    siteName: "PALLUVO",
+    locale: "en_IN",
+    type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "About Us | Handloom Heritage & Philosophy (Prototype Demo) | PALLUVO",
+    description:
+      "Discover the story of PALLUVO, celebrating the timeless poetry of slow Indian textiles, master weaving traditions, and handloom inspirations on this prototype storefront.",
   },
 };
 
