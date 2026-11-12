@@ -42,13 +42,13 @@ const INITIAL_NOTIFICATIONS: NotificationItem[] = [
   {
     id: "notif-2",
     type: "drop",
-    title: "New Royal Kanjeevaram Collection Live",
-    description: "Explore 12 heirloom bridal weaves crafted with certified 2G gold zari motifs, now open for bespoke reservations.",
+    title: "Sample Royal Kanjeevaram Concept Drop",
+    description: "Sample preview of 12 bridal drapes inspired by classic temple motifs. (Illustrative demonstration drop).",
     timestamp: "Sample event: 2 hours ago",
     isRead: false,
     actionText: "Explore Collection",
     actionHref: "/shop?category=Kanjeevaram",
-    tag: "Atelier Drop",
+    tag: "Demo Drop",
   },
   {
     id: "notif-3",

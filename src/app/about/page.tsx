@@ -61,7 +61,7 @@ export default function AboutPage() {
         </blockquote>
 
         <p>
-          Each weave in our collection is curated directly from master weaving clusters across Kanchipuram, Varanasi, Chanderi, and Paithan. Crafted from traditional handloom fibers, our textiles are designed to become treasured family heirlooms. (Silk Mark attributes on this prototype storefront are illustrative demo representations).
+          Each design concept in our prototype catalog draws inspiration from revered master weaving traditions across Kanchipuram, Varanasi, Chanderi, and Paithan. Crafted to celebrate traditional textile artistry, these curated pieces showcase fluid drape aesthetics. (Note: Brand narrative, craft timelines, regional sourcing stories, and Silk Mark attributes on this prototype storefront are illustrative demo representations).
         </p>
 
         <div className="pt-8 border-t border-[#E8E2D9] flex flex-col sm:flex-row items-center justify-between gap-4">
