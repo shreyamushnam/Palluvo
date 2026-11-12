@@ -7,14 +7,14 @@ import { BackToTopButton } from "@/components/common/BackToTopButton";
 import { SITE_URL } from "@/data/site";
 
 export const metadata: Metadata = {
-  title: "Curated Saree Collections & Heritage Edits | PALLUVO",
+  title: "Curated Saree Collections & Heritage Edits (Prototype Demo) | PALLUVO",
   description:
     "Explore PALLUVO's thematic collections of Indian textiles: The Silk Edit, Midnight Drapes, Festive Stories, and Everyday Poetry (prototype showcase).",
   alternates: {
     canonical: "/collections",
   },
   openGraph: {
-    title: "Curated Saree Collections & Heritage Edits | PALLUVO",
+    title: "Curated Saree Collections & Heritage Edits (Prototype Demo) | PALLUVO",
     description:
       "Explore PALLUVO's thematic collections of Indian textiles: The Silk Edit, Midnight Drapes, Festive Stories, and Everyday Poetry (prototype showcase).",
     url: `${SITE_URL}/collections`,
@@ -24,7 +24,7 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: "Curated Saree Collections & Heritage Edits | PALLUVO",
+    title: "Curated Saree Collections & Heritage Edits (Prototype Demo) | PALLUVO",
     description:
       "Explore PALLUVO's thematic collections of Indian textiles: The Silk Edit, Midnight Drapes, Festive Stories, and Everyday Poetry (prototype showcase).",
   },

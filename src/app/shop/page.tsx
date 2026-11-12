@@ -3,14 +3,14 @@ import { ShopContent } from "./ShopClient";
 import { SITE_URL } from "@/data/site";
 
 export const metadata: Metadata = {
-  title: "Handcrafted Luxury Sarees, Blouses & Jewelry | PALLUVO",
+  title: "Handcrafted Sarees, Blouses & Jewelry (Prototype Demo) | PALLUVO",
   description:
     "Explore PALLUVO's curated collection of Indian handcrafted products on this prototype storefront. Pure silk & handloom sarees, designer blouses, and temple jewelry with simulated checkout.",
   alternates: {
     canonical: "/shop",
   },
   openGraph: {
-    title: "Handcrafted Luxury Sarees, Blouses & Jewelry | PALLUVO",
+    title: "Handcrafted Sarees, Blouses & Jewelry (Prototype Demo) | PALLUVO",
     description:
       "Explore PALLUVO's curated collection of Indian handcrafted products on this prototype storefront. Pure silk & handloom sarees, designer blouses, and temple jewelry with simulated checkout.",
     url: `${SITE_URL}/shop`,
@@ -20,7 +20,7 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: "Handcrafted Luxury Sarees, Blouses & Jewelry | PALLUVO",
+    title: "Handcrafted Sarees, Blouses & Jewelry (Prototype Demo) | PALLUVO",
     description:
       "Explore PALLUVO's curated collection of Indian handcrafted products on this prototype storefront. Pure silk & handloom sarees, designer blouses, and temple jewelry with simulated checkout.",
   },

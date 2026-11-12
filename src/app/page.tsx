@@ -11,7 +11,7 @@ import { OfferWelcomeModal } from "@/components/home/OfferWelcomeModal";
 import { BackToTopButton } from "@/components/common/BackToTopButton";
 
 export const metadata: Metadata = {
-  title: "PALLUVO | Buy Designer Sarees Online | Pure Silk, Handloom, & Bridal",
+  title: "PALLUVO (Prototype Showcase) | Curated Designer Sarees & Handlooms",
   description:
     "Explore handwoven Kanjeevaram silk, Banarasi brocades, lightweight organza, and festive party wear on the PALLUVO prototype storefront. Showcasing curated drapes, illustrative brand shipping, and sample policies.",
   alternates: {

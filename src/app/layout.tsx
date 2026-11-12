@@ -33,7 +33,7 @@ const montserrat = Montserrat({
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
-  title: "PALLUVO | Buy Designer Sarees Online | Pure Silk, Handloom, & Bridal",
+  title: "PALLUVO (Prototype Showcase) | Curated Designer Sarees & Handlooms",
   description:
     "Explore handwoven Kanjeevaram silk, Banarasi brocades, lightweight organza, and festive party wear on the PALLUVO prototype storefront. Showcasing curated drapes, illustrative brand shipping, and sample policies.",
   keywords: [
@@ -112,7 +112,7 @@ const organizationAndWebsiteJsonLd = {
       "@id": `${SITE_URL}/#website`,
       "url": SITE_URL,
       "name": "PALLUVO",
-      "description": "Buy Designer Sarees Online | Pure Silk, Handloom, & Bridal",
+      "description": "Prototype Storefront | Curated Designer Sarees & Handlooms",
       "publisher": {
         "@id": `${SITE_URL}/#organization`,
       },
