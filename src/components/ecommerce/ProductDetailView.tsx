@@ -188,48 +188,45 @@ export const ProductDetailView: React.FC<ProductDetailViewProps> = ({
               ))}
             </div>
 
-            {/* Main Stage Image */}
-            <div
-              className={`relative aspect-[3/4] w-full max-w-[220px] sm:max-w-none flex-1 rounded-sm overflow-hidden bg-neutral-100 shadow-md border border-[#E8E2D9] select-none ${
-                isZoomed ? "cursor-zoom-out" : "cursor-zoom-in"
-              }`}
-              onClick={(e) => {
-                const rect = e.currentTarget.getBoundingClientRect();
-                const x = Math.max(0, Math.min(100, ((e.clientX - rect.left) / rect.width) * 100));
-                const y = Math.max(0, Math.min(100, ((e.clientY - rect.top) / rect.height) * 100));
-                setZoomOrigin({ x, y });
-                setIsZoomed((prev) => !prev);
-              }}
-              role="button"
-              tabIndex={0}
-              aria-label={isZoomed ? "Zoom out product image" : "Zoom product image"}
-              onKeyDown={(e) => {
-                if (e.target === e.currentTarget && (e.key === "Enter" || e.key === " ")) {
-                  e.preventDefault();
+            {/* Main Stage Image Container */}
+            <div className="relative aspect-[3/4] w-full max-w-[220px] sm:max-w-none flex-1 rounded-sm overflow-hidden bg-neutral-100 shadow-md border border-[#E8E2D9] select-none">
+              {/* Dedicated Zoom Interactive Target */}
+              <button
+                type="button"
+                onClick={(e) => {
+                  const rect = e.currentTarget.getBoundingClientRect();
+                  const x = Math.max(0, Math.min(100, ((e.clientX - rect.left) / rect.width) * 100));
+                  const y = Math.max(0, Math.min(100, ((e.clientY - rect.top) / rect.height) * 100));
+                  setZoomOrigin({ x, y });
                   setIsZoomed((prev) => !prev);
-                }
-              }}
-            >
-              <div
-                className="relative w-full h-full transition-transform duration-500 ease-out will-change-transform"
-                style={{
-                  transform: isZoomed ? "scale(2.2)" : "scale(1)",
-                  transformOrigin: `${zoomOrigin.x}% ${zoomOrigin.y}%`,
                 }}
+                className={`relative w-full h-full block text-left p-0 border-0 bg-transparent focus-visible:ring-2 focus-visible:ring-[#541920] focus-visible:outline-none ${
+                  isZoomed ? "cursor-zoom-out" : "cursor-zoom-in"
+                }`}
+                aria-label={isZoomed ? "Zoom out product image" : "Zoom product image"}
+                aria-pressed={isZoomed}
               >
-                <Image
-                  src={product.images[activeImageIdx] || product.images[0]}
-                  alt={product.name}
-                  fill
-                  priority
-                  sizes="(max-width: 1024px) 100vw, 650px"
-                  className="object-cover object-top transition-all duration-300"
-                />
-              </div>
+                <div
+                  className="relative w-full h-full transition-transform duration-500 ease-out will-change-transform"
+                  style={{
+                    transform: isZoomed ? "scale(2.2)" : "scale(1)",
+                    transformOrigin: `${zoomOrigin.x}% ${zoomOrigin.y}%`,
+                  }}
+                >
+                  <Image
+                    src={product.images[activeImageIdx] || product.images[0]}
+                    alt={product.name}
+                    fill
+                    priority
+                    sizes="(max-width: 1024px) 100vw, 650px"
+                    className="object-cover object-top transition-all duration-300"
+                  />
+                </div>
+              </button>
 
               {/* Mobile Zoom Indicator Badge */}
-              <div className="absolute top-2.5 right-2.5 z-10 sm:hidden">
-                <span className="inline-flex items-center gap-1 px-2 py-1 bg-black/60 backdrop-blur-xs text-white text-[10px] uppercase tracking-wider font-medium rounded-xs shadow-xs pointer-events-none">
+              <div className="absolute top-2.5 right-2.5 z-10 sm:hidden pointer-events-none">
+                <span className="inline-flex items-center gap-1 px-2 py-1 bg-black/60 backdrop-blur-xs text-white text-[10px] uppercase tracking-wider font-medium rounded-xs shadow-xs">
                   {isZoomed ? (
                     <>
                       <ZoomOut className="w-3 h-3 text-[#FAF7F2]" />
@@ -258,11 +255,9 @@ export const ProductDetailView: React.FC<ProductDetailViewProps> = ({
                 </div>
               )}
 
-              {/* Mobile Floating Thumbnail Switcher */}
+              {/* Mobile Floating Thumbnail Switcher - Sibling outside zoom button */}
               <div
                 className="absolute bottom-2 right-2 z-20 flex sm:hidden gap-1.5 bg-black/40 backdrop-blur-xs p-1 rounded-xs"
-                onClick={(e) => e.stopPropagation()}
-                onKeyDown={(e) => e.stopPropagation()}
               >
                 {product.images.map((img, idx) => (
                   <button
