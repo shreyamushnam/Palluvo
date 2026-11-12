@@ -297,9 +297,9 @@ export const Footer: React.FC = () => {
           <div className="pt-6 flex flex-col sm:flex-row items-center justify-between text-xs text-[#FAF7F2]/50 gap-3">
             <p>© {new Date().getFullYear()} PALLUVO Retail Pvt Ltd. All rights reserved.</p>
             <div className="flex gap-4">
-              <span>100% Genuine Sarees</span>
+              <span>Authentic Handcrafted Inspiration (Demo)</span>
               <span>•</span>
-              <span>Handcrafted Pure Silk Edits (Demo)</span>
+              <span>Pure Silk Weave Edits (Illustrative)</span>
               <span>•</span>
               <span>Demo Checkout – No Real Payment</span>
             </div>

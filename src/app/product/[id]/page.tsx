@@ -19,7 +19,7 @@ export async function generateMetadata({
     notFound();
   }
 
-  const title = `${product.name} | PALLUVO`;
+  const title = `${product.name} (Prototype Demo) | PALLUVO`;
   const description = getProductMetaDescription(product);
   const canonicalUrl = `${SITE_URL}/product/${product.id}`;
 
@@ -28,6 +28,10 @@ export async function generateMetadata({
     description,
     alternates: {
       canonical: canonicalUrl,
+    },
+    robots: {
+      index: false,
+      follow: true,
     },
     openGraph: {
       title,
@@ -39,11 +43,11 @@ export async function generateMetadata({
           url: product.primaryImage,
           width: 800,
           height: 1067,
-          alt: product.name,
+          alt: `${product.name} Prototype`,
         },
         ...product.images.map((img) => ({
           url: img,
-          alt: `${product.name} alternate view`,
+          alt: `${product.name} prototype alternate view`,
         })),
       ],
       locale: "en_IN",

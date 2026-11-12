@@ -1,5 +1,4 @@
 import type { MetadataRoute } from "next";
-import { PRODUCTS } from "@/data/products";
 import { SITE_URL } from "@/data/site";
 
 // lastModified is intentionally omitted: per-page modification dates are not
@@ -35,11 +34,6 @@ export default function sitemap(): MetadataRoute.Sitemap {
     },
   ];
 
-  const productRoutes: MetadataRoute.Sitemap = PRODUCTS.map((product) => ({
-    url: `${baseUrl}/product/${product.id}`,
-    changeFrequency: "weekly",
-    priority: 0.8,
-  }));
-
-  return [...staticRoutes, ...productRoutes];
+  // Prototype product detail pages are excluded from sitemap indexing until live catalog is connected
+  return staticRoutes;
 }

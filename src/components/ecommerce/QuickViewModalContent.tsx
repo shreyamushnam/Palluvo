@@ -307,7 +307,7 @@ export const QuickViewModalContent: React.FC<QuickViewModalContentProps> = ({
                   </div>
                   <div className="flex flex-col items-center gap-1">
                     <ShieldCheck className="w-4 h-4 text-[#15803D]" />
-                    <span>{isSilkMark ? "Silk Mark Eligible (Demo)" : "Authentic Handcrafted"}</span>
+                    <span>{isSilkMark ? "Silk Mark Eligible (Demo)" : "Handcrafted Curation (Demo)"}</span>
                   </div>
                   <div className="flex flex-col items-center gap-1">
                     <RotateCcw className="w-4 h-4 text-[#C5A575]" />

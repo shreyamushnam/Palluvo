@@ -576,14 +576,14 @@ export function getProductMetaDescription(product: Product, maxLength: number = 
   let descriptor = "";
   switch (type) {
     case "blouse":
-      descriptor = `${product.fabric} handcrafted blouse piece.`;
+      descriptor = `${product.fabric} handcrafted blouse piece (prototype showcase).`;
       break;
     case "jewelry":
-      descriptor = `Handcrafted jewelry in ${product.fabric}.`;
+      descriptor = `Handcrafted jewelry in ${product.fabric} (prototype showcase).`;
       break;
     case "saree":
     default:
-      descriptor = `${product.fabric} handcrafted saree.`;
+      descriptor = `${product.fabric} handcrafted saree (prototype showcase).`;
       break;
   }
 

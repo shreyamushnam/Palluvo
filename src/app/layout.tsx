@@ -47,8 +47,9 @@ export const metadata: Metadata = {
     "Organza Sarees",
   ],
   openGraph: {
-    title: "PALLUVO | Every drape, a little magic",
-    description: "Premium Indian sarees online. Authentic handlooms, pure silk, and modern silhouettes.",
+    title: "PALLUVO | Prototype Storefront",
+    description:
+      "Prototype online saree atelier showcasing curated Kanjeevarams, Banarasi brocades, and modern handloom silhouettes with simulated shopping workflows.",
     url: SITE_URL,
     siteName: "PALLUVO",
     images: [
@@ -56,7 +57,7 @@ export const metadata: Metadata = {
         url: "/images/hero-saree.jpg",
         width: 1200,
         height: 630,
-        alt: "PALLUVO Saree Collection",
+        alt: "PALLUVO Saree Collection Prototype",
       },
     ],
     locale: "en_IN",
@@ -64,14 +65,15 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: "PALLUVO | Buy Designer Sarees Online | Pure Silk, Handloom, & Bridal",
-    description: "Premium Indian sarees online. Authentic handlooms, pure silk, and modern silhouettes.",
+    title: "PALLUVO | Prototype Storefront",
+    description:
+      "Prototype online saree atelier showcasing curated Kanjeevarams, Banarasi brocades, and modern handloom silhouettes with simulated shopping workflows.",
     images: [
       {
         url: "/images/hero-saree.jpg",
         width: 1200,
         height: 630,
-        alt: "PALLUVO Saree Collection",
+        alt: "PALLUVO Saree Collection Prototype",
       },
     ],
   },
@@ -96,7 +98,7 @@ const organizationAndWebsiteJsonLd = {
       "name": "PALLUVO",
       "url": SITE_URL,
       "logo": `${SITE_URL}/images/logo.png`,
-      "description": "Premium Indian sarees online. Authentic handlooms, pure silk, and modern silhouettes.",
+      "description": "Prototype online saree atelier showcasing curated handloom textiles and simulated store workflows.",
       "contactPoint": {
         "@type": "ContactPoint",
         "telephone": "+918498854323",
