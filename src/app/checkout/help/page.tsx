@@ -69,7 +69,7 @@ const HELP_SECTIONS = [
     items: [
       {
         question: "How do I know my saree is authentic pure silk?",
-        answer: "Under our atelier fulfillment standards, genuine PALLUVO pure silk sarees are dispatched with an official Silk Mark Organisation of India (SMOI) security label verifying natural pure silk thread purity. Note: Silk Mark tags and QR verification details displayed in this prototype storefront are illustrative demo representations."
+        answer: "Under our brand curation standards, eligible pure silk weaves are designed to meet Silk Mark Organisation of India (SMOI) purity standards. Please note that Silk Mark tags, QR verification codes, and provenance details shown on this prototype storefront are illustrative demo representations (no live registry verification is connected)."
       },
       {
         question: "What is your return and exchange policy?",

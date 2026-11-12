@@ -1317,10 +1317,10 @@ export default function CheckoutPage() {
                 <p>
                   •{" "}
                   {allSilkMarkItems
-                    ? "100% Pure Silk Mark Verified"
+                    ? "Silk Mark Eligible Weaves (Demo Prototype Data)"
                     : isJewelryOnly
-                    ? "100% Certified Handcrafted Authenticity"
-                    : "100% Verified Artisanal Authenticity"}
+                    ? "Handcrafted Jewelry (Demo Prototype Data)"
+                    : "Artisanal Weaves (Demo Prototype Data)"}
                 </p>
                 <div className="pt-2 border-t border-[#E8E2D9] text-neutral-600">
                   <Link

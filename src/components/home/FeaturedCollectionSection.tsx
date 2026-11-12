@@ -6,7 +6,7 @@ import { ArrowRight } from "lucide-react";
 import { PRODUCTS, Product } from "@/data/products";
 import { ProductCard } from "@/components/ecommerce/ProductCard";
 
-type CollectionTabKey = "new-arrivals" | "popular" | "featured";
+type CollectionTabKey = "new-arrivals" | "stylist-picks" | "featured";
 
 interface CollectionTab {
   id: CollectionTabKey;
@@ -25,14 +25,12 @@ const TABS: CollectionTab[] = [
     getProducts: () => PRODUCTS.filter((p) => p.isNewArrival).slice(0, 4),
   },
   {
-    id: "popular",
-    label: "Stylist Picks",
+    id: "stylist-picks",
+    label: "Stylist Picks (Demo)",
     shopHref: "/shop?sort=popular",
     viewAllText: "View All Stylist Picks",
     getProducts: () =>
-      PRODUCTS.filter((p) => p.isTrending || (p.rating >= 4.8 && !p.isNewArrival))
-        .concat(PRODUCTS.filter((p) => p.isTrending))
-        .filter((item, index, self) => index === self.findIndex((t) => t.id === item.id))
+      PRODUCTS.filter((p) => p.isTrending || p.id === "pal-003" || p.id === "pal-007")
         .slice(0, 4),
   },
   {
