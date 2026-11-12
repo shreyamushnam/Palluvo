@@ -524,7 +524,7 @@ export const InfoModal: React.FC<InfoModalProps> = ({
                         <ClipboardList className="w-4 h-4 text-[#541920]" />
                         <span>Return Conditions by Product Type</span>
                       </strong>
-                      <p>• <strong>Sarees:</strong> Must be unused, unwashed, and folded with all original tags, Silk Mark tags, and attached unstitched blouse intact.</p>
+                      <p>• <strong>Sarees:</strong> Must be unused, unwashed, and folded with all original tags, attached labels, and attached unstitched blouse intact.</p>
                       <p>• <strong>Separate Blouse Pieces:</strong> Must remain unstitched, uncut, and in original protective packaging.</p>
                       <p>• <strong>Handcrafted Jewelry:</strong> Must be unworn with unbroken tamper-evident security seals and protective pouch intact.</p>
                       <p>• Return in original PALLUVO luxury box or keepsake pouch with protective wrap.</p>
@@ -656,10 +656,10 @@ export const InfoModal: React.FC<InfoModalProps> = ({
 
                     <div className="p-4 bg-white border border-[#E8E2D9] rounded-xs space-y-1.5">
                       <strong className="text-neutral-900 font-semibold block text-sm">
-                        Silk Mark Purity
+                        Artisanal Silk Purity (Brand Standards)
                       </strong>
                       <p className="text-neutral-600 leading-relaxed">
-                        Each individual batch undergoes stringent laboratory testing for filament authenticity, ensuring zero synthetic blends or compromised zari.
+                        Under our brand textile standards, handloom weavers use 100% natural silk filaments and tested zari threading. (Note: Specific Silk Mark attributes and certifications on this prototype website are simulated demo representations).
                       </p>
                     </div>
                   </div>

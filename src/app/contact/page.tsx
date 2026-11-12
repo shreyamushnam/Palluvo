@@ -148,7 +148,7 @@ export default function ContactPage() {
               </p>
               <div className="p-4 bg-white rounded-xs border border-[#E8E2D9] text-xs text-neutral-700 space-y-1">
                 <strong className="text-neutral-900 block font-semibold">What We Assist With:</strong>
-                <p>• Pure Silk Mark authentication and weave provenance</p>
+                <p>• Handloom weave provenance and textile care recommendations</p>
                 <p>• Custom unstitched blouse styling and zari coordination</p>
                 <p>• Insured express domestic and international courier tracking</p>
               </div>

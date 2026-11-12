@@ -453,7 +453,7 @@ const RETURN_STEPS = [
   {
     step: "03",
     title: "Quality Check & Refund / Dispatch",
-    description: "Upon atelier quality check (unworn, intact Silk Mark tags), replacement is dispatched or refund is credited within 24–48 hours.",
+    description: "Upon atelier quality check (unworn, intact brand tags and blouse piece), replacement is dispatched or refund is credited within 24–48 hours.",
     icon: <PackageCheck className="w-5 h-5 text-[#C5A575]" />,
   },
 ];
@@ -851,7 +851,7 @@ export const OrderReturnsClient: React.FC<OrderReturnsClientProps> = ({
             <span>Important Condition Requirements by Product Type</span>
           </h2>
           <ul className="text-xs text-neutral-600 font-sans space-y-1.5 list-disc pl-5 leading-relaxed">
-            <li><strong>Sarees:</strong> Must be unworn, undamaged, unwashed, and in original folded condition with all Silk Mark Organisation tags, security loops, and attached blouse pieces intact.</li>
+            <li><strong>Sarees:</strong> Must be unworn, undamaged, unwashed, and in original folded condition with all security tags, attached labels, and blouse pieces intact.</li>
             <li><strong>Separate Blouse Pieces:</strong> Must remain unstitched, uncut, unwashed, and in original protective wrap with tags intact.</li>
             <li><strong>Jewelry & Accessories:</strong> Must remain unworn with tamper-evident security seals, hygiene tags, and original protective keepsake pouch intact.</li>
             <li>Original wooden keepsake box or luxury packaging must be returned during reverse pickup.</li>
