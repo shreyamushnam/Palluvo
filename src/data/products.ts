@@ -190,8 +190,8 @@ export const PRODUCTS: Product[] = [
     hasBlousePiece: true,
     blouseOptions: ["With Blouse", "Without Blouse"],
     inStock: true,
-    // Sample catalog selection for curated highlights (prototype demo)
-    isBestseller: true,
+    // Sample catalog selection for stylist curation (prototype demo)
+    isTrending: true,
     isSilkMark: true,
     tags: ["handloom", "purple", "festive"],
     origin: "Varanasi, India",
@@ -348,6 +348,8 @@ export const PRODUCTS: Product[] = [
     blouseOptions: ["With Blouse", "Without Blouse"],
     inStock: true,
     isNewArrival: true,
+    // Sample catalog selection for stylist curation (prototype demo)
+    isTrending: true,
     isSilkMark: false,
     tags: ["organza", "lavender", "party"],
     origin: "Kolkata, West Bengal",

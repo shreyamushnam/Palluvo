@@ -621,9 +621,12 @@ export const InfoModal: React.FC<InfoModalProps> = ({
                 <div className="space-y-5">
                   <div>
                     <span className="text-[10px] uppercase font-bold tracking-[0.25em] text-[#7C5C26] block">
-                      Loom To Wardrobe
+                      Loom To Wardrobe (Illustrative Guide)
                     </span>
-                    <h3 className="font-serif text-2xl text-neutral-900 mt-0.5">Artisan Clusters & Weaving Purity</h3>
+                    <h3 className="font-serif text-2xl text-neutral-900 mt-0.5">Artisan Clusters & Heritage Traditions</h3>
+                    <p className="text-[11px] text-neutral-500 mt-1 font-sans">
+                      The descriptions below illustrate regional Indian weaving traditions and brand design inspirations (prototype educational content).
+                    </p>
                   </div>
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 text-xs">
@@ -632,7 +635,7 @@ export const InfoModal: React.FC<InfoModalProps> = ({
                         Varanasi Katan & Kadwa
                       </strong>
                       <p className="text-neutral-600 leading-relaxed">
-                        Master weavers spend upwards of 25 days threading individual zari motifs into pure silk mulberry warps using the ancient Kadwa hand-shuttle technique.
+                        Traditional Kadwa handloom drapes celebrate the historic Varanasi craft where artisans hand-thread distinct zari motifs into fine silk warps over extensive weaving cycles.
                       </p>
                     </div>
 
@@ -641,7 +644,7 @@ export const InfoModal: React.FC<InfoModalProps> = ({
                         Kanchipuram Temple Weaves
                       </strong>
                       <p className="text-neutral-600 leading-relaxed">
-                        Interlocked korvai borders woven with three-ply mulberry silk and tested silver-gold zari, renowned for lustrous drape and heirloom longevity.
+                        Inspired by legendary temple clusters, characterized by contrast korvai borders and lustrous metallic-thread zari ornamentation crafted for celebratory heirlooms.
                       </p>
                     </div>
 
@@ -650,16 +653,16 @@ export const InfoModal: React.FC<InfoModalProps> = ({
                         Chanderi & Mulmul
                       </strong>
                       <p className="text-neutral-600 leading-relaxed">
-                        Gossamer-light organic cotton interwoven with silk filaments, creating breathable drapes suited for joyous daytime rituals and celebrations.
+                        Gossamer-light fine cotton and silk filament textures inspired by historic Madhya Pradesh looms, ideal for daytime occasions.
                       </p>
                     </div>
 
                     <div className="p-4 bg-white border border-[#E8E2D9] rounded-xs space-y-1.5">
                       <strong className="text-neutral-900 font-semibold block text-sm">
-                        Artisanal Silk Purity (Brand Standards)
+                        Artisanal Textile Curation (Brand Standards)
                       </strong>
                       <p className="text-neutral-600 leading-relaxed">
-                        Under our brand textile standards, handloom weavers use 100% natural silk filaments and tested zari threading. (Note: Specific Silk Mark attributes and certifications on this prototype website are simulated demo representations).
+                        Our brand design philosophy honors traditional pure silk and handloom weaving methods. (Note: Craft timelines, material compositions, and Silk Mark attributes on this prototype storefront are illustrative demo representations).
                       </p>
                     </div>
                   </div>

@@ -315,7 +315,7 @@ export function ShopContent() {
       if (sortBy === "price-low") return a.price - b.price;
       if (sortBy === "price-high") return b.price - a.price;
       if (sortBy === "rating") return b.rating - a.rating;
-      if (sortBy === "popular") return (b.isTrending ? 2 : 0) + b.rating - ((a.isTrending ? 2 : 0) + a.rating);
+      if (sortBy === "popular") return (b.isTrending ? 1 : 0) - (a.isTrending ? 1 : 0);
       if (sortBy === "curated" || sortBy === "bestselling") return (b.isBestseller ? 1 : 0) - (a.isBestseller ? 1 : 0);
       if (sortBy === "newest") return (b.isNewArrival ? 1 : 0) - (a.isNewArrival ? 1 : 0);
       return 0; // default featured
