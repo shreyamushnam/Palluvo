@@ -35,11 +35,11 @@ const CURATED_COLLECTIONS = [
     id: "the-silk-edit",
     number: "01",
     name: "The Silk Edit",
-    tagline: "Heirloom Silks & Pure Metallic Zari",
+    tagline: "Heirloom Silks & Metallic Zari Inspirations (Demo)",
     description:
-      "Opulent Kanjeevarams, liquid Benarasi satins, and sculpted Tanchoi brocades woven for moments that echo across generations.",
+      "Curated styling inspirations drawn from Kanjeevarams, Benarasi weaves, and Tanchoi brocades celebrating timeless Indian celebrations.",
     image: "/images/products/royal-blue-kanjeevaram.jpg",
-    countText: "Curated Silk Weaves",
+    countText: "Curated Silk Weaves (Demo)",
     href: "/shop?category=Silk",
     accentColor: "#541920",
   },
@@ -47,11 +47,11 @@ const CURATED_COLLECTIONS = [
     id: "midnight-drapes",
     number: "02",
     name: "Midnight Drapes",
-    tagline: "The Poetry of Shadow & Sheer",
+    tagline: "The Poetry of Shadow & Sheer (Demo)",
     description:
-      "Organza, whisper-light tissue silks, and noir matkas created for twilight soirees, cocktail evenings, and candlelit celebrations.",
+      "Organza, lightweight tissue silks, and noir draping inspirations created for twilight soirees, cocktail evenings, and celebratory moments.",
     image: "/images/products/black-chiffon-saree.jpg",
-    countText: "Party Wear Editions",
+    countText: "Party Wear Editions (Demo)",
     href: "/shop?category=Party+Wear",
     accentColor: "#1C1A18",
   },
@@ -59,11 +59,11 @@ const CURATED_COLLECTIONS = [
     id: "festive-stories",
     number: "03",
     name: "Festive Stories",
-    tagline: "Gilded Nostalgia & Royal Hues",
+    tagline: "Gilded Nostalgia & Royal Hues (Demo)",
     description:
-      "Luminous turmeric yellows, ruby carmines, and ceremonial gold tissue silks reimagined with clean contemporary geometry.",
+      "Luminous turmeric yellows, ruby carmines, and ceremonial gold tissue drape concepts reimagined with clean contemporary geometry.",
     image: "/images/products/wine-tissue-silk.jpg",
-    countText: "Festive Masterpieces",
+    countText: "Festive Concepts (Demo)",
     href: "/shop?category=Festive",
     accentColor: "#BF6A54",
   },
@@ -71,11 +71,11 @@ const CURATED_COLLECTIONS = [
     id: "everyday-poetry",
     number: "04",
     name: "Everyday Poetry",
-    tagline: "Breathable Weaves for Living In",
+    tagline: "Breathable Weave Inspirations (Demo)",
     description:
-      "Handspun Chanderi, unbleached Ahimsa tussar, and organic handlooms crafted for the quiet poetry of everyday life.",
+      "Chanderi and handloom styling inspirations crafted to celebrate the quiet, understated poetry of everyday drape aesthetics.",
     image: "/images/products/mustard-cotton-saree.jpg",
-    countText: "Artisanal Handlooms",
+    countText: "Artisanal Weaves (Demo)",
     href: "/shop?category=Handloom",
     accentColor: "#C5A575",
   },
@@ -99,13 +99,13 @@ export default function CollectionsPage() {
           </nav>
           <div className="flex items-center justify-center sm:justify-start gap-2 text-xs uppercase tracking-widest text-[#541920] font-semibold mb-1">
             <Sparkles className="w-3.5 h-3.5 text-[#C5A575]" />
-            <span>Curated Heritage Edits</span>
+            <span>Curated Heritage Edits (Prototype Showcase)</span>
           </div>
           <h1 className="text-3xl sm:text-5xl font-serif font-normal text-neutral-900">
             The PALLUVO Collections
           </h1>
           <p className="text-xs sm:text-sm text-neutral-600 mt-2 font-sans max-w-2xl">
-            Thematic explorations of Indian textiles, from celebratory gold zari brocades to lightweight twilight chiffons.
+            Thematic explorations and styling concepts of Indian textiles. (Note: Collection descriptions and material attributes on this prototype storefront are illustrative demo representations).
           </p>
         </div>
       </div>

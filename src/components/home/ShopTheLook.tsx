@@ -115,9 +115,12 @@ export const ShopTheLook: React.FC = () => {
                         >
                           {item.title || item.name}
                         </Link>
-                        <p className="text-xs font-bold text-neutral-900 mt-0.5 tabular-nums">
-                          {formatPrice(item.price)}
-                        </p>
+                        <div className="flex items-baseline gap-1 mt-0.5 tabular-nums">
+                          <span className="text-xs font-bold text-neutral-900 tabular-nums">
+                            {formatPrice(item.price)}
+                          </span>
+                          <span className="text-[10px] text-neutral-500 font-sans font-normal">(demo price)</span>
+                        </div>
                       </div>
                     </div>
 
