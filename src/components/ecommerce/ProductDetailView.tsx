@@ -320,9 +320,14 @@ export const ProductDetailView: React.FC<ProductDetailViewProps> = ({
                 </div>
               </div>
 
-              <h1 className="text-base sm:text-3xl font-serif font-medium text-neutral-900 mt-0 sm:mt-1 leading-tight sm:leading-snug">
-                {product.name}
-              </h1>
+              <div className="mt-0 sm:mt-1">
+                <h1 className="text-base sm:text-3xl font-serif font-medium text-neutral-900 leading-tight sm:leading-snug inline">
+                  {product.name}
+                </h1>
+                <span className="ml-2 inline-block align-baseline text-[11px] sm:text-xs text-neutral-600 font-sans font-normal">
+                  (demo concept)
+                </span>
+              </div>
             </div>
 
             {/* Price & Quantity Stepper */}
@@ -341,7 +346,7 @@ export const ProductDetailView: React.FC<ProductDetailViewProps> = ({
                     {product.discountPercent}% OFF (Demo)
                   </span>
                 )}
-                <span className="text-[11px] text-neutral-500 font-sans font-normal">(demo price)</span>
+                <span className="text-[11px] text-neutral-600 font-sans font-normal">(demo price)</span>
               </div>
 
               {/* Quantity Stepper */}
@@ -486,7 +491,7 @@ export const ProductDetailView: React.FC<ProductDetailViewProps> = ({
                     ? "Blouse Specifications"
                     : "Product Details"}
                 </h2>
-                <span className="text-[10px] text-neutral-500 font-sans font-normal">(sample specifications)</span>
+                <span className="text-[10px] text-neutral-600 font-sans font-normal">(sample specifications)</span>
               </div>
               <div className="grid grid-cols-2 gap-y-1.5 text-xs text-neutral-600 font-sans">
                 <div>
@@ -524,7 +529,7 @@ export const ProductDetailView: React.FC<ProductDetailViewProps> = ({
                 >
                   <span className="flex items-center gap-1.5">
                     <span>Description</span>
-                    <span className="text-[10px] text-neutral-500 font-normal font-sans">(sample copy)</span>
+                    <span className="text-[10px] text-neutral-600 font-normal font-sans">(sample copy)</span>
                   </span>
                   {openAccordions.description ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
                 </button>
@@ -537,7 +542,7 @@ export const ProductDetailView: React.FC<ProductDetailViewProps> = ({
                     <p className="pb-3 text-neutral-600 leading-relaxed font-sans">
                       {product.description}
                     </p>
-                    <p className="text-[11px] text-neutral-500 italic pb-3">
+                    <p className="text-[11px] text-neutral-600 italic pb-3">
                       Note: Product descriptions, material specifications, and craft timelines on this prototype storefront are illustrative demo representations.
                     </p>
                   </div>
