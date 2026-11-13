@@ -215,7 +215,7 @@ export const ProductDetailView: React.FC<ProductDetailViewProps> = ({
                 >
                   <Image
                     src={product.images[activeImageIdx] || product.images[0]}
-                    alt={product.name}
+                    alt={`${product.name} (Prototype Demo)`}
                     fill
                     priority
                     sizes="(max-width: 1024px) 100vw, 650px"
@@ -321,12 +321,12 @@ export const ProductDetailView: React.FC<ProductDetailViewProps> = ({
               </div>
 
               <div className="mt-0 sm:mt-1">
-                <h1 className="text-base sm:text-3xl font-serif font-medium text-neutral-900 leading-tight sm:leading-snug inline">
-                  {product.name}
+                <h1 className="text-xl sm:text-3xl font-serif font-medium text-neutral-900 leading-tight sm:leading-snug inline">
+                  <span>{product.name}</span>
+                  <span className="ml-2 inline-block align-baseline text-xs sm:text-sm text-neutral-600 font-sans font-normal">
+                    (demo concept)
+                  </span>
                 </h1>
-                <span className="ml-2 inline-block align-baseline text-[11px] sm:text-xs text-neutral-600 font-sans font-normal">
-                  (demo concept)
-                </span>
               </div>
             </div>
 
