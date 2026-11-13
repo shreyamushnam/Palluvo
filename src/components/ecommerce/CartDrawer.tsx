@@ -249,10 +249,11 @@ export const CartDrawer: React.FC = () => {
                         )}
                       </div>
 
-                      <div className="mt-1 flex items-baseline gap-2 tabular-nums">
+                      <div className="mt-1 flex items-baseline gap-1.5 tabular-nums">
                         <span className="text-xs font-semibold text-[#541920] tabular-nums">
                           {formatPrice(item.product.price)}
                         </span>
+                        <span className="text-[10px] text-neutral-500 font-sans font-normal">(demo price)</span>
                         {item.product.originalPrice && (
                           <span className="text-[10px] text-neutral-600 line-through tabular-nums">
                             {formatPrice(item.product.originalPrice)}
@@ -368,9 +369,12 @@ export const CartDrawer: React.FC = () => {
                     {shippingFee === 0 ? <span className="text-[#15803D]">FREE</span> : formatPrice(shippingFee)}
                   </span>
                 </div>
-                <div className="flex justify-between text-sm font-semibold text-neutral-900 pt-2 border-t border-[#E8E2D9]">
+                <div className="flex justify-between items-baseline text-sm font-semibold text-neutral-900 pt-2 border-t border-[#E8E2D9]">
                   <span>Total Amount</span>
-                  <span className="text-[#541920] tabular-nums">{formatPrice(finalTotal)}</span>
+                  <div className="flex items-baseline gap-1 text-right">
+                    <span className="text-[#541920] tabular-nums">{formatPrice(finalTotal)}</span>
+                    <span className="text-[10px] text-neutral-500 font-sans font-normal">(demo total)</span>
+                  </div>
                 </div>
               </div>
 

@@ -25,7 +25,7 @@ export const CollectionBanner: React.FC = () => {
 
           <div className="relative px-6 py-12 sm:px-12 max-w-xl space-y-4">
             <span className="text-xs uppercase tracking-[0.25em] text-[#C5A575] font-semibold block">
-              Curated Heritage Weaves
+              Curated Heritage Weaves (Demo)
             </span>
 
             <h2 className="text-3xl sm:text-4xl lg:text-5xl font-serif font-normal uppercase tracking-wider text-[#FAF7F2] leading-tight">
@@ -33,7 +33,7 @@ export const CollectionBanner: React.FC = () => {
             </h2>
 
             <p className="text-xs sm:text-sm text-neutral-200 leading-relaxed font-sans max-w-md">
-              Celebrate every occasion in a drape made to be remembered. Pure silk zari weaves illuminated with heirloom craftsmanship.
+              Celebrate every occasion in a drape made to be remembered. Curated festive drape concepts inspired by classic zari traditions and artisanal craftsmanship (illustrative prototype edit).
             </p>
 
             <div className="pt-3">

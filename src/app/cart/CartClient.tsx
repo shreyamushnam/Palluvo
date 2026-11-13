@@ -182,9 +182,12 @@ export default function CartPage() {
                           </div>
 
                           <div className="text-right tabular-nums">
-                            <span className="text-base font-serif font-bold text-[#541920] tabular-nums">
-                              {formatPrice(item.product.price * item.quantity)}
-                            </span>
+                            <div className="flex items-baseline justify-end gap-1">
+                              <span className="text-base font-serif font-bold text-[#541920] tabular-nums">
+                                {formatPrice(item.product.price * item.quantity)}
+                              </span>
+                              <span className="text-[10px] text-neutral-500 font-sans font-normal">(demo price)</span>
+                            </div>
                             {item.product.originalPrice && (
                               <p className="text-xs text-neutral-600 line-through tabular-nums">
                                 {formatPrice(item.product.originalPrice * item.quantity)}
@@ -336,9 +339,12 @@ export default function CartPage() {
                       {shippingFee === 0 ? <span className="text-[#15803D]">FREE</span> : formatPrice(shippingFee)}
                     </span>
                   </div>
-                  <div className="flex justify-between text-base font-serif font-bold text-neutral-900 pt-3 border-t border-[#E8E2D9]">
+                  <div className="flex justify-between items-baseline text-base font-serif font-bold text-neutral-900 pt-3 border-t border-[#E8E2D9]">
                     <span>Total Payable</span>
-                    <span className="text-[#541920] tabular-nums">{formatPrice(finalTotal)}</span>
+                    <div className="flex items-baseline gap-1 text-right">
+                      <span className="text-[#541920] tabular-nums">{formatPrice(finalTotal)}</span>
+                      <span className="text-[11px] text-neutral-500 font-sans font-normal">(demo total)</span>
+                    </div>
                   </div>
                 </div>
 
