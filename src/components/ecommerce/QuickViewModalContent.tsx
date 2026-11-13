@@ -301,17 +301,23 @@ export const QuickViewModalContent: React.FC<QuickViewModalContentProps> = ({
 
                 {/* Trust Badges */}
                 <div className="grid grid-cols-3 gap-2 pt-3 border-t border-[#E8E2D9] text-[11px] text-neutral-600 text-center">
-                  <div className="flex flex-col items-center gap-1">
+                  <div
+                    className="flex flex-col items-center gap-1"
+                    title="Illustrative shipping calculation: orders of ₹1,999 or more qualify for demo free shipping (prototype simulation; no real shipping occurs)."
+                  >
                     <Truck className="w-4 h-4 text-[#541920]" />
-                    <span>Free standard shipping on orders of ₹1,999 or more</span>
+                    <span>Demo Free Shipping (₹1,999+ Simulation)</span>
                   </div>
                   <div className="flex flex-col items-center gap-1">
                     <ShieldCheck className="w-4 h-4 text-[#15803D]" />
                     <span>{isSilkMark ? "Silk Mark Eligible (Demo)" : "Handcrafted Curation (Demo)"}</span>
                   </div>
-                  <div className="flex flex-col items-center gap-1">
+                  <div
+                    className="flex flex-col items-center gap-1"
+                    title="Illustrative return workflow: demo simulation; no physical pickup or refund occurs."
+                  >
                     <RotateCcw className="w-4 h-4 text-[#C5A575]" />
-                    <span>7-Day Return</span>
+                    <span>7-Day Return (Demo Simulation)</span>
                   </div>
                 </div>
               </div>
