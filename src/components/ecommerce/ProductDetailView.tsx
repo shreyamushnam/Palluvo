@@ -478,13 +478,16 @@ export const ProductDetailView: React.FC<ProductDetailViewProps> = ({
 
             {/* Product Details Table */}
             <div className="pt-4 border-t border-[#E8E2D9] space-y-2">
-              <h2 className="font-serif text-sm font-semibold text-neutral-900">
-                {productType === "jewelry"
-                  ? "Jewelry Specifications"
-                  : productType === "blouse"
-                  ? "Blouse Specifications"
-                  : "Product Details"}
-              </h2>
+              <div className="flex items-center justify-between">
+                <h2 className="font-serif text-sm font-semibold text-neutral-900">
+                  {productType === "jewelry"
+                    ? "Jewelry Specifications"
+                    : productType === "blouse"
+                    ? "Blouse Specifications"
+                    : "Product Details"}
+                </h2>
+                <span className="text-[10px] text-neutral-500 font-sans font-normal">(sample specifications)</span>
+              </div>
               <div className="grid grid-cols-2 gap-y-1.5 text-xs text-neutral-600 font-sans">
                 <div>
                   {productType === "jewelry" ? "Material: " : "Fabric: "}
@@ -519,7 +522,10 @@ export const ProductDetailView: React.FC<ProductDetailViewProps> = ({
                   onClick={() => toggleAccordion("description")}
                   className="w-full min-h-[44px] flex items-center justify-between font-semibold text-neutral-900 text-left cursor-pointer focus-visible:ring-2 focus-visible:ring-[#541920] focus-visible:outline-none"
                 >
-                  <span>Description</span>
+                  <span className="flex items-center gap-1.5">
+                    <span>Description</span>
+                    <span className="text-[10px] text-neutral-500 font-normal font-sans">(sample copy)</span>
+                  </span>
                   {openAccordions.description ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
                 </button>
                 {openAccordions.description && (
@@ -530,6 +536,9 @@ export const ProductDetailView: React.FC<ProductDetailViewProps> = ({
                   >
                     <p className="pb-3 text-neutral-600 leading-relaxed font-sans">
                       {product.description}
+                    </p>
+                    <p className="text-[11px] text-neutral-500 italic pb-3">
+                      Note: Product descriptions, material specifications, and craft timelines on this prototype storefront are illustrative demo representations.
                     </p>
                   </div>
                 )}

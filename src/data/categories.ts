@@ -162,40 +162,40 @@ export function isCategoryActive(
 
 export function getCategoryDescription(categoryOrQuery?: string): string {
   if (!categoryOrQuery) {
-    return "Explore authentic zari brocades, royal silk drapes, designer blouses, and handcrafted jewellery curated with artisanal elegance.";
+    return "Explore curated zari brocades, royal silk drapes, designer blouses, and handcrafted jewellery styling inspirations (prototype catalog).";
   }
   const norm = categoryOrQuery.toLowerCase().trim();
   if (norm.includes("jewel") || norm.includes("jhumka") || norm.includes("accessor")) {
-    return "Discover artisanal temple jewellery and handcrafted antique gold-plated adornments designed to complement your luxury drapes.";
+    return "Discover artisanal temple jewellery and antique gold-tone adornment concepts designed to complement luxury drapes (prototype catalog).";
   }
   if (norm.includes("blouse")) {
-    return "Explore curated designer blouse pieces crafted in fine silk with intricate zari embroidery to complete your ensemble.";
+    return "Explore curated designer blouse pieces styled with intricate zari embroidery motifs to complete your ensemble (prototype catalog).";
   }
   if (norm.includes("silk") && !norm.includes("cotton")) {
-    return "Explore lustrous silk weaves, rich zari brocades, and festive drapes crafted across celebrated handloom traditions.";
+    return "Explore lustrous silk weaves, rich zari brocades, and festive drape concepts inspired by celebrated handloom traditions (prototype catalog).";
   }
   if (norm.includes("handloom")) {
-    return "Discover heritage handloom weaves and timeless artisan drapes crafted with authentic weaving traditions.";
+    return "Discover heritage handloom weave concepts and timeless artisan drapes inspired by regional weaving traditions (prototype catalog).";
   }
   if (norm.includes("cotton")) {
-    return "Explore lightweight cotton and chanderi silk sarees designed for breathable all-day elegance and festive grace.";
+    return "Explore lightweight cotton and chanderi styling inspirations designed for breathable all-day elegance and festive grace (prototype catalog).";
   }
   if (norm.includes("bridal") || norm.includes("wedding")) {
-    return "Explore heirloom bridal drapes and opulent zari brocades curated for timeless wedding celebrations.";
+    return "Explore bridal drape concepts and opulent brocade styling curated for grand wedding celebrations (prototype catalog).";
   }
   if (norm.includes("festive")) {
-    return "Celebrate festive moments in shimmering tissue silks, vibrant jewel tones, and celebratory gold zari drapes.";
+    return "Celebrate festive moments in shimmering tissue silks, vibrant jewel tones, and celebratory drape concepts (prototype catalog).";
   }
   if (norm.includes("party")) {
-    return "Step into contemporary elegance with modern organza drapes, fine sequins, and evening celebrations wear.";
+    return "Step into contemporary elegance with modern organza drape concepts, fine sequins, and evening celebration wear (prototype catalog).";
   }
   if (norm.includes("printed")) {
-    return "Discover fluid georgette and printed floral drapes crafted for modern versatility and effortless styling.";
+    return "Discover fluid georgette and printed floral drape concepts crafted for modern versatility and effortless styling (prototype catalog).";
   }
   if (norm.includes("new")) {
-    return "Explore the latest handcrafted drapes, designer blouses, and artisanal accessories fresh from our master weavers.";
+    return "Explore the latest curated drapes, designer blouses, and artisanal styling concepts on our prototype storefront.";
   }
-  return "Explore handcrafted drapes, designer blouses, and artisanal accessories curated with traditional craftsmanship.";
+  return "Explore curated drapes, designer blouses, and artisanal accessories styling concepts (prototype catalog).";
 }
 
 const CATEGORY_DEFINITIONS: Omit<Category, "itemCount">[] = [
