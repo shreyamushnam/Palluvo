@@ -55,7 +55,7 @@ export const QuickViewModalContent: React.FC<QuickViewModalContentProps> = ({
       role="dialog"
       aria-modal="true"
       aria-labelledby="quickview-title"
-      aria-label={`Quick view ${product.name}`}
+      aria-label={`Quick view ${product.name} (Prototype Demo)`}
     >
       {/* Backdrop */}
       <div
@@ -80,9 +80,9 @@ export const QuickViewModalContent: React.FC<QuickViewModalContentProps> = ({
               <div className="relative w-full max-w-sm aspect-[3/4] rounded-sm overflow-hidden bg-neutral-200 shadow-sm">
                 <Image
                   src={product.images[activeImageIdx] || product.images[0]}
-                  alt={product.name}
+                  alt={`${product.name} (Prototype Demo)`}
                   fill
-                  sizes="(max-width: 768px) 100vw, 400px"
+                  sizes="(max-width: 384px) 100vw, 384px"
                   className="object-cover object-top"
                   priority
                 />
@@ -132,11 +132,16 @@ export const QuickViewModalContent: React.FC<QuickViewModalContentProps> = ({
                       {product.category}
                     </span>
                     <span className="text-neutral-300">•</span>
-                    <span className="text-xs text-neutral-600">{product.fabric}</span>
+                    <span className="text-xs text-neutral-600">
+                      {product.fabric} <span className="text-[10px] text-neutral-600 font-sans font-normal">(sample fabric)</span>
+                    </span>
                   </div>
 
-                  <h3 id="quickview-title" className="text-xl sm:text-2xl font-serif font-medium text-neutral-900 mt-1">
-                    {product.name}
+                  <h3 id="quickview-title" className="text-xl sm:text-2xl font-serif font-medium text-neutral-900 mt-1 inline-block">
+                    <span>{product.name}</span>
+                    <span className="ml-2 inline-block align-baseline text-xs text-neutral-600 font-sans font-normal">
+                      (demo concept)
+                    </span>
                   </h3>
 
                   {/* Rating */}
