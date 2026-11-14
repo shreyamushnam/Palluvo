@@ -1,4 +1,4 @@
-import React, { Suspense } from "react";
+import React from "react";
 import type { Metadata } from "next";
 import AccountClient from "./AccountClient";
 
@@ -15,9 +15,5 @@ export const metadata: Metadata = {
 };
 
 export default function AccountPage() {
-  return (
-    <Suspense fallback={null}>
-      <AccountClient />
-    </Suspense>
-  );
+  return <AccountClient />;
 }

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useCallback, useMemo, useRef, useEffect } from "react";
+import React, { useState, useCallback, useMemo, useRef, useEffect, Suspense } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -53,10 +53,28 @@ function getSafeRedirectUrl(target: string | null | undefined): string {
   }
 }
 
+interface AccountRedirectWatcherProps {
+  onRedirectChange: (redirect: string | null) => void;
+}
+
+function AccountRedirectWatcher({ onRedirectChange }: AccountRedirectWatcherProps) {
+  const searchParams = useSearchParams();
+  const redirectParam = searchParams.get("redirect");
+
+  useEffect(() => {
+    onRedirectChange(redirectParam);
+  }, [redirectParam, onRedirectChange]);
+
+  return null;
+}
+
 export default function AccountPage() {
   const router = useRouter();
-  const searchParams = useSearchParams();
-  const redirectUrl = searchParams.get("redirect");
+  const [redirectUrl, setRedirectUrl] = useState<string | null>(null);
+
+  const handleRedirectChange = useCallback((redirect: string | null) => {
+    setRedirectUrl(redirect);
+  }, []);
 
   useEffect(() => {
     migrateLegacyAccountAliases();
@@ -580,6 +598,10 @@ export default function AccountPage() {
   if (!isLoggedIn) {
     return (
       <div className="min-h-screen bg-[#FAF7F2] pb-24 lg:pb-16">
+        <Suspense fallback={null}>
+          <AccountRedirectWatcher onRedirectChange={handleRedirectChange} />
+        </Suspense>
+
         {/* Editorial Brand Header */}
         <div className="bg-[#F4EFE6] border-b border-[#E8E2D9] py-8 sm:py-12">
           <div className="max-w-4xl mx-auto px-4 sm:px-6 text-center">
@@ -868,6 +890,10 @@ export default function AccountPage() {
 
   return (
     <div className="min-h-screen bg-[#FAF7F2] pb-24 lg:pb-12">
+      <Suspense fallback={null}>
+        <AccountRedirectWatcher onRedirectChange={handleRedirectChange} />
+      </Suspense>
+
       {/* Header */}
       <div className="bg-[#F4EFE6] border-b border-[#E8E2D9] py-4 sm:py-8">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
